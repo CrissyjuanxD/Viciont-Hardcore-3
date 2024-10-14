@@ -1,0 +1,8 @@
+name: Viciont_Hardcore3_Plugin
+version: 1.0.0
+main: vct.hardcore3.ViciontHardcore3
+author: CrissyJuanXD
+api-version: 1.13
+commands:
+  revive:
+    description: Revive a player.
