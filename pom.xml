@@ -19,6 +19,7 @@
             <id>spigot-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
+
     </repositories>
     <dependencies>
         <!--This adds the Spigot API artifact to the build -->
@@ -29,12 +30,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <dependency>
-            <groupId>org.bukkit</groupId>
-            <artifactId>craftbukkit</artifactId>
-            <version>1.21-R0.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
 
     </dependencies>
 
