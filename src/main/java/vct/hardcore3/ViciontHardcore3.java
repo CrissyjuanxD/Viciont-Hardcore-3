@@ -1,6 +1,7 @@
 package vct.hardcore3;
 
 import org.bukkit.*;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -11,6 +12,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import Commands.DeathStormCommand;
 
 import java.util.Objects;
 
@@ -18,6 +20,8 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
     public String Prefix = "&d&lViciont&5&lHardcore &5&l3&7➤ &f";
     public String Version = getDescription().getVersion();
+    private DeathStormHandler deathStormHandler;
+
 
     public void onEnable() {
         Bukkit.getConsoleSender().sendMessage(
@@ -25,14 +29,39 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         // Registra los eventos de esta clase
         Bukkit.getServer().getPluginManager().registerEvents(this, this);
 
+        //resgistra evento de revivir
         Objects.requireNonNull(this.getCommand("revive")).setExecutor(new ReviveCommand(this));
+        //registra evento de doble totem
         getServer().getPluginManager().registerEvents(new DoubleLifeTotemHandler(this), this);
         getLogger().info("DoubleLifeTotemHandler registered!");
+
+        //DeathStorm
+        deathStormHandler = new DeathStormHandler(this);
+        getServer().getPluginManager().registerEvents(deathStormHandler, this);
+
+        PluginCommand resetCommand = getCommand("resetdeathstorm");
+        PluginCommand addCommand = getCommand("adddeathstorm");
+        PluginCommand removeCommand = getCommand("removedeathstorm");
+
+        if (resetCommand != null) {
+            resetCommand.setExecutor(new DeathStormCommand(deathStormHandler));
+        }
+        if (addCommand != null) {
+            addCommand.setExecutor(new DeathStormCommand(deathStormHandler));
+        }
+        if (removeCommand != null) {
+            removeCommand.setExecutor(new DeathStormCommand(deathStormHandler));
+        }
+
+        deathStormHandler.loadStormData();
     }
 
     public void onDisable() {
         Bukkit.getConsoleSender().sendMessage(
                 ChatColor.translateAlternateColorCodes('&', Prefix + "&aha sido deshabilitado!, &eVersion: " + Version));
+
+        //deathsotrm
+        deathStormHandler.saveStormData(); // Guardar datos de la tormenta al deshabilitar
     }
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {

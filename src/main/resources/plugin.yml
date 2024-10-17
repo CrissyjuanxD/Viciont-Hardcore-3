@@ -1,8 +1,16 @@
 name: Viciont_Hardcore3_Plugin
-version: 1.2.0
+version: 1.3.1
 main: vct.hardcore3.ViciontHardcore3
 author: CrissyJuanXD
 api-version: 1.21
 commands:
   revive:
     description: Revive a player.
+  resetdeathstorm:
+    description: Resetea la DeathStorm
+  adddeathstorm:
+    description: Añade horas a la DeathStorm
+    usage: /adddeathstorm <horas>
+  removedeathstorm:
+    description: Remueve horas de la DeathStorm
+    usage: /removedeathstorm
