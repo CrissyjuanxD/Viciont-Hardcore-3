@@ -1,4 +1,4 @@
-package vct.hardcore3;
+package Dificultades;
 
 public class Change1 {
 }
