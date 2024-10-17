@@ -1,1 +1,1 @@
-Este es mi Primer Plugin Grande que estoy haciendo, ya he hecho varios pero han sido pequeñitos, el plugin esta en fase alpha y llevara un 3%
+Este es mi Primer Plugin Grande que estoy haciendo, ya he hecho varios pero han sido pequeñitos, el plugin esta en fase alpha y llevara un 3% de todo lo que quiero hacer, y si hay fallos de estructuras o redundacion, lo siento, soy muy nuevo con los Plugins.
