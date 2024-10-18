@@ -14,3 +14,8 @@ commands:
   removedeathstorm:
     description: Remueve horas de la DeathStorm
     usage: /removedeathstorm
+  cambiardia:
+    description: Cambia manualmente al día especificado
+    usage: /cambiardia <día>
+  dia:
+    description: Muestra el día actual de Viciont Hardcore 3
