@@ -9,7 +9,7 @@ Este es mi Primer Plugin Grande que estoy haciendo, ya he hecho varios pero han 
 
 ## Resumen del Plugin
 
-Basicamente el Plugin esta hecho para que suba la dificultad manualmente con comandos
+Basicamente el Plugin esta hecho para que suba la dificultad manualmente con comandos <br>
 Constara de aproximadamente 25 dias, cada cambio de dificultad sera cada 2 dias
 Entre medio de cada cambio de dificultad habra algun evento para conseguir una **Life Orb** que servira para revivir un jugador
 
