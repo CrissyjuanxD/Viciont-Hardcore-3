@@ -1,5 +1,7 @@
 package vct.hardcore3;
 
+import Commands.PingCommand;
+import list.VHList;
 import org.bukkit.*;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.event.EventHandler;
@@ -11,6 +13,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import Commands.DeathStormCommand;
 import Commands.DayCommandHandler;
 import Commands.ReviveCommand;
+import chat.chatgeneral;
 
 
 import java.util.Objects;
@@ -63,6 +66,15 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         }
 
         deathStormHandler.loadStormData(); // Cargar datos de la tormenta al iniciar
+
+        //registrar eventos de chat
+        getServer().getPluginManager().registerEvents(new chatgeneral(), this);
+
+        // Registrar el comando /ping
+        this.getCommand("ping").setExecutor(new PingCommand(this));
+
+        //registrar eventos de list
+        new VHList(this).runTaskTimer(this, 0, 20);
     }
 
     public void onDisable() {

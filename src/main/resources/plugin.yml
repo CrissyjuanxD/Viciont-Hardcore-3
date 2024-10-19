@@ -1,5 +1,5 @@
 name: Viciont_Hardcore3_Plugin
-version: 1.3.2
+version: 1.3.4
 main: vct.hardcore3.ViciontHardcore3
 author: CrissyJuanXD
 api-version: 1.21
@@ -19,3 +19,6 @@ commands:
     usage: /cambiardia <día>
   dia:
     description: Muestra el día actual de Viciont Hardcore 3
+  ping:
+    description: Muestra tu ping actual en milisegundos.
+    usage: /ping
