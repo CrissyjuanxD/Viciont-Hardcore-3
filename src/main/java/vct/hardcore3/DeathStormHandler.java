@@ -9,11 +9,10 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import net.md_5.bungee.api.ChatColor;
+import org.bukkit.ChatColor;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,18 +21,19 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import org.bukkit.event.player.PlayerBedEnterEvent; // Añadimos la importación para capturar el evento de dormir
+import org.bukkit.event.player.PlayerBedEnterEvent;
 
 public class DeathStormHandler implements Listener {
     private final JavaPlugin plugin;
+    private final DayHandler dayHandler;  // Referencia al DayHandler
     private final Map<UUID, Integer> deathCount = new HashMap<>();
     private int remainingStormSeconds = 0;
-    private int currentDay = 1;
-    private boolean isDeathStormActive = false;  // Variable para marcar si está activa la DeathStorm
+    private boolean isDeathStormActive = false;
 
-    public DeathStormHandler(JavaPlugin plugin) {
+    public DeathStormHandler(JavaPlugin plugin, DayHandler dayHandler) {
         this.plugin = plugin;
-        loadStormData(); // Asegúrate de cargar los datos cuando se inicializa
+        this.dayHandler = dayHandler;
+        loadStormData();
     }
 
     @EventHandler
@@ -42,53 +42,36 @@ public class DeathStormHandler implements Listener {
         UUID playerUUID = player.getUniqueId();
         deathCount.put(playerUUID, deathCount.getOrDefault(playerUUID, 0) + 1);
 
+        int currentDay = dayHandler.getCurrentDay(); // Obtener el día desde DayHandler
         int increment = 3600 * currentDay; // Cada muerte agrega horas basadas en el día actual
         remainingStormSeconds += increment;
-        isDeathStormActive = true;  // Activamos la tormenta de muerte
+        isDeathStormActive = true;
         startStorm();
-        saveStormData(); // Asegúrate de guardar los datos después de cada muerte
+        saveStormData();
     }
 
     @EventHandler
     public void onWeatherChange(WeatherChangeEvent event) {
-        // Si es una DeathStorm, evitamos que se pueda quitar el clima solo cuando es por dormir
         if (!event.toWeatherState()) {
-            boolean isDeathTrainActive = checkIfDeathTrainActive();
-            if (!isDeathTrainActive) {
-                event.setCancelled(false); // Permite cancelar la tormenta si no está activo el evento DeathStorm
-            } else {
-                event.setCancelled(true); // No permite cancelar la tormenta si el evento DeathStorm está activo
+            if (isDeathStormActive) {
+                event.setCancelled(true);
             }
         }
     }
 
     @EventHandler
     public void onPlayerBedEnter(PlayerBedEnterEvent event) {
-        if (isDeathStormActive) {  // Si la DeathStorm está activa
+        if (isDeathStormActive) {
             event.getPlayer().sendMessage(ChatColor.GRAY + "No puedes dormir durante una DeathStorm.");
-            event.setCancelled(true);  // Cancelamos la acción de dormir
+            event.setCancelled(true);
         }
     }
 
-    private boolean checkIfDeathTrainActive() {
-        return isDeathStormActive;  // Indicamos si la DeathStorm está activa o no
-    }
-
-    public void changeDay(int day) {
-        currentDay = day;
-        saveStormData();
-    }
-
-    public int getCurrentDay() {
-        return currentDay;
-    }
-
-    private BukkitRunnable stormTask; // Agrega esta variable
+    private BukkitRunnable stormTask;
 
     private void startStorm() {
-        World world = Bukkit.getWorlds().get(0);  // Ajusta según el mundo que quieras afectar
+        World world = Bukkit.getWorlds().get(0);
 
-        // Cancela cualquier tarea de tormenta previa si está activa
         if (stormTask != null && !stormTask.isCancelled()) {
             stormTask.cancel();
         }
@@ -103,7 +86,7 @@ public class DeathStormHandler implements Listener {
                     cancel();
                     world.setStorm(false);
                     world.setThundering(false);
-                    isDeathStormActive = false;  // Desactivamos la DeathStorm cuando termina el tiempo
+                    isDeathStormActive = false;
                     return;
                 }
 
@@ -120,13 +103,12 @@ public class DeathStormHandler implements Listener {
             }
         };
 
-        // Inicia la nueva tarea
-        stormTask.runTaskTimer(plugin, 0, 20);  // Ejecuta cada segundo
+        stormTask.runTaskTimer(plugin, 0, 20);
     }
 
     public void resetStorm() {
         remainingStormSeconds = 0;
-        isDeathStormActive = false;  // Desactivamos la DeathStorm al reiniciar
+        isDeathStormActive = false;
         saveStormData();
     }
 
@@ -144,30 +126,33 @@ public class DeathStormHandler implements Listener {
         saveStormData();
     }
 
-    public void saveStormData() {
-        try {
-            Path path = Paths.get(plugin.getDataFolder().getAbsolutePath(), "stormdata.txt");
-            Files.createDirectories(path.getParent());
-            Files.write(path, (currentDay + "\n" + remainingStormSeconds).getBytes());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     public void loadStormData() {
         try {
             Path path = Paths.get(plugin.getDataFolder().getAbsolutePath(), "stormdata.txt");
             if (Files.exists(path)) {
-                String[] data = new String(Files.readAllBytes(path)).split("\n");
-                currentDay = Integer.parseInt(data[0]);
-                remainingStormSeconds = Integer.parseInt(data[1]);
+                remainingStormSeconds = Integer.parseInt(new String(Files.readAllBytes(path)).trim());
+                Bukkit.getLogger().info("Storm data loaded: " + remainingStormSeconds + " seconds remaining.");
                 if (remainingStormSeconds > 0) {
-                    isDeathStormActive = true;  // Reactivamos la DeathStorm si el tiempo restante es mayor a 0
+                    isDeathStormActive = true;
                     startStorm();
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            Bukkit.getLogger().severe("Error loading storm data: " + e.getMessage());
+        } catch (NumberFormatException e) {
+            Bukkit.getLogger().severe("Invalid number format in stormdata.txt: " + e.getMessage());
         }
     }
+
+    public void saveStormData() {
+        try {
+            Path path = Paths.get(plugin.getDataFolder().getAbsolutePath(), "stormdata.txt");
+            Files.createDirectories(path.getParent());
+            Files.write(path, String.valueOf(remainingStormSeconds).getBytes());
+            Bukkit.getLogger().info("Storm data saved: " + remainingStormSeconds + " seconds remaining.");
+        } catch (IOException e) {
+            Bukkit.getLogger().severe("Error saving storm data: " + e.getMessage());
+        }
+    }
+
 }

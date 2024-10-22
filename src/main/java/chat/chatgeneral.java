@@ -1,13 +1,9 @@
 package chat;
 
-import net.md_5.bungee.api.ChatColor;
-import org.bukkit.util.*;
+import org.bukkit.ChatColor;
 import org.bukkit.event.Listener;
-import org.bukkit.plugin.java.JavaPlugin;
-
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.scoreboard.Team;
 public class chatgeneral implements Listener {
@@ -23,12 +19,14 @@ public class chatgeneral implements Listener {
 
         // Si el jugador tiene un equipo, extraemos los valores
         if (team != null) {
-            prefix = team.getPrefix() != null ? team.getPrefix() : ""; // Obtener prefijo del equipo
-            suffix = team.getSuffix() != null ? team.getSuffix() : ""; // Obtener sufijo del equipo
+            team.getPrefix();
+            prefix = team.getPrefix(); // Obtener prefijo del equipo
+            team.getSuffix();
+            suffix = team.getSuffix(); // Obtener sufijo del equipo
         }
 
         // Formatear el mensaje eliminando los "<>" y agregando prefijos y sufijos
-        String formattedMessage = prefix + player.getName() + suffix + " > " + message;
+        String formattedMessage = prefix + player.getName() + suffix + ChatColor.RESET + " > " + message;
         // Establecer el nuevo formato del chat
         event.setFormat(formattedMessage);
     }

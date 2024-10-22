@@ -7,14 +7,13 @@ import org.bukkit.command.PluginCommand;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
-import net.md_5.bungee.api.ChatColor;
+import org.bukkit.ChatColor;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import Commands.DeathStormCommand;
 import Commands.DayCommandHandler;
 import Commands.ReviveCommand;
 import chat.chatgeneral;
-
 
 import java.util.Objects;
 
@@ -28,23 +27,25 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     public void onEnable() {
         Bukkit.getConsoleSender().sendMessage(
                 ChatColor.translateAlternateColorCodes('&', Prefix + "&aha sido habilitado!, &eVersion: " + Version));
+
         // Registra los eventos de esta clase
         Bukkit.getServer().getPluginManager().registerEvents(this, this);
 
-        //resgistra evento de revivir
+        // Registra evento de revivir
         Objects.requireNonNull(this.getCommand("revive")).setExecutor(new ReviveCommand(this));
-        //registra evento de doble totem
+
+        // Registra evento de doble totem
         getServer().getPluginManager().registerEvents(new DoubleLifeTotemHandler(this), this);
         getLogger().info("DoubleLifeTotemHandler registered!");
 
-        //registra los cambios de los dias
-        PluginCommand changeDayCommand = getCommand("cambiardia");
-        PluginCommand dayCommand = getCommand("dia");
+        // Inicializa el DayHandler para manejar los días
+        DayHandler dayHandler = new DayHandler(this);
 
-        //DeathStorm
-        deathStormHandler = new DeathStormHandler(this);
+        // DeathStorm
+        deathStormHandler = new DeathStormHandler(this, dayHandler); // Pasa dayHandler al DeathStormHandler
         getServer().getPluginManager().registerEvents(deathStormHandler, this);
 
+        // Comandos de DeathStorm
         PluginCommand resetCommand = getCommand("resetdeathstorm");
         PluginCommand addCommand = getCommand("adddeathstorm");
         PluginCommand removeCommand = getCommand("removedeathstorm");
@@ -58,32 +59,46 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         if (removeCommand != null) {
             removeCommand.setExecutor(new DeathStormCommand(deathStormHandler));
         }
+
+        // Comandos de días
+        PluginCommand changeDayCommand = getCommand("cambiardia");
+        PluginCommand dayCommand = getCommand("dia");
+
         if (changeDayCommand != null) {
-            changeDayCommand.setExecutor(new DayCommandHandler(deathStormHandler));
+            changeDayCommand.setExecutor(new DayCommandHandler(dayHandler));  // Usa DayHandler
         }
         if (dayCommand != null) {
-            dayCommand.setExecutor(new DayCommandHandler(deathStormHandler));
+            dayCommand.setExecutor(new DayCommandHandler(dayHandler));  // Usa DayHandler
         }
 
         deathStormHandler.loadStormData(); // Cargar datos de la tormenta al iniciar
 
-        //registrar eventos de chat
+        // Registrar eventos de chat
         getServer().getPluginManager().registerEvents(new chatgeneral(), this);
 
         // Registrar el comando /ping
         this.getCommand("ping").setExecutor(new PingCommand(this));
 
-        //registrar eventos de list
+        // Registrar eventos de list
         new VHList(this).runTaskTimer(this, 0, 20);
+
+        // Registrar el manejador de tótems normales
+        getServer().getPluginManager().registerEvents(new NormalTotemHandler(this), this);
     }
 
     public void onDisable() {
         Bukkit.getConsoleSender().sendMessage(
                 ChatColor.translateAlternateColorCodes('&', Prefix + "&aha sido deshabilitado!, &eVersion: " + Version));
 
-        //deathsotrm
-        deathStormHandler.saveStormData(); // Guardar datos de la tormenta al deshabilitar
+        // Guardar datos de DeathStorm al deshabilitar
+        if (deathStormHandler != null) {
+            deathStormHandler.saveStormData();
+        } else {
+            Bukkit.getLogger().severe("deathStormHandler is null, cannot save storm data.");
+        }
     }
+
+
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         String message = ChatColor.LIGHT_PURPLE + "" + ChatColor.BOLD + "∨ " + event.getPlayer().getName() + ChatColor.RESET + ChatColor.LIGHT_PURPLE + " ha entrado a Viciont Hardcore 3";
