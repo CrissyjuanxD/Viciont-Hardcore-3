@@ -10,8 +10,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public class DoubleLifeTotemHandler implements Listener {
+
     private final ViciontHardcore3 plugin;
-    private final String Prefix = ChatColor.translateAlternateColorCodes('&', "&d&lViciont&5&lHardcore &5&l2&7➤ &f");
 
     public DoubleLifeTotemHandler(ViciontHardcore3 plugin) {
         this.plugin = plugin;
@@ -29,9 +29,6 @@ public class DoubleLifeTotemHandler implements Listener {
         meta.setCustomModelData(life);
         item.setItemMeta(meta);
 
-        // Muestra un mensaje en el chat solo para el jugador
-        player.sendMessage(ChatColor.translateAlternateColorCodes('&', Prefix + ChatColor.DARK_RED + "Haz consumido 1 vida del " + ChatColor.GOLD + "Tótem de Doble Vida"));
-
         // Mensaje a todos los jugadores
         broadcastTotemMessage(player);
 
@@ -45,7 +42,7 @@ public class DoubleLifeTotemHandler implements Listener {
         }
     }
 
-    // Método para enviar un mensaje a todos los jugadores cuando se usa un tótem de doble vida
+    //Método para enviar un mensaje a todos los jugadores cuando se usa un tótem de doble vida
     private void broadcastTotemMessage(Player player) {
         String message = ChatColor.translateAlternateColorCodes('&',"\uDBE8\uDCF6" + ChatColor.YELLOW + ChatColor.BOLD + player.getName() + ChatColor.RESET + ChatColor.YELLOW + " ha consumido un tótem de doble vida");
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {

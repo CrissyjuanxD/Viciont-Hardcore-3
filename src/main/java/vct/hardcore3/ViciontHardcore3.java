@@ -14,7 +14,7 @@ import Commands.DeathStormCommand;
 import Commands.DayCommandHandler;
 import Commands.ReviveCommand;
 import chat.chatgeneral;
-
+import Dificultades.DayOneChanges;
 import java.util.Objects;
 
 public class ViciontHardcore3 extends JavaPlugin implements Listener {
@@ -22,8 +22,10 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     public String Prefix = "&d&lViciont&5&lHardcore &5&l3&7➤ &f";
     public String Version = getDescription().getVersion();
     private DeathStormHandler deathStormHandler;
+    private DayHandler dayHandler; // Asegurarse de usar esta variable de instancia
+    private DayOneChanges dayOneChanges;
 
-
+    @Override
     public void onEnable() {
         Bukkit.getConsoleSender().sendMessage(
                 ChatColor.translateAlternateColorCodes('&', Prefix + "&aha sido habilitado!, &eVersion: " + Version));
@@ -34,12 +36,12 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         // Registra evento de revivir
         Objects.requireNonNull(this.getCommand("revive")).setExecutor(new ReviveCommand(this));
 
-        // Registra evento de doble totem
+        // Registra evento de doble tótem
         getServer().getPluginManager().registerEvents(new DoubleLifeTotemHandler(this), this);
         getLogger().info("DoubleLifeTotemHandler registered!");
 
-        // Inicializa el DayHandler para manejar los días
-        DayHandler dayHandler = new DayHandler(this);
+        // Inicializa correctamente el DayHandler y asigna a la variable de instancia
+        dayHandler = new DayHandler(this);
 
         // DeathStorm
         deathStormHandler = new DeathStormHandler(this, dayHandler); // Pasa dayHandler al DeathStormHandler
@@ -65,13 +67,14 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         PluginCommand dayCommand = getCommand("dia");
 
         if (changeDayCommand != null) {
-            changeDayCommand.setExecutor(new DayCommandHandler(dayHandler));  // Usa DayHandler
+            changeDayCommand.setExecutor(new DayCommandHandler(dayHandler));  // Usa DayHandler correctamente
         }
         if (dayCommand != null) {
-            dayCommand.setExecutor(new DayCommandHandler(dayHandler));  // Usa DayHandler
+            dayCommand.setExecutor(new DayCommandHandler(dayHandler));  // Usa DayHandler correctamente
         }
 
-        deathStormHandler.loadStormData(); // Cargar datos de la tormenta al iniciar
+        // Cargar datos de DeathStorm al iniciar
+        deathStormHandler.loadStormData();
 
         // Registrar eventos de chat
         getServer().getPluginManager().registerEvents(new chatgeneral(), this);
@@ -84,8 +87,14 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
         // Registrar el manejador de tótems normales
         getServer().getPluginManager().registerEvents(new NormalTotemHandler(this), this);
+
+        // Inicializa los cambios del día 1
+        dayOneChanges = new DayOneChanges(this);
+        dayOneChanges.apply(); // Aplica los cambios del día 1
+        new DayOneChanges(this).registerCustomRecipe(); // Registrar receta personalizada
     }
 
+    @Override
     public void onDisable() {
         Bukkit.getConsoleSender().sendMessage(
                 ChatColor.translateAlternateColorCodes('&', Prefix + "&aha sido deshabilitado!, &eVersion: " + Version));
@@ -97,6 +106,8 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
             Bukkit.getLogger().severe("deathStormHandler is null, cannot save storm data.");
         }
     }
+
+
 
 
     @EventHandler
@@ -112,5 +123,11 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     }
 
     //Formateo del chat
+
+    // Método para acceder a DayHandler
+    public DayHandler getDayHandler() {
+        return dayHandler;  // Retorna la instancia correctamente inicializada
+    }
+
 
 }

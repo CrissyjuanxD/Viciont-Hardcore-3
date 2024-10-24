@@ -26,7 +26,7 @@ public class chatgeneral implements Listener {
         }
 
         // Formatear el mensaje eliminando los "<>" y agregando prefijos y sufijos
-        String formattedMessage = prefix + player.getName() + suffix + ChatColor.RESET + " > " + message;
+        String formattedMessage = prefix + player.getName() + suffix + ChatColor.GRAY + ChatColor.BOLD + " ➤ " + ChatColor.RESET + message;
         // Establecer el nuevo formato del chat
         event.setFormat(formattedMessage);
     }
