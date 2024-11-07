@@ -2,79 +2,82 @@ package vct.hardcore3;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.scheduler.BukkitRunnable;
 
 public class DoubleLifeTotemHandler implements Listener {
 
     private final ViciontHardcore3 plugin;
+    private boolean doubleLifeTotemUsed = false; // Bandera para evitar mensajes duplicados
 
     public DoubleLifeTotemHandler(ViciontHardcore3 plugin) {
         this.plugin = plugin;
     }
 
     public boolean isDoubleLifeTotem(ItemStack item) {
-        // Comprueba si el ítem tiene un CustomModelData de 2
-        return item.hasItemMeta() && item.getItemMeta().hasCustomModelData() && item.getItemMeta().getCustomModelData() == 2;
-    }
-
-    public void useDoubleLifeTotem(Player player, ItemStack item) {
-        // Reduce en uno la "vida" del tótem
-        ItemMeta meta = item.getItemMeta();
-        int life = meta.getCustomModelData() - 1;
-        meta.setCustomModelData(life);
-        item.setItemMeta(meta);
-
-        // Mensaje a todos los jugadores
-        broadcastTotemMessage(player);
-
-        // Muestra un título
-        player.sendTitle("\uE062", "", 10, 15, 10);
-
-        // Comprueba si el tótem ha sido usado completamente
-        if (life <= 0) {
-            // Elimina el tótem del inventario del jugador
-            player.getInventory().removeItem(item);
+        if (item != null && item.getType() == Material.TOTEM_OF_UNDYING) {
+            ItemMeta meta = item.getItemMeta();
+            return meta != null && meta.hasCustomModelData() && meta.getCustomModelData() == 2;
         }
+        return false;
     }
 
-    //Método para enviar un mensaje a todos los jugadores cuando se usa un tótem de doble vida
+    public boolean isDoubleLifeTotemUsed() {
+        return doubleLifeTotemUsed;
+    }
+
     private void broadcastTotemMessage(Player player) {
-        String message = ChatColor.translateAlternateColorCodes('&',"\uDBE8\uDCF6" + ChatColor.YELLOW + ChatColor.BOLD + player.getName() + ChatColor.RESET + ChatColor.YELLOW + " ha consumido un tótem de doble vida");
+        String message = ChatColor.translateAlternateColorCodes('&', "\uDBE8\uDCF6" + ChatColor.YELLOW + ChatColor.BOLD + player.getName() + ChatColor.RESET + ChatColor.YELLOW + " ha consumido un tótem de doble vida");
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             onlinePlayer.sendMessage(message);
         }
     }
+
     @EventHandler
     public void onEntityDamage(EntityDamageEvent event) {
-        // Comprueba si la entidad dañada es un jugador
         if (event.getEntity() instanceof Player) {
             Player player = (Player) event.getEntity();
             ItemStack mainHandItem = player.getInventory().getItemInMainHand();
             ItemStack offHandItem = player.getInventory().getItemInOffHand();
 
-            // Comprueba si el ítem en la mano principal es un tótem de doble vida
-            if (isDoubleLifeTotem(mainHandItem) || isDoubleLifeTotem(offHandItem)) {
-                ItemStack itemToUse = isDoubleLifeTotem(mainHandItem) ? mainHandItem : offHandItem;
+            boolean isMainHandTotem = isDoubleLifeTotem(mainHandItem);
+            boolean isOffHandTotem = isDoubleLifeTotem(offHandItem);
 
-                // Comprueba si el daño causaría la muerte
-                if (player.getHealth() - event.getFinalDamage() <= 0) {
-                    // Cancela el evento de daño
-                    event.setCancelled(true);
+            // Verifica si el jugador moriría y si algún tótem de doble vida puede salvarlo
+            if ((isMainHandTotem || isOffHandTotem) && player.getHealth() - event.getFinalDamage() <= 0) {
+                // Si hay un tótem normal en la mano principal, no activamos el tótem de doble vida
+                if (!isMainHandTotem && mainHandItem.getType() == Material.TOTEM_OF_UNDYING) {
 
-                    // Restaura la salud del jugador
-                    player.setHealth(player.getMaxHealth());
-
-                    // Reduce en uno la "vida" del tótem
-                    useDoubleLifeTotem(player, itemToUse);
+                    String message = ChatColor.translateAlternateColorCodes('&', "\uDBE8\uDCF6" + ChatColor.YELLOW + ChatColor.BOLD + player.getName() + ChatColor.RESET + ChatColor.YELLOW + " ha consumido un tótem");
+                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                        onlinePlayer.sendMessage(message);
+                    }
+                    return; // Se activa el tótem normal en la mano principal, no tocar el de doble vida
                 }
+
+                // Marca que el tótem de doble vida se ha usado
+                doubleLifeTotemUsed = true;
+                broadcastTotemMessage(player);
+
+                // Determina el tótem a activar y en qué ranura reemplazarlo
+                int slotIndex = isMainHandTotem ? player.getInventory().getHeldItemSlot() : 40;
+
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        if (doubleLifeTotemUsed) { // Reemplaza solo si realmente se usó
+                            player.getInventory().setItem(slotIndex, new ItemStack(Material.TOTEM_OF_UNDYING));
+                            doubleLifeTotemUsed = false; // Reinicia la bandera
+                        }
+                    }
+                }.runTaskLater(plugin, 5); // Espera de 5 ticks
             }
         }
     }
 }
-
-

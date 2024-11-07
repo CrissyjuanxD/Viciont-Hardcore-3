@@ -29,6 +29,8 @@ public class DeathStormHandler implements Listener {
     private final Map<UUID, Integer> deathCount = new HashMap<>();
     private int remainingStormSeconds = 0;
     private boolean isDeathStormActive = false;
+    private boolean isDeathMessageActive = false;
+
 
     public DeathStormHandler(JavaPlugin plugin, DayHandler dayHandler) {
         this.plugin = plugin;
@@ -46,9 +48,20 @@ public class DeathStormHandler implements Listener {
         int increment = 3600 * currentDay; // Cada muerte agrega horas basadas en el día actual
         remainingStormSeconds += increment;
         isDeathStormActive = true;
+        isDeathMessageActive = true; // Activar la bandera
+
         startStorm();
         saveStormData();
+
+        // Pausar el temporizador de DeathStorm mientras se muestra el mensaje de muerte
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                isDeathMessageActive = false; // Desactivar la bandera después de 5 segundos (o el tiempo necesario)
+            }
+        }.runTaskLater(plugin, 5 * 20); // Ajusta el tiempo según la duración de tu mensaje de muerte
     }
+
 
     @EventHandler
     public void onWeatherChange(WeatherChangeEvent event) {
@@ -90,6 +103,11 @@ public class DeathStormHandler implements Listener {
                     return;
                 }
 
+                // Verificar si el mensaje de muerte está activo
+                if (isDeathMessageActive) {
+                    return; // No mostrar el action bar de la tormenta mientras se muestra el mensaje de muerte
+                }
+
                 int hours = remainingStormSeconds / 3600;
                 int minutes = (remainingStormSeconds % 3600) / 60;
                 int seconds = remainingStormSeconds % 60;
@@ -102,6 +120,7 @@ public class DeathStormHandler implements Listener {
                 remainingStormSeconds--;
             }
         };
+;
 
         stormTask.runTaskTimer(plugin, 0, 20);
     }

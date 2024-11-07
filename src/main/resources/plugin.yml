@@ -8,17 +8,45 @@ commands:
     description: Revive a player.
   resetdeathstorm:
     description: Resetea la DeathStorm
+    permission: viciont_hardcore3.resetdeathstorm
+    permission-message: No tienes permiso para usar este comando.
   adddeathstorm:
     description: Añade horas a la DeathStorm
     usage: /adddeathstorm <horas>
+    permission: viciont_hardcore3.adddeathstorm
+    permission-message: No tienes permiso para usar este comando.
   removedeathstorm:
     description: Remueve horas de la DeathStorm
     usage: /removedeathstorm
+    permission: viciont_hardcore3.removedeathstorm
+    permission-message: No tienes permiso para usar este comando.
   cambiardia:
     description: Cambia manualmente al día especificado
     usage: /cambiardia <día>
+    permission: viciont_hardcore3.cambiardia
+    permission-message: No tienes permiso para usar este comando.
   dia:
     description: Muestra el día actual de Viciont Hardcore 3
   ping:
     description: Muestra tu ping actual en milisegundos.
     usage: /ping
+  giveessence:
+    description: Da al jugador una esencia específica.
+    usage: /giveessence <nombre de esencia>
+    permission: viciont_hardcore3.giveessence
+    permission-message: No tienes permiso para usar este comando.
+  ruletavct:
+    description: Comando para reproducir la animación de la ruleta.
+    usage: /ruletavct <json>
+    permission: viciont_hardcore3.ruletavct
+    permission-message: No tienes permiso para usar este comando.
+  muertevct:
+    description: Comando para reproducir la animación de la Muerte.
+    usage: /muertevct <json>
+    permission: viciont_hardcore3.muertevct
+    permission-message: No tienes permiso para usar este comando.
+  give_corrupted_block:
+    description: Gives a Corrupted Block to the player.
+    usage: /give_corrupted_block
+    permission: viciont_hardcore3.give_corrupted_block
+    permission-message: You don't have permission to use this command.

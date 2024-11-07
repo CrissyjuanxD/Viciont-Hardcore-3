@@ -8,16 +8,17 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityResurrectEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 public class NormalTotemHandler implements Listener {
+
     private final ViciontHardcore3 plugin;
-    private final String Prefix = ChatColor.translateAlternateColorCodes('&', "&d&lViciont&5&lHardcore &5&l2&7➤ &f");
 
     public NormalTotemHandler(ViciontHardcore3 plugin) {
         this.plugin = plugin;
     }
 
-    private void broadcastTotemMessage(Player player) {
+    private void broadcastNormalTotemMessage(Player player) {
         String message = ChatColor.translateAlternateColorCodes('&', "\uDBE8\uDCF6" + ChatColor.YELLOW + ChatColor.BOLD + player.getName() + ChatColor.RESET + ChatColor.YELLOW + " ha consumido un tótem");
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             onlinePlayer.sendMessage(message);
@@ -26,14 +27,26 @@ public class NormalTotemHandler implements Listener {
 
     @EventHandler
     public void onPlayerTotemUse(EntityResurrectEvent event) {
-        // Verificar si la entidad que se resucita es un jugador
         if (event.getEntity() instanceof Player) {
             Player player = (Player) event.getEntity();
 
-            // Verificar si el tótem fue usado (evento no cancelado)
-            if (event.isCancelled() == false) {
-                // Enviar el mensaje a todos los jugadores
-                broadcastTotemMessage(player);
+            // Verifica si ya se activó un tótem de doble vida y no muestra mensaje si es el caso
+            if (plugin.getDoubleLifeTotemHandler().isDoubleLifeTotemUsed()) {
+                return;
+            }
+
+            if (!event.isCancelled()) {
+                ItemStack totemItem = player.getInventory().getItemInOffHand();
+                if (totemItem.getType() != Material.TOTEM_OF_UNDYING) {
+                    totemItem = player.getInventory().getItemInMainHand();
+                }
+
+                ItemMeta meta = totemItem.getItemMeta();
+                boolean isNormalTotem = meta == null || !meta.hasCustomModelData() || meta.getCustomModelData() == 1;
+
+                if (isNormalTotem) {
+                    broadcastNormalTotemMessage(player);
+                }
             }
         }
     }

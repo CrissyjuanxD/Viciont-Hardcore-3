@@ -19,87 +19,108 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import vct.hardcore3.DayHandler;
 import vct.hardcore3.ViciontHardcore3;
-import java.util.*;
 import org.bukkit.metadata.MetadataValue;
+
+import java.util.*;
 
 public class DayOneChanges implements Listener {
     private final JavaPlugin plugin;
     private final Random random = new Random();
     private final Map<UUID, Integer> zombieTasks = new HashMap<>();
-    // Etiqueta para identificar a los Corrupted Zombies
     private final NamespacedKey corruptedKey;
+    private boolean isApplied = false; // Para asegurarnos de que solo se apliquen los cambios una vez
 
     public DayOneChanges(JavaPlugin plugin) {
-
         this.plugin = plugin;
-        this.corruptedKey = new NamespacedKey(plugin, "corrupted_zombie"); // Ahora plugin ya está inicializado
+        this.corruptedKey = new NamespacedKey(plugin, "corrupted_zombie");
     }
 
+    // Método para aplicar cambios
     public void apply() {
-        // Registra el evento para los mobs y portales
-        Bukkit.getPluginManager().registerEvents(this, plugin);
+        if (!isApplied) {
+            // Registra los eventos solo cuando se aplica
+            Bukkit.getPluginManager().registerEvents(this, plugin);
+            registerCustomRecipe();
+            isApplied = true;
+        }
     }
 
+    // Método para revertir cambios
     public void revert() {
-        // Para revertir cambios, añade la lógica aquí
+        if (isApplied) {
+            // Remueve todos los zombies y spiders corruptos del mundo
+            for (World world : Bukkit.getWorlds()) {
+                for (Entity entity : world.getEntities()) {
+                    if (entity instanceof Zombie zombie && zombie.getPersistentDataContainer().has(corruptedKey, PersistentDataType.BYTE)) {
+                        zombie.remove();
+                    }
+                    if (entity instanceof Spider spider && spider.getCustomName() != null &&
+                            spider.getCustomName().equals(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Spider")) {
+                        spider.remove();
+                    }
+                }
+            }
+
+            // Remueve recetas personalizadas
+            NamespacedKey key = new NamespacedKey(plugin, "corrupted_steak");
+            Bukkit.removeRecipe(key);
+
+            // Cancela los runnables de zombies corruptos
+            for (Integer taskId : zombieTasks.values()) {
+                Bukkit.getScheduler().cancelTask(taskId);
+            }
+            zombieTasks.clear();
+
+            isApplied = false;
+        }
     }
+
 
     @EventHandler
     public void onSpiderSpawn(EntitySpawnEvent event) {
-        if (event.getEntityType() == EntityType.SPIDER) {
-            if (random.nextInt(25) == 0) { // 1 de cada 25
-                Spider spider = (Spider) event.getEntity(); // Cast a Spider
-                spider.setCustomName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Spider"); // Nombre personalizado
-                spider.setCustomNameVisible(true); // Hacer que el nombre sea visible
-                // Añadir efectos
-                spider.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 0)); // Velocidad I
-                spider.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, Integer.MAX_VALUE, 0)); // Fuerza I (cambia si está disponible)
+        if (isApplied && event.getEntityType() == EntityType.SPIDER) {
+            if (random.nextInt(25) == 0) {
+                Spider spider = (Spider) event.getEntity();
+                spider.setCustomName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Spider");
+                spider.setCustomNameVisible(true);
+                spider.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 0));
+                spider.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, Integer.MAX_VALUE, 0));
             }
         }
     }
 
-
-    // Evento de aparición de zombies
     @EventHandler
     public void onZombieSpawn(EntitySpawnEvent event) {
-        if (event.getEntityType() == EntityType.ZOMBIE && random.nextInt(25) == 0) { // 1 de cada 25
+        if (isApplied && event.getEntityType() == EntityType.ZOMBIE && random.nextInt(2) == 0) {
             Zombie zombie = (Zombie) event.getEntity();
             zombie.getPersistentDataContainer().set(corruptedKey, PersistentDataType.BYTE, (byte) 1);
-
             zombie.setCustomName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Zombie");
             zombie.setCustomNameVisible(true);
             zombie.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 0));
-
             startSnowballRunnable(zombie);
         }
     }
 
-
-
-    // Runnable para lanzar bolas de nieve
     public void startSnowballRunnable(Zombie zombie) {
         int taskId = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (zombie == null || zombie.isDead() || !zombie.getPersistentDataContainer().has(corruptedKey, PersistentDataType.BYTE)) {
-                if (zombie != null) { // Verificar que zombie no sea null antes de llamar a getUniqueId
-                    Integer zombieTaskId = zombieTasks.remove(zombie.getUniqueId());
-                    if (zombieTaskId != null) {
-                        Bukkit.getScheduler().cancelTask(zombieTaskId);
-                    }
+                Integer zombieTaskId = zombieTasks.remove(zombie.getUniqueId());
+                if (zombieTaskId != null) {
+                    Bukkit.getScheduler().cancelTask(zombieTaskId);
                 }
                 return;
             }
 
             for (Player player : Bukkit.getOnlinePlayers()) {
-                if (isPlayerInRange(zombie, player) && Math.random() < 0.3) { // 30% probabilidad
+                if (isPlayerInRange(zombie, player) && Math.random() < 0.3) {
                     lanzarSnowball(zombie, player);
                 }
             }
-        }, 0L, 40L).getTaskId(); // Cada 40 ticks (2 segundos)
+        }, 0L, 40L).getTaskId();
+
         zombieTasks.put(zombie.getUniqueId(), taskId);
     }
 
-
-    // Evento al morir un zombie para cancelar su runnable
     @EventHandler
     public void onZombieDeath(EntityDeathEvent event) {
         if (event.getEntity() instanceof Zombie zombie && zombie.getPersistentDataContainer().has(corruptedKey, PersistentDataType.BYTE)) {
@@ -111,42 +132,30 @@ public class DayOneChanges implements Listener {
     private boolean isPlayerInRange(Zombie zombie, Player player) {
         double distanceXZ = zombie.getLocation().distanceSquared(player.getLocation()) - Math.pow(zombie.getLocation().getY() - player.getLocation().getY(), 2);
         double distanceY = Math.abs(zombie.getLocation().getY() - player.getLocation().getY());
-        return distanceXZ <= 7 * 7 && distanceY <= 7; // 7 bloques en el plano y altura máxima de 7
+        return distanceXZ <= 7 * 7 && distanceY <= 7;
     }
 
     @EventHandler
     public void onZombieAttack(EntityDamageByEntityEvent event) {
-        if (event.getDamager() instanceof Zombie zombie && event.getEntity() instanceof Player) {
-
-            // Verifica si es un "Corrupted Zombie"
+        if (isApplied && event.getDamager() instanceof Zombie zombie && event.getEntity() instanceof Player) {
             if (zombie.getCustomName() != null && zombie.getCustomName().equals(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Zombie")) {
-                // Daño melee
                 event.setDamage(2);
             }
         }
     }
 
-
-
-    // Lanzar bola de nieve personalizada con partículas y efectos
     private void lanzarSnowball(Zombie zombie, Player player) {
         Snowball snowball = zombie.launchProjectile(Snowball.class);
-
-        // Dirección y velocidad
         Vector direction = player.getLocation().toVector().subtract(zombie.getLocation().toVector()).normalize().multiply(1.5);
         snowball.setVelocity(direction);
         snowball.setCustomName("Corrupted Zombie Snowball");
-
-        // Añadir knockback y partículas moradas
-        snowball.setMetadata("knockback", new FixedMetadataValue(plugin, 3));
+        snowball.setMetadata("knockback", new FixedMetadataValue(plugin, 2));
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (snowball.isValid()) {
                 snowball.getWorld().spawnParticle(Particle.PORTAL, snowball.getLocation(), 10);
                 snowball.getWorld().spawnParticle(Particle.SMOKE, snowball.getLocation(), 5, 0.2, 0.2, 0.2, 0.1);
             }
         }, 0L, 1L);
-
-        // Sonido al impactar
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (snowball.isValid()) {
                 snowball.getWorld().playSound(snowball.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_BLAST, 1.0F, 2.0F);
@@ -159,7 +168,7 @@ public class DayOneChanges implements Listener {
     public void onSnowballHit(EntityDamageByEntityEvent event) {
         if (event.getDamager() instanceof Snowball snowball && event.getEntity() instanceof Player player) {
             if ("Corrupted Zombie Snowball".equals(snowball.getCustomName())) {
-                event.setDamage(4); // Daño de bola de nieve
+                event.setDamage(2); // Daño de bola de nieve
                 player.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 50, 0)); // Veneno I (2.5 seg)
                 player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 100, 0)); // Debilidad I (5 seg)
 
@@ -168,7 +177,6 @@ public class DayOneChanges implements Listener {
                 Vector knockback = player.getLocation().toVector().subtract(snowball.getLocation().toVector()).normalize().multiply(knockbackLevel);
                 player.setVelocity(knockback);
             } else {
-                // Cancelar daño si es otra entidad que no sea un jugador
                 event.setCancelled(true);
             }
         }
@@ -191,7 +199,7 @@ public class DayOneChanges implements Listener {
 
                     // Aplica knockback a los jugadores cercanos
                     for (Player player : nearbyPlayers) {
-                        Vector knockback = player.getLocation().toVector().subtract(impactLocation.toVector()).normalize().multiply(2);
+                        Vector knockback = player.getLocation().toVector().subtract(impactLocation.toVector()).normalize().multiply(1);
                         player.setVelocity(knockback);
                     }
 
@@ -221,45 +229,58 @@ public class DayOneChanges implements Listener {
     }
 
     public void registerCustomRecipe() {
+        NamespacedKey key = new NamespacedKey(plugin, "corrupted_steak");
+
+        // Verifica si la receta ya existe para evitar duplicados
+        if (Bukkit.getRecipe(key) != null) {
+            return; // Sale si la receta ya está registrada
+        }
+
+        // Crea el item personalizado
         ItemStack customItem = new ItemStack(Material.COOKED_BEEF);
         ItemMeta meta = customItem.getItemMeta();
         meta.setDisplayName(ChatColor.DARK_PURPLE + "Carne Corrupta");
         meta.setCustomModelData(2);
         customItem.setItemMeta(meta);
 
-        ShapedRecipe customRecipe = new ShapedRecipe(new NamespacedKey(plugin, "corrupted_steak"), customItem);
+        // Define la receta
+        ShapedRecipe customRecipe = new ShapedRecipe(key, customItem);
         customRecipe.shape(" F ", " F ", " F ");
         customRecipe.setIngredient('F', Material.ROTTEN_FLESH);
 
+        // Añade la receta al servidor
         plugin.getServer().addRecipe(customRecipe);
     }
 
+
     @EventHandler
     public void onPlayerEat(PlayerItemConsumeEvent event) {
-        ItemStack item = event.getItem();
-        if (item.getType() == Material.COOKED_BEEF && item.getItemMeta().hasCustomModelData() && item.getItemMeta().getCustomModelData() == 2) {
+        if (isApplied && event.getItem().getType() == Material.COOKED_BEEF && event.getItem().getItemMeta().hasCustomModelData() && event.getItem().getItemMeta().getCustomModelData() == 2) {
             Player player = event.getPlayer();
-            player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 300, 0));  // 15 segundos de náuseas
-            player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 60, 0));  // 3 segundos de saturación
+            player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 300, 0));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 60, 0));
         }
     }
 
     @EventHandler
     public void onPortalEnter(PlayerPortalEvent event) {
-        Player player = event.getPlayer();
-        DayHandler dayHandler = ((ViciontHardcore3) plugin).getDayHandler();
-        if (dayHandler.getCurrentDay() < 4 && event.getCause() == PlayerPortalEvent.TeleportCause.NETHER_PORTAL) {
-            event.setCancelled(true);
-            player.sendMessage(ChatColor.RED + "¡El Nether está cerrado hasta el día 4!");
+        if (isApplied) {
+            DayHandler dayHandler = ((ViciontHardcore3) plugin).getDayHandler();
+            if (dayHandler.getCurrentDay() < 4 && event.getCause() == PlayerPortalEvent.TeleportCause.NETHER_PORTAL) {
+                event.setCancelled(true);
+                event.getPlayer().sendMessage(ChatColor.RED + "¡El Nether está cerrado hasta el día 4!");
+            }
         }
     }
 
     @EventHandler
     public void onRaidTrigger(RaidTriggerEvent event) {
-        DayHandler dayHandler = ((ViciontHardcore3) plugin).getDayHandler();
-        if (dayHandler.getCurrentDay() < 2) {
-            event.setCancelled(true);
-            event.getPlayer().sendMessage(ChatColor.RED + "¡Las Raids están deshabilitadas hasta el día 2!");
+        if (isApplied) {
+            DayHandler dayHandler = ((ViciontHardcore3) plugin).getDayHandler();
+            if (dayHandler.getCurrentDay() < 2) {
+                event.setCancelled(true);
+                event.getPlayer().sendMessage(ChatColor.RED + "¡Las Raids están deshabilitadas hasta el día 2!");
+            }
         }
     }
 }

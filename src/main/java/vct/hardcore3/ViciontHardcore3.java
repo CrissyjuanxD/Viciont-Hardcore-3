@@ -1,9 +1,16 @@
 package vct.hardcore3;
 
+import Blocks.Corrupted_Block;
 import Commands.PingCommand;
+import Enchants.EnhancedEnchantmentGUI;
+import Enchants.EnhancedEnchantmentTable;
+import Enchants.GiveEssenceCommand;
+import TitleListener.*;
 import list.VHList;
 import org.bukkit.*;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Zombie;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -15,6 +22,7 @@ import Commands.DayCommandHandler;
 import Commands.ReviveCommand;
 import chat.chatgeneral;
 import Dificultades.DayOneChanges;
+
 import java.util.Objects;
 
 public class ViciontHardcore3 extends JavaPlugin implements Listener {
@@ -23,7 +31,11 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     public String Version = getDescription().getVersion();
     private DeathStormHandler deathStormHandler;
     private DayHandler dayHandler; // Asegurarse de usar esta variable de instancia
+    private RuletaAnimation ruletaAnimation;
+    private MuerteAnimation muerteAnimation;
     private DayOneChanges dayOneChanges;
+    private DoubleLifeTotemHandler doubleLifeTotemHandler;
+    private NormalTotemHandler normalTotemHandler;
 
     @Override
     public void onEnable() {
@@ -36,9 +48,13 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         // Registra evento de revivir
         Objects.requireNonNull(this.getCommand("revive")).setExecutor(new ReviveCommand(this));
 
-        // Registra evento de doble tótem
-        getServer().getPluginManager().registerEvents(new DoubleLifeTotemHandler(this), this);
-        getLogger().info("DoubleLifeTotemHandler registered!");
+        // Inicializa los manejadores de eventos de totems
+        doubleLifeTotemHandler = new DoubleLifeTotemHandler(this);
+        normalTotemHandler = new NormalTotemHandler(this);
+
+        // Registra los eventos de totems
+        getServer().getPluginManager().registerEvents(doubleLifeTotemHandler, this);
+        getServer().getPluginManager().registerEvents(normalTotemHandler, this);
 
         // Inicializa correctamente el DayHandler y asigna a la variable de instancia
         dayHandler = new DayHandler(this);
@@ -85,13 +101,35 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         // Registrar eventos de list
         new VHList(this).runTaskTimer(this, 0, 20);
 
-        // Registrar el manejador de tótems normales
-        getServer().getPluginManager().registerEvents(new NormalTotemHandler(this), this);
+        // Registrar el comando "giveessence"
+        this.getCommand("giveessence").setExecutor(new GiveEssenceCommand());
+
+        // Registra la clase EnhancedEnchantmentTable para crear los ítems y recetas
+        new EnhancedEnchantmentTable(this);
+        // Registra la GUI personalizada
+        new EnhancedEnchantmentGUI(this);
+
+        //Inicializa el manejador de muerte
+        new MuerteHandler(this);
+
+        // Inicializar RuletaAnimation y MuerteAnimation
+        ruletaAnimation = new RuletaAnimation(this);
+        muerteAnimation = new MuerteAnimation(this);
+
+        // Registrar el comando y su ejecutor
+        getCommand("ruletavct").setExecutor(new RuletaCommand(ruletaAnimation));
+        getCommand("muertevct").setExecutor(new MuerteCommand(muerteAnimation));
+
+        // Registra la clase Corrupted_Block como un Listener
+        getServer().getPluginManager().registerEvents(new Corrupted_Block(this), this);
+        // Registra el comando en el plugin.yml
+        this.getCommand("give_corrupted_block").setExecutor(new Corrupted_Block(this));
 
         // Inicializa los cambios del día 1
         dayOneChanges = new DayOneChanges(this);
-        dayOneChanges.apply(); // Aplica los cambios del día 1
         new DayOneChanges(this).registerCustomRecipe(); // Registrar receta personalizada
+        applySnowballRunnableToLoadedCorruptedZombies();
+
     }
 
     @Override
@@ -105,29 +143,44 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         } else {
             Bukkit.getLogger().severe("deathStormHandler is null, cannot save storm data.");
         }
+
     }
-
-
 
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        String message = ChatColor.LIGHT_PURPLE + "" + ChatColor.BOLD + "∨ " + event.getPlayer().getName() + ChatColor.RESET + ChatColor.LIGHT_PURPLE + " ha entrado a Viciont Hardcore 3";
+        String message = ChatColor.WHITE + "" + ChatColor.BOLD + "\uE003 " + ChatColor.RESET + ChatColor.LIGHT_PURPLE + ChatColor.BOLD + event.getPlayer().getName() + ChatColor.RESET + ChatColor.LIGHT_PURPLE + " ha entrado a" + ChatColor.RESET + ChatColor.GOLD + ChatColor.BOLD + " Viciont Hardcore 3";
         event.setJoinMessage(message);
     }
 
+    //Formateo del chat
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        String message = ChatColor.GRAY + "" + ChatColor.BOLD + "∨ " + event.getPlayer().getName() + ChatColor.RESET + ChatColor.GRAY + " ha salido de Viciont Hardcore 3";
+        String message = ChatColor.WHITE + "" + ChatColor.BOLD + "\uE004 " + ChatColor.RESET + ChatColor.GRAY + ChatColor.BOLD + event.getPlayer().getName() + ChatColor.RESET + ChatColor.GRAY + " ha salido de" + ChatColor.RESET + ChatColor.GOLD + ChatColor.BOLD + " Viciont Hardcore 3";
         event.setQuitMessage(message);
     }
 
-    //Formateo del chat
 
     // Método para acceder a DayHandler
     public DayHandler getDayHandler() {
         return dayHandler;  // Retorna la instancia correctamente inicializada
     }
 
+    public DoubleLifeTotemHandler getDoubleLifeTotemHandler() {
+        return doubleLifeTotemHandler;
+    }
 
+    public void applySnowballRunnableToLoadedCorruptedZombies() {
+        for (World world : Bukkit.getWorlds()) {
+            for (Entity entity : world.getEntities()) {
+                if (entity instanceof Zombie zombie) {
+                    // Verifica si es un Corrupted Zombie revisando su nombre o usando PersistentDataContainer
+                    if (zombie.getCustomName() != null && zombie.getCustomName().equals(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Zombie")) {
+                        dayOneChanges.startSnowballRunnable(zombie); // Inicia el runnable de bolas de nieve para este zombie
+                    }
+                }
+            }
+        }
+    }
 }
+
