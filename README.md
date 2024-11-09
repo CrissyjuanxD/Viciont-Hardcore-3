@@ -1,5 +1,5 @@
 <p align="center">
-<img src="[https://github.com/CrissyjuanxD/Viciont-Hardcore-3/blob/master/assets/MINECRAFT%20VH3%20Titlle.png](https://github.com/CrissyjuanxD/imagenes_ropositorios/blob/main/MINECRAFT%20VH3%20Titlle.png)" />
+<img src="[[https://github.com/CrissyjuanxD/Viciont-Hardcore-3/blob/master/assets/MINECRAFT%20VH3%20Titlle.png]" />
 </p>
 
 <h1 align="center"> VICIONT HARDCORE 3 </h1>
