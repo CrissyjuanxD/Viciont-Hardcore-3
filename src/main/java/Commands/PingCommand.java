@@ -7,14 +7,14 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class PingCommand implements CommandExecutor {
 
     private final JavaPlugin plugin;
-    private final Map<UUID, Long> cooldowns = new HashMap<>();
+    private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
 
     public PingCommand(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -39,14 +39,14 @@ public class PingCommand implements CommandExecutor {
             long timeLeft = (lastUse + 10000) - currentTime;
 
             if (timeLeft > 0) {
-                player.sendMessage(ChatColor.GRAY + "Debes esperar " + (timeLeft / 1000) + " segundos antes de volver a usar /ping.");
+                player.sendMessage(ChatColor.GRAY + "Debes esperar " + (timeLeft / 1500) + " segundos antes de volver a usar /ping.");
                 return true;
             }
         }
 
         // Obtener el ping del jugador
         int ping = player.getPing();
-        player.sendMessage(ChatColor.LIGHT_PURPLE + "Tu ping es de " + ChatColor.GRAY + ping + "ms.");
+        player.sendMessage(ChatColor.GRAY + "Tu ping es de: " + ChatColor.LIGHT_PURPLE + ping + "ms.");
 
         // Registrar el uso del comando con la marca de tiempo actual
         cooldowns.put(playerUUID, currentTime);
@@ -54,4 +54,3 @@ public class PingCommand implements CommandExecutor {
         return true;
     }
 }
-

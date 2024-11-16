@@ -8,6 +8,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.NamespacedKey;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.ChatColor;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class EssenceFactory {
 
@@ -80,16 +84,22 @@ public class EssenceFactory {
     private static ItemStack createEssence(String name, int customModelData) {
         ItemStack essence = new ItemStack(Material.IRON_NUGGET);
         ItemMeta meta = essence.getItemMeta();
+        // Asegurarse de que el nombre sea de color azul
+        name = ChatColor.BLUE + name;  // Establece el color azul para el nombre
         meta.setDisplayName(name);
         meta.setCustomModelData(customModelData);
 
-        // Agregar brillo al ítem con un encantamiento oculto
-        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
-        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        // Configurar el lore con usos restantes
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.DARK_PURPLE + "Con esta Esencia podrás encantar");
+        lore.add(ChatColor.DARK_PURPLE + "cualquier ítem en la " + ChatColor.GOLD + "Mesa de Encantamientos Mejorada");
+        lore.add(" ");
+        lore.add(ChatColor.GRAY + "Usos restantes: 5");
+        meta.setLore(lore);
 
-        // Iniciar el contador de usos en 0
+        // Iniciar el contador de usos en 5
         PersistentDataContainer data = meta.getPersistentDataContainer();
-        data.set(new NamespacedKey("vicionthardcore3", "uses"), PersistentDataType.INTEGER, 0);
+        data.set(new NamespacedKey("vicionthardcore3", "uses"), PersistentDataType.INTEGER, 5);
 
         essence.setItemMeta(meta);
         return essence;

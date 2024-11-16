@@ -75,7 +75,7 @@
 
 
         private void applyCurrentDayChanges() {
-            if (currentDay == 1 && !dayOneChangesApplied) {
+            if (currentDay >= 1 && !dayOneChangesApplied) {
                 dayOneChanges.apply();
                 dayOneChangesApplied = true;
             }
@@ -83,7 +83,7 @@
         }
 
         private void revertCurrentDayChanges() {
-            if (dayOneChangesApplied && currentDay != 1) {  // Revierte si ya se aplicó el cambio del día 1
+            if (dayOneChangesApplied && currentDay < 1) {  // Revierte si ya se aplicó el cambio del día 1
                 dayOneChanges.revert();
                 dayOneChangesApplied = false;
             }

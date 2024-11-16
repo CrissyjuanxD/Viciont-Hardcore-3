@@ -26,17 +26,17 @@ public class EnhancedEnchantmentTable {
         ItemStack diamondPlate = new ItemStack(Material.DIAMOND);
         ItemMeta meta = diamondPlate.getItemMeta();
         meta.setDisplayName("§bPlaca de Diamante");
-        meta.setCustomModelData(2);  // Custom Model Data
+        meta.setCustomModelData(1);  // Custom Model Data
         diamondPlate.setItemMeta(meta);
         return diamondPlate;
     }
 
     // Crea el ítem personalizado "Mesa de Encantamientos Mejorada"
-    public ItemStack createEnhancedEnchantmentTable() {
-        ItemStack table = new ItemStack(Material.ENCHANTING_TABLE);
+    public static ItemStack createEnhancedEnchantmentTable() {
+        ItemStack table = new ItemStack(Material.GREEN_GLAZED_TERRACOTTA);
         ItemMeta meta = table.getItemMeta();
         meta.setDisplayName("§bMesa de Encantamientos Mejorada");
-        meta.setCustomModelData(1);  // Custom Model Data
+        meta.setCustomModelData(1);
         table.setItemMeta(meta);
         return table;
     }

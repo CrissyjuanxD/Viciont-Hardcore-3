@@ -1,7 +1,7 @@
 package vct.hardcore3;
 
-import Blocks.Corrupted_Block;
 import Commands.PingCommand;
+import Enchants.EnchantDelete;
 import Enchants.EnhancedEnchantmentGUI;
 import Enchants.EnhancedEnchantmentTable;
 import Enchants.GiveEssenceCommand;
@@ -96,7 +96,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(new chatgeneral(), this);
 
         // Registrar el comando /ping
-        this.getCommand("ping").setExecutor(new PingCommand(this));
+        Objects.requireNonNull(this.getCommand("ping")).setExecutor(new PingCommand(this));
 
         // Registrar eventos de list
         new VHList(this).runTaskTimer(this, 0, 20);
@@ -107,7 +107,10 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         // Registra la clase EnhancedEnchantmentTable para crear los ítems y recetas
         new EnhancedEnchantmentTable(this);
         // Registra la GUI personalizada
-        new EnhancedEnchantmentGUI(this);
+        getServer().getPluginManager().registerEvents(new EnhancedEnchantmentGUI(this), this);
+
+        // Registro de EnchantDelete
+        getServer().getPluginManager().registerEvents(new EnchantDelete(this), this);
 
         //Inicializa el manejador de muerte
         new MuerteHandler(this);
@@ -119,11 +122,6 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         // Registrar el comando y su ejecutor
         getCommand("ruletavct").setExecutor(new RuletaCommand(ruletaAnimation));
         getCommand("muertevct").setExecutor(new MuerteCommand(muerteAnimation));
-
-        // Registra la clase Corrupted_Block como un Listener
-        getServer().getPluginManager().registerEvents(new Corrupted_Block(this), this);
-        // Registra el comando en el plugin.yml
-        this.getCommand("give_corrupted_block").setExecutor(new Corrupted_Block(this));
 
         // Inicializa los cambios del día 1
         dayOneChanges = new DayOneChanges(this);

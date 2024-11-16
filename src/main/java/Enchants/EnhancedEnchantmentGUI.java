@@ -1,64 +1,49 @@
 package Enchants;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.block.Action;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.metadata.MetadataValue;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.ChatColor;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class EnhancedEnchantmentGUI implements Listener {
 
     private final JavaPlugin plugin;
     private final ItemStack grayPane = createGrayPane();
-    private final Map<Enchantment, Integer> essenceCustomModelDataMap;
     private final Map<Player, ItemStack[]> playerInventoryContents = new HashMap<>();
+    private final Map<Location, BukkitRunnable> particleTasks = new HashMap<>();
 
     public EnhancedEnchantmentGUI(JavaPlugin plugin) {
         this.plugin = plugin;
-        this.essenceCustomModelDataMap = new HashMap<>();
-
-        // Inicializar el mapa manualmente
-        essenceCustomModelDataMap.put(Enchantment.PROTECTION, 2);
-        essenceCustomModelDataMap.put(Enchantment.UNBREAKING, 3);
-        essenceCustomModelDataMap.put(Enchantment.MENDING, 4);
-        essenceCustomModelDataMap.put(Enchantment.EFFICIENCY, 5);
-        essenceCustomModelDataMap.put(Enchantment.FORTUNE, 6);
-        essenceCustomModelDataMap.put(Enchantment.SHARPNESS, 7);
-        essenceCustomModelDataMap.put(Enchantment.SMITE, 8);
-        essenceCustomModelDataMap.put(Enchantment.BANE_OF_ARTHROPODS, 9);
-        essenceCustomModelDataMap.put(Enchantment.FEATHER_FALLING, 10);
-        essenceCustomModelDataMap.put(Enchantment.LOOTING, 11);
-        essenceCustomModelDataMap.put(Enchantment.DEPTH_STRIDER, 12);
-        essenceCustomModelDataMap.put(Enchantment.SILK_TOUCH, 13);
-        essenceCustomModelDataMap.put(Enchantment.POWER, 14);
-
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
-    // Crear un panel gris claro
     private ItemStack createGrayPane() {
         ItemStack pane = new ItemStack(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
         ItemMeta meta = pane.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(" ");
+            meta.setCustomModelData(1);
             pane.setItemMeta(meta);
         }
         return pane;
@@ -66,9 +51,7 @@ public class EnhancedEnchantmentGUI implements Listener {
 
     // Crear y abrir la GUI personalizada
     public void openEnhancedEnchantmentTableGUI(Player player) {
-        Inventory gui = Bukkit.createInventory(null, 54, ChatColor.AQUA + "Mesa Mejorada");
-
-        // Colocar los libros de encantamiento en sus posiciones
+        Inventory gui = Bukkit.createInventory(null, 54,"\u3201\u3201" + ChatColor.WHITE + "\u3200");
         Enchantment[] enchantments = {
                 Enchantment.PROTECTION, Enchantment.UNBREAKING, Enchantment.MENDING,
                 Enchantment.EFFICIENCY, Enchantment.FORTUNE, Enchantment.SHARPNESS,
@@ -78,10 +61,9 @@ public class EnhancedEnchantmentGUI implements Listener {
         };
         int[] slots = { 13, 14, 15, 16, 22, 23, 24, 25, 31, 32, 33, 34, 40 };
         for (int i = 0; i < enchantments.length; i++) {
-            gui.setItem(slots[i], createEnchantmentBook(enchantments[i]));
+            gui.setItem(slots[i], createEnchantmentBook(enchantments[i], 1));
         }
 
-        // Colocar el cristal gris, pero dejando libres los slots 36, 37 y 38
         for (int i = 0; i < gui.getSize(); i++) {
             if (gui.getItem(i) == null && i != 36 && i != 37 && i != 38) {
                 gui.setItem(i, grayPane);
@@ -92,128 +74,567 @@ public class EnhancedEnchantmentGUI implements Listener {
         player.openInventory(gui);
     }
 
-    // Crear libros de encantamiento de nivel 1 para cada encantamiento deseado
-    private ItemStack createEnchantmentBook(Enchantment enchantment) {
+    private ItemStack createEnchantmentBook(Enchantment enchantment, int level) {
         ItemStack book = new ItemStack(Material.ENCHANTED_BOOK);
-        book.addUnsafeEnchantment(enchantment, 1);
-        ItemMeta meta = book.getItemMeta();
+        EnchantmentStorageMeta meta = (EnchantmentStorageMeta) book.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(ChatColor.LIGHT_PURPLE + enchantment.getKey().getKey() + " I");
+            meta.addStoredEnchant(enchantment, level, true); // Añade el encantamiento al NBT 'StoredEnchantments'
+
+            String enchantmentName = formatEnchantmentName(enchantment.getKey().getKey());
+            meta.setDisplayName(ChatColor.GOLD + enchantmentName + " " + ChatColor.BLUE + "Nivel " + level);
+
             book.setItemMeta(meta);
         }
         return book;
     }
 
-    // Método para crear la mesa de encantamientos en una ubicación específica
-    public void createCustomEnchantingTable(Block block) {
-        block.setType(Material.ENCHANTING_TABLE);
-        block.setMetadata("CustomModelData", new FixedMetadataValue(plugin, 1)); // Cambiar el modelo personalizado a 1
+
+    private String formatEnchantmentName(String key) {
+        Map<String, String> enchantmentNames = new HashMap<>();
+        enchantmentNames.put("protection", "Protección");
+        enchantmentNames.put("unbreaking", "Irrompibilidad");
+        enchantmentNames.put("mending", "Reparación");
+        enchantmentNames.put("efficiency", "Eficiencia");
+        enchantmentNames.put("fortune", "Fortuna");
+        enchantmentNames.put("sharpness", "Filo");
+        enchantmentNames.put("smite", "Castigo");
+        enchantmentNames.put("bane_of_arthropods", "Perdición de los Artrópodos");
+        enchantmentNames.put("feather_falling", "Caída de Pluma");
+        enchantmentNames.put("looting", "Saqueo");
+        enchantmentNames.put("depth_strider", "Agilidad Acuática");
+        enchantmentNames.put("silk_touch", "Toque de Seda");
+        enchantmentNames.put("power", "Poder");
+
+        return enchantmentNames.getOrDefault(key, key); // Retorna el nombre en español o el nombre original si no está en el mapa
     }
+
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) return;
+        Inventory inventory = event.getInventory();
+        String title = "\u3201\u3201" + ChatColor.WHITE + "\u3200";
 
-        if (!event.getView().getTitle().equals(ChatColor.AQUA + "Mesa Mejorada")) return;
+        if (event.getView().getTitle().equals(title)) {
+            int slot = event.getRawSlot();
+            Player player = (Player) event.getWhoClicked();
+            Inventory gui = event.getInventory();
+            Inventory clickedInventory = event.getClickedInventory();
 
-        int slot = event.getRawSlot();
-        if (slot < 54 && slot != 36 && slot != 37 && slot != 38) {
+            // Evitar doble procesamiento en una interacción
+            if (event.isCancelled()) {
+                return;
+            }
             event.setCancelled(true);
-            return;
-        }
 
-        ItemStack clickedItem = event.getCurrentItem();
-        if (clickedItem != null && clickedItem.getType() == Material.ENCHANTED_BOOK) {
-            // Obtener ítems de los slots específicos
-            ItemStack itemToEnchant = event.getInventory().getItem(36);
-            ItemStack lapis = event.getInventory().getItem(37);
-            ItemStack essence = event.getInventory().getItem(38);
-
-            if (itemToEnchant == null) {
-                player.sendMessage(ChatColor.RED + "No hay ítem para encantar en el slot 36.");
+            // Permitir que los jugadores interactúen con su propio inventario
+            if (clickedInventory == null || clickedInventory.equals(player.getInventory())) {
+                event.setCancelled(false);
                 return;
             }
 
-            if (lapis == null || lapis.getAmount() < 3) {
-                player.sendMessage(ChatColor.RED + "No hay suficiente lapislázuli en el slot 37.");
-                return;
+            // Detectar shift-click para actualizar el slot 36
+            if (event.isShiftClick() && clickedInventory.equals(player.getInventory())) {
+                ItemStack currentItem = event.getCurrentItem();
+                if (currentItem != null && inventory.getItem(36) == null) {
+                    // Mover el ítem al slot 36
+                    inventory.setItem(36, currentItem.clone());
+                    event.getClickedInventory().setItem(event.getSlot(), null);
+                    updateEnchantmentBooksInGUI(inventory, currentItem);
+                    player.updateInventory();
+                    return; // Detener más procesamiento
+                }
             }
 
-            if (essence == null || essence.getType() == Material.AIR) {
-                player.sendMessage(ChatColor.RED + "No hay esencia en el slot 38.");
-                return;
+            // Comprobar si el ítem es retirado del slot 36 mediante shift-click
+            if (slot == 36 && event.isShiftClick()) {
+                ItemStack currentItem = event.getCurrentItem();
+                if (currentItem == null) {
+                    resetEnchantmentBooksToLevel1(inventory);
+                }
             }
 
-            // Obtener el encantamiento del libro
-            Enchantment enchantment = clickedItem.getEnchantments().keySet().iterator().next();
-
-            // Verificar CustomModelData de la esencia
-            ItemMeta essenceMeta = essence.getItemMeta();
-            if (essenceMeta == null) {
-                player.sendMessage(ChatColor.RED + "Error al obtener la meta de la esencia.");
-                return;
+            // Manejar el caso en que un ítem es arrastrado fuera del slot 36
+            if (slot == 36 && event.getAction() == InventoryAction.PLACE_ALL && event.getCursor() == null) {
+                resetEnchantmentBooksToLevel1(inventory);
             }
 
-            int essenceModelData = essenceCustomModelDataMap.getOrDefault(enchantment, -1);
-            if (essenceMeta.getCustomModelData() != essenceModelData) {
-                player.sendMessage(ChatColor.RED + "Esencia incorrecta para este encantamiento.");
-                return;
-            }
-
-            // Verificar y actualizar el nivel de encantamiento
-            int currentLevel = itemToEnchant.getEnchantmentLevel(enchantment);
-            int nextLevel = currentLevel + 1;
-            int maxLevel = enchantment.getMaxLevel();
-
-            if (currentLevel >= maxLevel) {
-                player.sendMessage(ChatColor.RED + "El ítem ya tiene el nivel máximo de este encantamiento.");
-                return;
-            }
-
-            // Aplicar el encantamiento
-            itemToEnchant.addUnsafeEnchantment(enchantment, nextLevel);
-            lapis.setAmount(lapis.getAmount() - 3);
-
-            // Reducir los usos de la esencia
-            PersistentDataContainer data = essenceMeta.getPersistentDataContainer();
-            int uses = data.getOrDefault(new NamespacedKey(plugin, "uses"), PersistentDataType.INTEGER, 0);
-            if (uses < 4) {
-                data.set(new NamespacedKey(plugin, "uses"), PersistentDataType.INTEGER, uses + 1);
-                essence.setItemMeta(essenceMeta);
+            // Permitir interacción con los slots 36, 37 y 38
+            if (slot == 36 || slot == 37 || slot == 38) {
+                event.setCancelled(false);
+                if (slot == 36 && event.getCursor() != null) {
+                    updateEnchantmentBooksInGUI(inventory, event.getCursor());
+                }
             } else {
-                player.getInventory().remove(essence);
+                event.setCancelled(true);
             }
 
-            // Actualizar el slot de item encantado
-            event.getInventory().setItem(36, itemToEnchant);
-            player.sendMessage(ChatColor.GREEN + "Encantamiento aplicado exitosamente.");
+            if (slot < inventory.getSize()) {
+                if (slot >= 13 && slot <= 40 && slot != 36 && slot != 37 && slot != 38) {
+                    ItemStack book = gui.getItem(slot);
+                    if (book == null || !book.getType().equals(Material.ENCHANTED_BOOK)) {
+                        return;
+                    }
+
+                    EnchantmentStorageMeta meta = (EnchantmentStorageMeta) book.getItemMeta();
+                    if (meta == null) return;
+
+                    Map<Enchantment, Integer> enchantments = meta.getStoredEnchants();
+                    if (enchantments.isEmpty()) return;
+
+                    Enchantment selectedEnchantment = enchantments.keySet().iterator().next();
+                    int currentLevel = enchantments.get(selectedEnchantment);
+
+                    ItemStack itemToEnchant = gui.getItem(36);
+                    if (itemToEnchant == null) {
+                        sendMessageOnce(player, ChatColor.RED + "Coloca un objeto en el slot de encantamiento.");
+                        return;
+                    }
+
+                    if (!selectedEnchantment.canEnchantItem(itemToEnchant)) {
+                        sendMessageOnce(player, ChatColor.RED + "Este encantamiento no se puede aplicar a este objeto.");
+                        return;
+                    }
+
+                    ItemMeta itemMeta = itemToEnchant.getItemMeta();
+                    int existingLevel = itemMeta != null ? itemMeta.getEnchantLevel(selectedEnchantment) : 0;
+
+                    if (existingLevel >= selectedEnchantment.getMaxLevel()) {
+                        sendMessageOnce(player, ChatColor.RED + "Este encantamiento ya está en su nivel máximo.");
+                        return;
+                    }
+
+                    ItemStack lapis = gui.getItem(37);
+                    if (lapis == null || lapis.getAmount() < 3) {
+                        sendMessageOnce(player, ChatColor.RED + "Necesitas al menos 3 de lapislázuli.");
+                        return;
+                    }
+
+                    ItemStack essence = gui.getItem(38);
+                    if (essence == null || !isValidEssence(essence, selectedEnchantment)) {
+                        sendMessageOnce(player, ChatColor.RED + "Necesitas la esencia correspondiente.");
+                        return;
+                    }
+
+                    // Verificar que solo haya una esencia en el slot 38
+                    if (essence.getAmount() > 1) {
+                        sendMessageOnce(player, ChatColor.RED + "Solo puedes usar una esencia.");
+                        return;
+                    }
+
+                    if (player.getLevel() < 3) {
+                        sendMessageOnce(player, ChatColor.RED + "Necesitas al menos 3 niveles de experiencia.");
+                        return;
+                    }
+
+                    // Aumentar el nivel del encantamiento
+                    int newLevel = existingLevel + 1;
+                    if (newLevel > selectedEnchantment.getMaxLevel()) {
+                        newLevel = selectedEnchantment.getMaxLevel();
+                    }
+                    itemMeta.addEnchant(selectedEnchantment, newLevel, true);
+                    itemToEnchant.setItemMeta(itemMeta);
+
+                    updateEnchantmentBook(gui, slot, selectedEnchantment, newLevel);
+
+                    lapis.setAmount(lapis.getAmount() - 3);
+                    gui.setItem(37, lapis);
+
+                    int usesLeft = decrementEssenceUsage(essence);
+                    if (usesLeft > 0) {
+                        updateEssenceLore(essence, usesLeft);
+                        gui.setItem(38, essence); // Asegúrate de que la esencia se actualice en la GUI
+                    } else {
+                        gui.setItem(38, null); // Remueve la esencia si los usos llegan a 0
+                        sendMessageOnce(player, ChatColor.RED + "La esencia se ha agotado.");
+                    }
+
+                    player.setLevel(player.getLevel() - 3);
+                    player.updateInventory();
+
+                    // Reproducir sonido de encantamiento
+                    player.playSound(player.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1.0f, 1.0f);
+
+                    sendMessageOnce(player, ChatColor.GREEN + "¡Encantamiento exitoso!");
+                }
+            }
         }
     }
 
-    @EventHandler
-    public void onInventoryClose(InventoryCloseEvent event) {
-        if (!(event.getPlayer() instanceof Player player)) return;
 
-        // Recuperar el contenido del inventario original
-        if (playerInventoryContents.containsKey(player)) {
-            ItemStack[] originalContents = playerInventoryContents.get(player);
-            player.getInventory().setContents(originalContents);
-            playerInventoryContents.remove(player);
+    private void sendMessageOnce(Player player, String message) {
+        // Método auxiliar para evitar duplicación de mensajes en una sesión de evento
+        player.sendMessage(message);
+    }
+
+    private boolean isValidEssence(ItemStack essence, Enchantment enchantment) {
+        if (essence == null || !essence.hasItemMeta()) {
+            return false;
+        }
+        String essenceName = essence.getItemMeta().getDisplayName();
+
+        // Verificar el nombre con el color
+        switch (enchantment.getKey().getKey()) {
+            case "protection":
+                return essenceName.equals(ChatColor.BLUE + "Esencia de Protección");
+            case "unbreaking":
+                return essenceName.equals(ChatColor.BLUE + "Esencia de Irrompibilidad");
+            case "mending":
+                return essenceName.equals(ChatColor.BLUE + "Esencia de Reparación");
+            case "efficiency":
+                return essenceName.equals(ChatColor.BLUE + "Esencia de Eficiencia");
+            case "fortune":
+                return essenceName.equals(ChatColor.BLUE + "Esencia de Fortuna");
+            case "sharpness":
+                return essenceName.equals(ChatColor.BLUE + "Esencia de Filo");
+            case "smite":
+                return essenceName.equals(ChatColor.BLUE + "Esencia de Castigo");
+            case "bane_of_arthropods":
+                return essenceName.equals(ChatColor.BLUE + "Esencia de Perdición de los Artrópodos");
+            case "feather_falling":
+                return essenceName.equals(ChatColor.BLUE + "Esencia de Caída de Pluma");
+            case "looting":
+                return essenceName.equals(ChatColor.BLUE + "Esencia de Saqueo");
+            case "depth_strider":
+                return essenceName.equals(ChatColor.BLUE + "Esencia de Agilidad Acuática");
+            case "silk_touch":
+                return essenceName.equals(ChatColor.BLUE + "Esencia de Toque de Seda");
+            case "power":
+                return essenceName.equals(ChatColor.BLUE + "Esencia de Poder");
+            default:
+                return false;
         }
     }
 
-    @EventHandler
-    public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 
-        Block block = event.getClickedBlock();
-        if (block != null && block.getType() == Material.ENCHANTING_TABLE) {
-            // Verificar si el bloque es una mesa de encantamiento personalizada
-            if (block.hasMetadata("CustomModelData") && block.getMetadata("CustomModelData").get(0).asInt() == 1) {
-                event.setCancelled(true); // Cancela la apertura de la mesa normal
+    private int decrementEssenceUsage(ItemStack essence) {
+        if (essence == null || !essence.hasItemMeta()) {
+            return 0;
+        }
+
+        ItemMeta meta = essence.getItemMeta();
+        PersistentDataContainer data = meta.getPersistentDataContainer();
+        NamespacedKey usesKey = new NamespacedKey("vicionthardcore3", "uses");
+
+        if (data.has(usesKey, PersistentDataType.INTEGER)) {
+            int uses = data.get(usesKey, PersistentDataType.INTEGER);
+            int newUses = uses - 1;
+            data.set(usesKey, PersistentDataType.INTEGER, Math.max(newUses, 0));
+            essence.setItemMeta(meta);
+            return newUses;
+        }
+
+        return 0;
+    }
+
+    private void updateEssenceLore(ItemStack essence, int usesLeft) {
+        ItemMeta meta = essence.getItemMeta();
+        if (meta != null) {
+            List<String> lore = meta.getLore();
+
+            // Si no hay lore existente, inicializarlo con las líneas base
+            if (lore == null || lore.isEmpty()) {
+                lore = new ArrayList<>();
+                lore.add(ChatColor.DARK_PURPLE + "Con esta Esencia podrás encantar");
+                lore.add(ChatColor.DARK_PURPLE + "cualquier ítem en la " + ChatColor.GOLD + "Mesa de Encantamientos Mejorada");
+                lore.add(" ");
+            } else {
+                // Remover la última línea (la de "Usos restantes") si ya está presente
+                if (lore.size() > 0 && lore.get(lore.size() - 1).startsWith(ChatColor.GRAY + "Usos restantes:")) {
+                    lore.remove(lore.size() - 1);
+                }
+            }
+
+            // Agregar la línea actualizada de "Usos restantes"
+            lore.add(ChatColor.GRAY + "Usos restantes: " + usesLeft);
+            meta.setLore(lore);
+            essence.setItemMeta(meta);
+        }
+    }
+
+
+
+    private void updateEnchantmentBooksInGUI(Inventory gui, ItemStack itemInSlot36) {
+        if (itemInSlot36 != null && itemInSlot36.hasItemMeta()) {
+            ItemMeta itemMeta = itemInSlot36.getItemMeta();
+            if (itemMeta != null && itemMeta.hasEnchants()) {
+                for (Map.Entry<Enchantment, Integer> entry : itemMeta.getEnchants().entrySet()) {
+                    Enchantment enchantment = entry.getKey();
+                    int currentLevel = entry.getValue();
+                    if (currentLevel < enchantment.getMaxLevel()) {
+                        updateAllMatchingBooks(gui, enchantment, currentLevel);
+                    }
+                }
+            }
+        }
+    }
+
+
+    private void updateAllMatchingBooks(Inventory gui, Enchantment enchantment, int currentLevel) {
+        int[] slots = { 13, 14, 15, 16, 22, 23, 24, 25, 31, 32, 33, 34, 40 };
+
+        for (int slot : slots) {
+            ItemStack book = gui.getItem(slot);
+            if (book != null && book.getType() == Material.ENCHANTED_BOOK) {
+                EnchantmentStorageMeta meta = (EnchantmentStorageMeta) book.getItemMeta();
+                if (meta != null && meta.hasStoredEnchant(enchantment)) {
+                    updateEnchantmentBook(gui, slot, enchantment, currentLevel);
+                }
+            }
+        }
+    }
+
+    private void updateEnchantmentBook(Inventory gui, int slot, Enchantment enchantment, int currentLevel) {
+        ItemStack book = gui.getItem(slot);
+        if (book != null && book.getType() == Material.ENCHANTED_BOOK) {
+            EnchantmentStorageMeta meta = (EnchantmentStorageMeta) book.getItemMeta();
+            if (meta != null) {
+                int newLevel = currentLevel + 1;
+                if (newLevel > enchantment.getMaxLevel()) {
+                    newLevel = enchantment.getMaxLevel(); // Asegurarse de que no se sobrepase el nivel máximo
+                }
+                meta.removeStoredEnchant(enchantment);
+                meta.addStoredEnchant(enchantment, newLevel, true);
+                String enchantmentName = formatEnchantmentName(enchantment.getKey().getKey());
+                meta.setDisplayName(ChatColor.GOLD + enchantmentName + " " + ChatColor.BLUE + "Nivel " + newLevel);
+                book.setItemMeta(meta);
+                gui.setItem(slot, book);
+            }
+        }
+    }
+
+
+    private void resetEnchantmentBooksToLevel1(Inventory gui) {
+        int[] slots = { 13, 14, 15, 16, 22, 23, 24, 25, 31, 32, 33, 34, 40 };
+        for (int slot : slots) {
+            ItemStack book = gui.getItem(slot);
+            if (book != null && book.getType() == Material.ENCHANTED_BOOK) {
+                EnchantmentStorageMeta meta = (EnchantmentStorageMeta) book.getItemMeta();
+                if (meta != null) {
+                    for (Enchantment enchantment : meta.getStoredEnchants().keySet()) {
+                        meta.removeStoredEnchant(enchantment);
+                        meta.addStoredEnchant(enchantment, 1, true);
+                        String enchantmentName = formatEnchantmentName(enchantment.getKey().getKey());
+                        meta.setDisplayName(ChatColor.GOLD + enchantmentName + " " + ChatColor.BLUE + "Nivel 1");
+                    }
+                    book.setItemMeta(meta);
+                    gui.setItem(slot, book);
+                }
+            }
+        }
+    }
+
+
+
+    @EventHandler
+    public void onInventoryDrag(InventoryDragEvent event) {
+        String title = "\u3201\u3201" +  ChatColor.WHITE + "\u3200";
+
+        // Verificar si el inventario es la GUI personalizada
+        if (event.getView().getTitle().equals(title)) {
+            // Recorrer todos los slots arrastrados en el evento
+            for (int slot : event.getRawSlots()) {
+                // Solo cancelar el arrastre si el slot no es 36, 37 ni 38
+                if (slot < event.getInventory().getSize() && (slot < 36 || slot > 38)) {
+                    event.setCancelled(true);
+                    return; // Salir del método si se encuentra un slot afectado
+                }
+            }
+        }
+    }
+
+
+    @EventHandler
+    public void onPlayerInteractWithBlock(PlayerInteractEvent event) {
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            if (event.getClickedBlock() != null && event.getClickedBlock().getType() == Material.GREEN_GLAZED_TERRACOTTA) {
+                event.setCancelled(true); // Cancela la acción predeterminada
                 openEnhancedEnchantmentTableGUI(event.getPlayer()); // Abre la GUI personalizada
             }
         }
     }
 
+    @EventHandler
+    public void onPlayerPlaceItemInFurnace(InventoryClickEvent event) {
+        // Verificamos si el contenedor es un horno
+        if (event.getClickedInventory() != null && event.getView().getTopInventory().getType() == InventoryType.FURNACE) {
+            // Verificamos si el jugador está interactuando con el inventario del horno
+            if (event.getWhoClicked() instanceof Player player) {
+                ItemStack item = event.getCurrentItem();
+
+                // Verificamos si el ítem no es nulo y si es Green Terracotta
+                if (item != null && item.getType() == Material.GREEN_TERRACOTTA) {
+                    // Evitamos que se coloque el bloque en el horno
+                    event.setCancelled(true);
+
+                    // Verificamos si el jugador ya tiene el ítem en su inventario antes de agregarlo
+                    boolean itemAlreadyInInventory = false;
+                    for (ItemStack inventoryItem : player.getInventory().getContents()) {
+                        if (inventoryItem != null && inventoryItem.isSimilar(item)) {
+                            itemAlreadyInInventory = true;
+                            break;
+                        }
+                    }
+
+                    // Si el jugador no tiene el ítem, lo agrega
+                    if (!itemAlreadyInInventory) {
+                        player.getInventory().addItem(item);
+                    }
+
+                    // Enviar un mensaje al jugador solo una vez
+                    player.sendMessage(ChatColor.RED + "No puedes colocar este bloque en el horno.");
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent event) {
+        Block block = event.getBlock();
+        Player player = event.getPlayer();
+        ItemStack tool = player.getInventory().getItemInMainHand();
+        Location blockLocation = block.getLocation();
+        World world = block.getWorld();
+
+        // Verificar si el bloque es Green Glazed Terracotta
+        if (block.getType() == Material.GREEN_GLAZED_TERRACOTTA) {
+            // Eliminar partículas y bloques de luz
+            if (particleTasks.containsKey(blockLocation)) {
+                particleTasks.get(blockLocation).cancel();
+                particleTasks.remove(blockLocation);
+            }
+
+            // Remover los bloques de luz alrededor del bloque
+            int[][] offsets = {
+                    {1, 0}, {-1, 0}, {0, 1}, {0, -1}
+            };
+
+            for (int[] offset : offsets) {
+                Block adjacentBlock = world.getBlockAt(blockLocation.clone().add(offset[0], 0, offset[1]));
+                if (adjacentBlock.getType() == Material.LIGHT) {
+                    adjacentBlock.setType(Material.AIR); // Elimina el bloque de luz
+                }
+            }
+
+            // Verificar si el jugador está usando un pico de diamante o netherite
+            if (tool.getType() == Material.DIAMOND_PICKAXE || tool.getType() == Material.NETHERITE_PICKAXE) {
+                // Asegurarse de que el bloque dropee solo una vez
+                event.setDropItems(false);
+                block.setType(Material.AIR); // Eliminar el bloque manualmente
+                block.getWorld().dropItemNaturally(block.getLocation(), EnhancedEnchantmentTable.createEnhancedEnchantmentTable());
+            } else {
+                event.setCancelled(true); // Cancela el evento de romper el bloque
+
+                // Mostrar mensaje solo si han pasado 10 segundos desde el último mensaje
+                long currentTime = System.currentTimeMillis();
+                long lastMessageTime = player.getMetadata("lastMessageTime").stream()
+                        .map(MetadataValue::asLong)
+                        .findFirst()
+                        .orElse(0L);
+
+                if (currentTime - lastMessageTime >= 10000) { // 10,000 milisegundos = 10 segundos
+                    // Establecer el tiempo de la última vez que se envió el mensaje
+                    player.setMetadata("lastMessageTime", new FixedMetadataValue(plugin, currentTime));
+
+                    // Enviar mensaje al instante
+                    player.sendMessage(ChatColor.GRAY + "Necesitas un pico de diamante o mejor para romper la Mesa de Encantamientos Mejorada.");
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onBlockPlace(BlockPlaceEvent event) {
+        Block block = event.getBlockPlaced();
+        Player player = event.getPlayer();
+        World world = block.getWorld();
+        Location blockLocation = block.getLocation();
+
+        if (block.getType() == Material.GREEN_GLAZED_TERRACOTTA) {
+            // Inicia las partículas giratorias alrededor del bloque
+            BukkitRunnable particleTask = new BukkitRunnable() {
+                double angle = 0;
+
+                @Override
+                public void run() {
+                    if (!block.getType().equals(Material.GREEN_GLAZED_TERRACOTTA)) {
+                        this.cancel();
+                        return;
+                    }
+
+                    double radius = 1.5;  // Radio del círculo
+                    double centerX = blockLocation.getX() + 0.5;  // Centra las partículas en el bloque (X)
+                    double centerY = blockLocation.getY() + 0.5;  // Altura de las partículas (ajustada para que estén encima del bloque)
+                    double centerZ = blockLocation.getZ() + 0.5;  // Centra las partículas en el bloque (Z)
+
+                    // Número de partículas en el círculo
+                    int numParticles = 15;  // Aumenta este número para más partículas
+
+                    // Calculamos las posiciones para las partículas a lo largo del círculo
+                    for (int i = 0; i < numParticles; i++) {
+                        double angle = (2 * Math.PI / numParticles) * i;  // Distribuir las partículas de manera uniforme en el círculo
+
+                        double x = centerX + radius * Math.cos(angle);  // Calcula la posición X de la partícula
+                        double z = centerZ + radius * Math.sin(angle);  // Calcula la posición Z de la partícula
+
+                        // Genera la partícula en la posición calculada
+                        world.spawnParticle(Particle.PORTAL, x, centerY, z, 1, 0, 0, 0, 0);  // Un solo "Particle.PORTAL" por partícula
+                    }
+                }
+            };
+            particleTask.runTaskTimer(plugin, 0, 2); // Ejecuta cada 2 ticks
+            particleTasks.put(blockLocation, particleTask);
+
+            // Coloca los bloques de luz alrededor del bloque
+            int[][] offsets = {
+                    {1, 0}, {-1, 0}, {0, 1}, {0, -1}
+            };
+
+            for (int[] offset : offsets) {
+                Block adjacentBlock = world.getBlockAt(blockLocation.clone().add(offset[0], 0, offset[1]));
+                if (adjacentBlock.getType() != Material.LIGHT) {
+                    // Dropea el bloque existente si no es aire
+                    if (adjacentBlock.getType() != Material.AIR) {
+                        ItemStack droppedItem = new ItemStack(adjacentBlock.getType());
+                        adjacentBlock.getWorld().dropItemNaturally(adjacentBlock.getLocation(), droppedItem);
+                    }
+                    // Coloca el bloque de luz
+                    adjacentBlock.setType(Material.LIGHT);
+                    adjacentBlock.setBlockData(Bukkit.createBlockData("minecraft:light[level=10]"));
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onHopperMoveItem(InventoryMoveItemEvent event) {
+        ItemStack item = event.getItem();
+        if (item.getType() == Material.GREEN_TERRACOTTA) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        Inventory inventory = event.getInventory();
+        String title = "\u3201\u3201" +  ChatColor.WHITE + "\u3200";
+
+        if (event.getView().getTitle().equals(title)) {
+            Player player = (Player) event.getPlayer();
+
+            int[] allowedSlots = {36, 37, 38};
+            boolean hasItems = false;
+
+            for (int slot : allowedSlots) {
+                ItemStack item = inventory.getItem(slot);
+                if (item != null) {
+                    hasItems = true;
+                    player.getInventory().addItem(item);
+                    inventory.setItem(slot, null);
+                }
+            }
+            if (hasItems) {
+                player.sendMessage(ChatColor.YELLOW + "Los objetos de la mesa mejorada han sido devueltos.");
+            }
+        }
+    }
 }

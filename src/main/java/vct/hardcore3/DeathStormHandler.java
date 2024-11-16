@@ -120,7 +120,7 @@ public class DeathStormHandler implements Listener {
                 remainingStormSeconds--;
             }
         };
-;
+
 
         stormTask.runTaskTimer(plugin, 0, 20);
     }

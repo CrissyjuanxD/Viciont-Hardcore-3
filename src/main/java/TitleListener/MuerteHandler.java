@@ -88,14 +88,15 @@ public class MuerteHandler implements Listener {
                                     @Override
                                     public void run() {
                                         String playerName = player.getName();
-                                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title @a times 50 40 50");
-                                        String titleJson = String.format(
-                                                "/title @a title [\"\",{\"text\":\"%s\",\"color\":\"dark_gray\",\"obfuscated\":true}]",
-                                                playerName
-                                        );
-                                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), titleJson);
-                                        String subtitleJson = "/title @a subtitle [\"\",{\"text\":\"Entro al sufrimiento eterno de Viciont\",\"color\":\"dark_purple\",\"bold\":true}]";
-                                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), subtitleJson);
+                                        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                                            onlinePlayer.sendTitle(
+                                                    ChatColor.DARK_GRAY + "" + ChatColor.MAGIC + "۞" + ChatColor.RESET + ChatColor.GRAY + playerName + ChatColor.RESET + ChatColor.GRAY + ChatColor.MAGIC + "۞", // Título (nombre del jugador con formato obfuscado)
+                                                    ChatColor.DARK_PURPLE + "" + ChatColor.RESET + ChatColor.DARK_PURPLE + ChatColor.BOLD + "Entro al sufrimiento eterno de Viciont", // Subtítulo
+                                                    50, // Tiempo de aparición
+                                                    40, // Tiempo en pantalla
+                                                    50  // Tiempo de desaparición
+                                            );
+                                        }
                                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:item.totem.use ambient @a ~ ~ ~ 100000 0.1");
                                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:entity.ender_dragon.death ambient @a ~ ~ ~ 100000 0.7");
                                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect give @a minecraft:blindness 15 3");
