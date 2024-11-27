@@ -7,13 +7,13 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
-public class RuletaAnimation {
+public class BonusAnimation {
     private final JavaPlugin plugin;
-    private static final int TOTAL_FRAMES = 267;
-    private static final String FRAME_PREFIX = "\uE3C6"; // Unicode inicial del primer frame
-    private static final int TICKS_DURATION = 170; // Duración en ticks para la animación (8 segundos x 20 ticks)
+    private static final int TOTAL_FRAMES = 110;
+    private static final String FRAME_PREFIX = "\uE732"; // Unicode inicial del primer frame
+    private static final int TICKS_DURATION = 120; // Duración en ticks para la animación (8 segundos x 20 ticks)
 
-    public RuletaAnimation(JavaPlugin plugin) {
+    public BonusAnimation (JavaPlugin plugin) {
         this.plugin = plugin;
     }
 
@@ -21,7 +21,7 @@ public class RuletaAnimation {
         // Agregar efectos al jugador
         player.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 50, 1, true, false, false));
         player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 50, 0, true, false, false));
-        player.playSound(player.getLocation(), "minecraft:custom.ruleta", 1.0f, 1.0f);
+        player.playSound(player.getLocation(), "minecraft:custom.bonus", 1.0f, 1.0f);
 
         double framesPerTick = (double) TOTAL_FRAMES / TICKS_DURATION;
 

@@ -17,15 +17,15 @@ public class DeathStormCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (label.equalsIgnoreCase("resetdeathstorm")) {
             deathStormHandler.resetStorm();
-            sender.sendMessage(ChatColor.GREEN + "DeathStorm has been reset.");
+            sender.sendMessage(ChatColor.GREEN + "La DeathStorm ha sido reseteada.");
         } else if (label.equalsIgnoreCase("adddeathstorm") && args.length == 1) {
             int hours = Integer.parseInt(args[0]);
             deathStormHandler.addStormHours(hours);
-            sender.sendMessage(ChatColor.GREEN + "Added " + hours + " hours to DeathStorm.");
+            sender.sendMessage(ChatColor.GREEN + "Se ha añadido " + hours + " horas de DeathStorm.");
         } else if (label.equalsIgnoreCase("removedeathstorm") && args.length == 1) {
             int hours = Integer.parseInt(args[0]);
             deathStormHandler.removeStormHours(hours);
-            sender.sendMessage(ChatColor.GREEN + "Removed " + hours + " hours from DeathStorm.");
+            sender.sendMessage(ChatColor.GREEN + "Se ha removido " + hours + " horas de DeathStorm.");
         } else {
             return false;
         }

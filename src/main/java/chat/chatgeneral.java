@@ -29,15 +29,12 @@ public class chatgeneral implements Listener {
         Scoreboard scoreboard = player.getScoreboard();
         Team team = scoreboard.getEntryTeam(player.getName());
 
-        // Obtiene los prefijos y sufijos del equipo
+        // prefijos y sufijos del equipo
         String prefix = team != null ? team.getPrefix() : "";
         String suffix = team != null ? team.getSuffix() : "";
         ChatColor teamColor = team != null ? team.getColor() : ChatColor.WHITE;
 
-        // Formatea el mensaje para eliminar los "<>"
         String formattedMessage = ChatColor.translateAlternateColorCodes('&', prefix + teamColor + player.getName() + ChatColor.RESET + suffix + "&7 ➤ &f" + message);
-
-        // Establece el formato del mensaje
         event.setFormat(formattedMessage);
     }
 

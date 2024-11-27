@@ -38,7 +38,7 @@ public class DayOneChanges implements Listener {
     // Método para aplicar cambios
     public void apply() {
         if (!isApplied) {
-            // Registra los eventos solo cuando se aplica
+            // eventos solo cuando se aplica
             Bukkit.getPluginManager().registerEvents(this, plugin);
             registerCustomRecipe();
             isApplied = true;
@@ -48,7 +48,7 @@ public class DayOneChanges implements Listener {
     // Método para revertir cambios
     public void revert() {
         if (isApplied) {
-            // Remueve todos los zombies y spiders corruptos del mundo
+            // Esto Remueve todos los zombies y spiders corruptos del mundo
             for (World world : Bukkit.getWorlds()) {
                 for (Entity entity : world.getEntities()) {
                     if (entity instanceof Zombie zombie && zombie.getPersistentDataContainer().has(corruptedKey, PersistentDataType.BYTE)) {
@@ -61,11 +61,11 @@ public class DayOneChanges implements Listener {
                 }
             }
 
-            // Remueve recetas personalizadas
+            // Esto Remueve recetas personalizadas
             NamespacedKey key = new NamespacedKey(plugin, "corrupted_steak");
             Bukkit.removeRecipe(key);
 
-            // Cancela los runnables de zombies corruptos
+            // Esto Cancela los runnables de zombies corruptos
             for (Integer taskId : zombieTasks.values()) {
                 Bukkit.getScheduler().cancelTask(taskId);
             }
@@ -116,6 +116,7 @@ public class DayOneChanges implements Listener {
                     lanzarSnowball(zombie, player);
                 }
             }
+
         }, 0L, 40L).getTaskId();
 
         zombieTasks.put(zombie.getUniqueId(), taskId);
@@ -130,10 +131,15 @@ public class DayOneChanges implements Listener {
     }
 
     private boolean isPlayerInRange(Zombie zombie, Player player) {
+        if (!zombie.getWorld().equals(player.getWorld())) {
+            return false;
+        }
+        // Calcula la distancia si están en el mismo mundo
         double distanceXZ = zombie.getLocation().distanceSquared(player.getLocation()) - Math.pow(zombie.getLocation().getY() - player.getLocation().getY(), 2);
         double distanceY = Math.abs(zombie.getLocation().getY() - player.getLocation().getY());
         return distanceXZ <= 7 * 7 && distanceY <= 7;
     }
+
 
     @EventHandler
     public void onZombieAttack(EntityDamageByEntityEvent event) {
@@ -169,8 +175,8 @@ public class DayOneChanges implements Listener {
         if (event.getDamager() instanceof Snowball snowball && event.getEntity() instanceof Player player) {
             if ("Corrupted Zombie Snowball".equals(snowball.getCustomName())) {
                 event.setDamage(2); // Daño de bola de nieve
-                player.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 50, 0)); // Veneno I (2.5 seg)
-                player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 100, 0)); // Debilidad I (5 seg)
+                player.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 50, 0));
+                player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 100, 0));
 
                 // Knockback al jugador
                 int knockbackLevel = snowball.getMetadata("knockback").stream().findFirst().map(MetadataValue::asInt).orElse(0);
@@ -186,27 +192,22 @@ public class DayOneChanges implements Listener {
     @EventHandler
     public void onProjectileHit(ProjectileHitEvent event) {
         if (event.getEntity() instanceof Snowball snowball) {
-            // Verifica si es la bola de nieve del Corrupted Zombie
             if ("Corrupted Zombie Snowball".equals(snowball.getCustomName())) {
-                // Si impacta contra un bloque o cualquier entidad
                 if (event.getHitBlock() != null || event.getHitEntity() != null) {
                     Location impactLocation = snowball.getLocation();
 
-                    // Busca a jugadores cercanos en un radio de 4x4
+                    // jugadores cercanos en un radio de 4x4
                     List<Player> nearbyPlayers = snowball.getWorld().getPlayers().stream()
-                            .filter(player -> player.getLocation().distance(impactLocation) <= 4) // 4 bloques de radio
-                            .toList(); // Cambiado a toList()
+                            .filter(player -> player.getLocation().distance(impactLocation) <= 4)
+                            .toList();
 
-                    // Aplica knockback a los jugadores cercanos
+                    // knockback a los jugadores cercanos
                     for (Player player : nearbyPlayers) {
                         Vector knockback = player.getLocation().toVector().subtract(impactLocation.toVector()).normalize().multiply(1);
                         player.setVelocity(knockback);
                     }
 
-                    // Partículas de impacto
-                    snowball.getWorld().spawnParticle(Particle.EXPLOSION, impactLocation, 8); // Explosión de partículas
-
-                    // Sonido de impacto
+                    snowball.getWorld().spawnParticle(Particle.EXPLOSION, impactLocation, 8);
                     snowball.getWorld().playSound(impactLocation, Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, 1.0F, 2.0F);
                 }
             }
@@ -220,9 +221,9 @@ public class DayOneChanges implements Listener {
             Spider spider = (Spider) event.getDamager();
             Player player = (Player) event.getEntity();
 
-            // Verifica si es un "Corrupted Spider"
+
             if (spider.getCustomName() != null && spider.getCustomName().equals(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Spider")) {
-                // Coloca una telaraña en los pies del jugador
+                // telaraña en los pies del jugador
                 player.getLocation().getBlock().setType(Material.COBWEB);
             }
         }
@@ -231,24 +232,22 @@ public class DayOneChanges implements Listener {
     public void registerCustomRecipe() {
         NamespacedKey key = new NamespacedKey(plugin, "corrupted_steak");
 
-        // Verifica si la receta ya existe para evitar duplicados
         if (Bukkit.getRecipe(key) != null) {
-            return; // Sale si la receta ya está registrada
+            return;
         }
 
-        // Crea el item personalizado
+        //item personalizado
         ItemStack customItem = new ItemStack(Material.COOKED_BEEF);
         ItemMeta meta = customItem.getItemMeta();
         meta.setDisplayName(ChatColor.DARK_PURPLE + "Carne Corrupta");
         meta.setCustomModelData(2);
         customItem.setItemMeta(meta);
 
-        // Define la receta
+        //receta
         ShapedRecipe customRecipe = new ShapedRecipe(key, customItem);
         customRecipe.shape(" F ", " F ", " F ");
         customRecipe.setIngredient('F', Material.ROTTEN_FLESH);
 
-        // Añade la receta al servidor
         plugin.getServer().addRecipe(customRecipe);
     }
 

@@ -19,7 +19,7 @@ public class DayCommandHandler implements CommandExecutor {
             if (sender.isOp()) {
                 try {
                     int day = Integer.parseInt(args[0]);
-                    dayHandler.changeDay(day);  // Cambia el día usando DayHandler
+                    dayHandler.changeDay(day);
                     sender.sendMessage(ChatColor.GREEN + "Día cambiado a " + day + ".");
                 } catch (NumberFormatException e) {
                     sender.sendMessage(ChatColor.RED + "Por favor ingresa un número válido.");
@@ -28,7 +28,7 @@ public class DayCommandHandler implements CommandExecutor {
                 sender.sendMessage(ChatColor.RED + "No tienes permiso para usar este comando.");
             }
         } else if (label.equalsIgnoreCase("dia")) {
-            int currentDay = dayHandler.getCurrentDay();  // Obtiene el día actual usando DayHandler
+            int currentDay = dayHandler.getCurrentDay();
             sender.sendMessage(ChatColor.GOLD + "Estamos en el día " + currentDay + " de Viciont Hardcore 3.");
         } else {
             return false;

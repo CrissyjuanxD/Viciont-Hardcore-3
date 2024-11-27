@@ -30,10 +30,10 @@ public class PingCommand implements CommandExecutor {
         Player player = (Player) sender;
         UUID playerUUID = player.getUniqueId();
 
-        // Obtener el tiempo actual en milisegundos
+        // tiempo actual en milisegundos
         long currentTime = System.currentTimeMillis();
 
-        // Verificar si el jugador está en cooldown
+        // cooldown
         if (cooldowns.containsKey(playerUUID)) {
             long lastUse = cooldowns.get(playerUUID);
             long timeLeft = (lastUse + 10000) - currentTime;
@@ -44,11 +44,10 @@ public class PingCommand implements CommandExecutor {
             }
         }
 
-        // Obtener el ping del jugador
+        //ping del jugador
         int ping = player.getPing();
         player.sendMessage(ChatColor.GRAY + "Tu ping es de: " + ChatColor.LIGHT_PURPLE + ping + "ms.");
 
-        // Registrar el uso del comando con la marca de tiempo actual
         cooldowns.put(playerUUID, currentTime);
 
         return true;

@@ -21,10 +21,8 @@ public class RuletaCommand implements CommandExecutor {
             return true;
         }
 
-        // Convertir argumentos JSON si existen
         String jsonMessage = args.length > 0 ? String.join(" ", args) : "";
 
-        // Reproducir la animación para todos los jugadores conectados
         for (Player player : Bukkit.getOnlinePlayers()) {
             ruletaAnimation.playAnimation(player, jsonMessage);
         }

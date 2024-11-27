@@ -15,17 +15,17 @@
     public class DayHandler {
         private final JavaPlugin plugin;
         private int currentDay = 1;
-        private int remainingDaySeconds = 86400; // 24 horas en segundos
+        private int remainingDaySeconds = 86400;
         private BukkitRunnable dayTask;
         private DayOneChanges dayOneChanges;
-        private boolean dayOneChangesApplied = false;  // Variable para rastrear si los cambios del día 1 están aplicados
+        private boolean dayOneChangesApplied = false;
     
         public DayHandler(JavaPlugin plugin) {
             this.plugin = plugin;
-            dayOneChanges = new DayOneChanges(plugin); // Inicializar DayOneChanges
-            loadDayData();  // Cargar los datos del día al inicio
-            startDayTimer(); // Iniciar el temporizador de días
-            applyCurrentDayChanges(); // Aplicar cambios del día actual
+            dayOneChanges = new DayOneChanges(plugin);
+            loadDayData();
+            startDayTimer();
+            applyCurrentDayChanges();
         }
     
         // Iniciar o reiniciar el temporizador de días
@@ -55,13 +55,13 @@
             for (Player player : Bukkit.getOnlinePlayers()) {
                 player.sendMessage(ChatColor.GOLD + "¡Es el día " + currentDay + "!");
             }
-            applyCurrentDayChanges(); // Aplicar cambios del nuevo día
+            applyCurrentDayChanges();
             saveDayData();
         }
 
         public void changeDay(int day) {
             revertCurrentDayChanges();  // Revertir los cambios antes de cambiar el día
-            currentDay = day;  // Cambia el día después de revertir
+            currentDay = day;
             remainingDaySeconds = 86400;  // Reiniciar el temporizador al cambiar de día
             startDayTimer();  // Reiniciar el temporizador
 
@@ -69,7 +69,7 @@
                 player.sendMessage(ChatColor.GOLD + "El día ha sido cambiado manualmente al día " + currentDay + ".");
             }
 
-            applyCurrentDayChanges();  // Aplicar cambios para el nuevo día
+            applyCurrentDayChanges();
             saveDayData();
         }
 
@@ -79,7 +79,6 @@
                 dayOneChanges.apply();
                 dayOneChangesApplied = true;
             }
-            // Si hay lógica adicional para otros días, agrégala aquí
         }
 
         private void revertCurrentDayChanges() {

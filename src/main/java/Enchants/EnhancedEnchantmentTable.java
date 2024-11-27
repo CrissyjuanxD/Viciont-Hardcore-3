@@ -21,7 +21,7 @@ public class EnhancedEnchantmentTable {
         registerRecipes();
     }
 
-    // Crea el ítem personalizado "Placa de Diamante"
+    //ítem personalizado "Placa de Diamante"
     public ItemStack createDiamondPlate() {
         ItemStack diamondPlate = new ItemStack(Material.DIAMOND);
         ItemMeta meta = diamondPlate.getItemMeta();
@@ -31,7 +31,7 @@ public class EnhancedEnchantmentTable {
         return diamondPlate;
     }
 
-    // Crea el ítem personalizado "Mesa de Encantamientos Mejorada"
+    //ítem personalizado "Mesa de Encantamientos Mejorada"
     public static ItemStack createEnhancedEnchantmentTable() {
         ItemStack table = new ItemStack(Material.GREEN_GLAZED_TERRACOTTA);
         ItemMeta meta = table.getItemMeta();
@@ -41,7 +41,7 @@ public class EnhancedEnchantmentTable {
         return table;
     }
 
-    // Registra las recetas para los ítems personalizados
+    // Recetas
     private void registerRecipes() {
         // Receta para la Placa de Diamante
         ShapedRecipe diamondPlateRecipe = new ShapedRecipe(new NamespacedKey(plugin, "diamond_plate"), createDiamondPlate());
@@ -52,10 +52,12 @@ public class EnhancedEnchantmentTable {
 
         // Receta para la Mesa de Encantamientos Mejorada
         ShapedRecipe tableRecipe = new ShapedRecipe(new NamespacedKey(plugin, "enhanced_enchantment_table"), createEnhancedEnchantmentTable());
-        tableRecipe.shape("BPB", "PTP", "BPB");
+        tableRecipe.shape("DPD", "PTP", "BIB");
         tableRecipe.setIngredient('B', Material.BOOKSHELF);
-        tableRecipe.setIngredient('P', Material.DIAMOND); // "Placa de Diamante" item
+        tableRecipe.setIngredient('P', Material.DIAMOND); // "Placa de Diamante", falta la diamond plate
         tableRecipe.setIngredient('T', Material.ENCHANTING_TABLE);
+        tableRecipe.setIngredient('I', Material.GOLD_BLOCK);
+        tableRecipe.setIngredient('D', Material.IRON_BLOCK);
         Bukkit.addRecipe(tableRecipe);
     }
 

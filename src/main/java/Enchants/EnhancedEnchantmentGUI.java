@@ -24,7 +24,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.ChatColor;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class EnhancedEnchantmentGUI implements Listener {
 
@@ -49,7 +48,6 @@ public class EnhancedEnchantmentGUI implements Listener {
         return pane;
     }
 
-    // Crear y abrir la GUI personalizada
     public void openEnhancedEnchantmentTableGUI(Player player) {
         Inventory gui = Bukkit.createInventory(null, 54,"\u3201\u3201" + ChatColor.WHITE + "\u3200");
         Enchantment[] enchantments = {
@@ -78,7 +76,7 @@ public class EnhancedEnchantmentGUI implements Listener {
         ItemStack book = new ItemStack(Material.ENCHANTED_BOOK);
         EnchantmentStorageMeta meta = (EnchantmentStorageMeta) book.getItemMeta();
         if (meta != null) {
-            meta.addStoredEnchant(enchantment, level, true); // Añade el encantamiento al NBT 'StoredEnchantments'
+            meta.addStoredEnchant(enchantment, level, true);
 
             String enchantmentName = formatEnchantmentName(enchantment.getKey().getKey());
             meta.setDisplayName(ChatColor.GOLD + enchantmentName + " " + ChatColor.BLUE + "Nivel " + level);
@@ -105,7 +103,7 @@ public class EnhancedEnchantmentGUI implements Listener {
         enchantmentNames.put("silk_touch", "Toque de Seda");
         enchantmentNames.put("power", "Poder");
 
-        return enchantmentNames.getOrDefault(key, key); // Retorna el nombre en español o el nombre original si no está en el mapa
+        return enchantmentNames.getOrDefault(key, key);
     }
 
 
@@ -132,20 +130,17 @@ public class EnhancedEnchantmentGUI implements Listener {
                 return;
             }
 
-            // Detectar shift-click para actualizar el slot 36
             if (event.isShiftClick() && clickedInventory.equals(player.getInventory())) {
                 ItemStack currentItem = event.getCurrentItem();
                 if (currentItem != null && inventory.getItem(36) == null) {
-                    // Mover el ítem al slot 36
                     inventory.setItem(36, currentItem.clone());
                     event.getClickedInventory().setItem(event.getSlot(), null);
                     updateEnchantmentBooksInGUI(inventory, currentItem);
                     player.updateInventory();
-                    return; // Detener más procesamiento
+                    return;
                 }
             }
 
-            // Comprobar si el ítem es retirado del slot 36 mediante shift-click
             if (slot == 36 && event.isShiftClick()) {
                 ItemStack currentItem = event.getCurrentItem();
                 if (currentItem == null) {
@@ -153,12 +148,10 @@ public class EnhancedEnchantmentGUI implements Listener {
                 }
             }
 
-            // Manejar el caso en que un ítem es arrastrado fuera del slot 36
             if (slot == 36 && event.getAction() == InventoryAction.PLACE_ALL && event.getCursor() == null) {
                 resetEnchantmentBooksToLevel1(inventory);
             }
 
-            // Permitir interacción con los slots 36, 37 y 38
             if (slot == 36 || slot == 37 || slot == 38) {
                 event.setCancelled(false);
                 if (slot == 36 && event.getCursor() != null) {
@@ -242,9 +235,9 @@ public class EnhancedEnchantmentGUI implements Listener {
                     int usesLeft = decrementEssenceUsage(essence);
                     if (usesLeft > 0) {
                         updateEssenceLore(essence, usesLeft);
-                        gui.setItem(38, essence); // Asegúrate de que la esencia se actualice en la GUI
+                        gui.setItem(38, essence);
                     } else {
-                        gui.setItem(38, null); // Remueve la esencia si los usos llegan a 0
+                        gui.setItem(38, null); // Remueve la esencia
                         sendMessageOnce(player, ChatColor.RED + "La esencia se ha agotado.");
                     }
 
@@ -331,14 +324,12 @@ public class EnhancedEnchantmentGUI implements Listener {
         if (meta != null) {
             List<String> lore = meta.getLore();
 
-            // Si no hay lore existente, inicializarlo con las líneas base
             if (lore == null || lore.isEmpty()) {
                 lore = new ArrayList<>();
                 lore.add(ChatColor.DARK_PURPLE + "Con esta Esencia podrás encantar");
                 lore.add(ChatColor.DARK_PURPLE + "cualquier ítem en la " + ChatColor.GOLD + "Mesa de Encantamientos Mejorada");
                 lore.add(" ");
             } else {
-                // Remover la última línea (la de "Usos restantes") si ya está presente
                 if (lore.size() > 0 && lore.get(lore.size() - 1).startsWith(ChatColor.GRAY + "Usos restantes:")) {
                     lore.remove(lore.size() - 1);
                 }
@@ -390,7 +381,7 @@ public class EnhancedEnchantmentGUI implements Listener {
             if (meta != null) {
                 int newLevel = currentLevel + 1;
                 if (newLevel > enchantment.getMaxLevel()) {
-                    newLevel = enchantment.getMaxLevel(); // Asegurarse de que no se sobrepase el nivel máximo
+                    newLevel = enchantment.getMaxLevel();
                 }
                 meta.removeStoredEnchant(enchantment);
                 meta.addStoredEnchant(enchantment, newLevel, true);
@@ -429,14 +420,12 @@ public class EnhancedEnchantmentGUI implements Listener {
     public void onInventoryDrag(InventoryDragEvent event) {
         String title = "\u3201\u3201" +  ChatColor.WHITE + "\u3200";
 
-        // Verificar si el inventario es la GUI personalizada
         if (event.getView().getTitle().equals(title)) {
-            // Recorrer todos los slots arrastrados en el evento
             for (int slot : event.getRawSlots()) {
                 // Solo cancelar el arrastre si el slot no es 36, 37 ni 38
                 if (slot < event.getInventory().getSize() && (slot < 36 || slot > 38)) {
                     event.setCancelled(true);
-                    return; // Salir del método si se encuentra un slot afectado
+                    return;
                 }
             }
         }
@@ -447,26 +436,21 @@ public class EnhancedEnchantmentGUI implements Listener {
     public void onPlayerInteractWithBlock(PlayerInteractEvent event) {
         if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
             if (event.getClickedBlock() != null && event.getClickedBlock().getType() == Material.GREEN_GLAZED_TERRACOTTA) {
-                event.setCancelled(true); // Cancela la acción predeterminada
-                openEnhancedEnchantmentTableGUI(event.getPlayer()); // Abre la GUI personalizada
+                event.setCancelled(true);
+                openEnhancedEnchantmentTableGUI(event.getPlayer());
             }
         }
     }
 
     @EventHandler
     public void onPlayerPlaceItemInFurnace(InventoryClickEvent event) {
-        // Verificamos si el contenedor es un horno
         if (event.getClickedInventory() != null && event.getView().getTopInventory().getType() == InventoryType.FURNACE) {
-            // Verificamos si el jugador está interactuando con el inventario del horno
             if (event.getWhoClicked() instanceof Player player) {
                 ItemStack item = event.getCurrentItem();
 
-                // Verificamos si el ítem no es nulo y si es Green Terracotta
                 if (item != null && item.getType() == Material.GREEN_TERRACOTTA) {
-                    // Evitamos que se coloque el bloque en el horno
                     event.setCancelled(true);
 
-                    // Verificamos si el jugador ya tiene el ítem en su inventario antes de agregarlo
                     boolean itemAlreadyInInventory = false;
                     for (ItemStack inventoryItem : player.getInventory().getContents()) {
                         if (inventoryItem != null && inventoryItem.isSimilar(item)) {
@@ -479,8 +463,6 @@ public class EnhancedEnchantmentGUI implements Listener {
                     if (!itemAlreadyInInventory) {
                         player.getInventory().addItem(item);
                     }
-
-                    // Enviar un mensaje al jugador solo una vez
                     player.sendMessage(ChatColor.RED + "No puedes colocar este bloque en el horno.");
                 }
             }
@@ -495,9 +477,7 @@ public class EnhancedEnchantmentGUI implements Listener {
         Location blockLocation = block.getLocation();
         World world = block.getWorld();
 
-        // Verificar si el bloque es Green Glazed Terracotta
         if (block.getType() == Material.GREEN_GLAZED_TERRACOTTA) {
-            // Eliminar partículas y bloques de luz
             if (particleTasks.containsKey(blockLocation)) {
                 particleTasks.get(blockLocation).cancel();
                 particleTasks.remove(blockLocation);
@@ -515,16 +495,13 @@ public class EnhancedEnchantmentGUI implements Listener {
                 }
             }
 
-            // Verificar si el jugador está usando un pico de diamante o netherite
             if (tool.getType() == Material.DIAMOND_PICKAXE || tool.getType() == Material.NETHERITE_PICKAXE) {
-                // Asegurarse de que el bloque dropee solo una vez
                 event.setDropItems(false);
-                block.setType(Material.AIR); // Eliminar el bloque manualmente
+                block.setType(Material.AIR);
                 block.getWorld().dropItemNaturally(block.getLocation(), EnhancedEnchantmentTable.createEnhancedEnchantmentTable());
             } else {
-                event.setCancelled(true); // Cancela el evento de romper el bloque
+                event.setCancelled(true);
 
-                // Mostrar mensaje solo si han pasado 10 segundos desde el último mensaje
                 long currentTime = System.currentTimeMillis();
                 long lastMessageTime = player.getMetadata("lastMessageTime").stream()
                         .map(MetadataValue::asLong)
@@ -532,10 +509,7 @@ public class EnhancedEnchantmentGUI implements Listener {
                         .orElse(0L);
 
                 if (currentTime - lastMessageTime >= 10000) { // 10,000 milisegundos = 10 segundos
-                    // Establecer el tiempo de la última vez que se envió el mensaje
                     player.setMetadata("lastMessageTime", new FixedMetadataValue(plugin, currentTime));
-
-                    // Enviar mensaje al instante
                     player.sendMessage(ChatColor.GRAY + "Necesitas un pico de diamante o mejor para romper la Mesa de Encantamientos Mejorada.");
                 }
             }
@@ -550,7 +524,6 @@ public class EnhancedEnchantmentGUI implements Listener {
         Location blockLocation = block.getLocation();
 
         if (block.getType() == Material.GREEN_GLAZED_TERRACOTTA) {
-            // Inicia las partículas giratorias alrededor del bloque
             BukkitRunnable particleTask = new BukkitRunnable() {
                 double angle = 0;
 
@@ -562,12 +535,12 @@ public class EnhancedEnchantmentGUI implements Listener {
                     }
 
                     double radius = 1.5;  // Radio del círculo
-                    double centerX = blockLocation.getX() + 0.5;  // Centra las partículas en el bloque (X)
-                    double centerY = blockLocation.getY() + 0.5;  // Altura de las partículas (ajustada para que estén encima del bloque)
-                    double centerZ = blockLocation.getZ() + 0.5;  // Centra las partículas en el bloque (Z)
+                    double centerX = blockLocation.getX() + 0.5;  // partículas en el bloque (X)
+                    double centerY = blockLocation.getY() + 0.5;  // Altura de las partículas
+                    double centerZ = blockLocation.getZ() + 0.5;  // partículas en el bloque (Z)
 
                     // Número de partículas en el círculo
-                    int numParticles = 15;  // Aumenta este número para más partículas
+                    int numParticles = 15;
 
                     // Calculamos las posiciones para las partículas a lo largo del círculo
                     for (int i = 0; i < numParticles; i++) {

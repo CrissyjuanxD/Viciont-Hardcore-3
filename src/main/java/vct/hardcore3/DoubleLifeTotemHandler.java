@@ -5,6 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
@@ -39,7 +40,7 @@ public class DoubleLifeTotemHandler implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onEntityDamage(EntityDamageEvent event) {
         if (event.getEntity() instanceof Player) {
             Player player = (Player) event.getEntity();
@@ -53,10 +54,9 @@ public class DoubleLifeTotemHandler implements Listener {
             if ((isMainHandTotem || isOffHandTotem) && player.getHealth() - event.getFinalDamage() <= 0) {
                 // Si hay un tótem normal en la mano principal, no activamos el tótem de doble vida
                 if (!isMainHandTotem && mainHandItem.getType() == Material.TOTEM_OF_UNDYING) {
-
-                    String message = ChatColor.translateAlternateColorCodes('&', "\uDBE8\uDCF6" + ChatColor.YELLOW + ChatColor.BOLD + player.getName() + ChatColor.RESET + ChatColor.YELLOW + " ha consumido un tótem");
-                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-                        onlinePlayer.sendMessage(message);
+                    //lanza mensjae del totem normal en vez del doble vida
+                    if (offHandItem.getType() == Material.TOTEM_OF_UNDYING) {
+                        NormalTotemHandler.broadcastNormalTotemMessage(player);
                     }
                     return; // Se activa el tótem normal en la mano principal, no tocar el de doble vida
                 }

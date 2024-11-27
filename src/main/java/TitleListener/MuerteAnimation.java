@@ -10,7 +10,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 public class MuerteAnimation {
     private final JavaPlugin plugin;
     private static final int TOTAL_FRAMES = 184;
-    private static final String FRAME_PREFIX = "\uE851"; // Unicode inicial del primer frame
+    private static final String FRAME_PREFIX = "\uE851"; // Unicode inicial
     private static final int TICKS_DURATION = 120; // Duración en ticks para la animación (8 segundos x 20 ticks)
     private static final int SOUND_DELAY_TICKS = 100; // Retraso para sonidos adicionales (5 segundos x 20 ticks)
 
@@ -20,11 +20,11 @@ public class MuerteAnimation {
 
     public void playAnimation(Player player, String jsonMessage) {
 
-        // Reproducir sonido
+        player.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 150, 1, true, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 150, 0, true, false, false));
         player.playSound(player.getLocation(), "minecraft:custom.emuerte", 300.0f, 1.0f);
         player.playSound(player.getLocation(), "minecraft:entity.allay.death", 100.0f, 0.7f);
         player.playSound(player.getLocation(), "minecraft:entity.blaze.death", 100.0f, 0.7f);
-        // Programar reproducción del sonido de skeleton_horse después de 5 segundos
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -43,7 +43,6 @@ public class MuerteAnimation {
             @Override
             public void run() {
                 if (frame >= TOTAL_FRAMES) {
-                    // Al finalizar, enviar mensaje JSON si existe
                     if (!jsonMessage.isEmpty()) {
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a " + jsonMessage);
                     }
@@ -51,17 +50,17 @@ public class MuerteAnimation {
                     return;
                 }
 
-                // Mostrar el frame actual
+                // Muestra el frame actual
                 String unicodeFrame = String.valueOf((char) (FRAME_PREFIX.codePointAt(0) + frame));
-                player.sendTitle(unicodeFrame, "", 0, 5, 0); // Mostrar por 5 ticks
+                player.sendTitle(unicodeFrame, "", 0, 20, 0); // Mostrar por 5 ticks
 
-                // Incrementar el acumulador y calcular avance de frames
+                // Incrementa el acumulador y calcular avance de frames
                 accumulatedFrames += framesPerTick;
                 while (accumulatedFrames >= 1) {
-                    frame++; // Avanza a los frames acumulados
-                    accumulatedFrames--; // Ajusta el acumulador
+                    frame++;
+                    accumulatedFrames--;
                 }
             }
-        }.runTaskTimer(plugin, 0, 1); // Ejecuta cada tick
+        }.runTaskTimer(plugin, 0, 1);
     }
 }

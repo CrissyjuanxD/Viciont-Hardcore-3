@@ -1,10 +1,9 @@
 package vct.hardcore3;
 
 import Commands.PingCommand;
-import Enchants.EnchantDelete;
-import Enchants.EnhancedEnchantmentGUI;
-import Enchants.EnhancedEnchantmentTable;
-import Enchants.GiveEssenceCommand;
+import Enchants.*;
+/*import Estructures.CorruptedVillage;*/
+import Estructures.CorruptedVillage;
 import TitleListener.*;
 import list.VHList;
 import org.bukkit.*;
@@ -30,9 +29,10 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     public String Prefix = "&d&lViciont&5&lHardcore &5&l3&7➤ &f";
     public String Version = getDescription().getVersion();
     private DeathStormHandler deathStormHandler;
-    private DayHandler dayHandler; // Asegurarse de usar esta variable de instancia
+    private DayHandler dayHandler;
     private RuletaAnimation ruletaAnimation;
     private MuerteAnimation muerteAnimation;
+    private BonusAnimation bonusAnimation;
     private DayOneChanges dayOneChanges;
     private DoubleLifeTotemHandler doubleLifeTotemHandler;
     private NormalTotemHandler normalTotemHandler;
@@ -60,7 +60,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         dayHandler = new DayHandler(this);
 
         // DeathStorm
-        deathStormHandler = new DeathStormHandler(this, dayHandler); // Pasa dayHandler al DeathStormHandler
+        deathStormHandler = new DeathStormHandler(this, dayHandler);
         getServer().getPluginManager().registerEvents(deathStormHandler, this);
 
         // Comandos de DeathStorm
@@ -83,10 +83,10 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         PluginCommand dayCommand = getCommand("dia");
 
         if (changeDayCommand != null) {
-            changeDayCommand.setExecutor(new DayCommandHandler(dayHandler));  // Usa DayHandler correctamente
+            changeDayCommand.setExecutor(new DayCommandHandler(dayHandler));
         }
         if (dayCommand != null) {
-            dayCommand.setExecutor(new DayCommandHandler(dayHandler));  // Usa DayHandler correctamente
+            dayCommand.setExecutor(new DayCommandHandler(dayHandler));
         }
 
         // Cargar datos de DeathStorm al iniciar
@@ -118,10 +118,18 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         // Inicializar RuletaAnimation y MuerteAnimation
         ruletaAnimation = new RuletaAnimation(this);
         muerteAnimation = new MuerteAnimation(this);
+        bonusAnimation = new BonusAnimation(this);
 
         // Registrar el comando y su ejecutor
         getCommand("ruletavct").setExecutor(new RuletaCommand(ruletaAnimation));
         getCommand("muertevct").setExecutor(new MuerteCommand(muerteAnimation));
+        getCommand("bonusvct").setExecutor(new BonusCommand(bonusAnimation));
+
+        //Registrar CorruptedVillage
+        getServer().getPluginManager().registerEvents(new CorruptedVillage(this), this);
+
+        //Loottables con Esencias
+        getServer().getPluginManager().registerEvents(new LootHandler(this), this);
 
         // Inicializa los cambios del día 1
         dayOneChanges = new DayOneChanges(this);
@@ -147,14 +155,14 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        String message = ChatColor.WHITE + "" + ChatColor.BOLD + "\uE003 " + ChatColor.RESET + ChatColor.LIGHT_PURPLE + ChatColor.BOLD + event.getPlayer().getName() + ChatColor.RESET + ChatColor.LIGHT_PURPLE + " ha entrado a" + ChatColor.RESET + ChatColor.GOLD + ChatColor.BOLD + " Viciont Hardcore 3";
+        String message = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "۞ " + ChatColor.RESET + ChatColor.LIGHT_PURPLE + ChatColor.BOLD + event.getPlayer().getName() + ChatColor.RESET + ChatColor.LIGHT_PURPLE + " ha entrado a" + ChatColor.RESET + ChatColor.GOLD + ChatColor.BOLD + " Viciont Hardcore 3";
         event.setJoinMessage(message);
     }
 
     //Formateo del chat
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        String message = ChatColor.WHITE + "" + ChatColor.BOLD + "\uE004 " + ChatColor.RESET + ChatColor.GRAY + ChatColor.BOLD + event.getPlayer().getName() + ChatColor.RESET + ChatColor.GRAY + " ha salido de" + ChatColor.RESET + ChatColor.GOLD + ChatColor.BOLD + " Viciont Hardcore 3";
+        String message = ChatColor.GRAY + "" + ChatColor.BOLD + "۞ " + ChatColor.RESET + ChatColor.GRAY + ChatColor.BOLD + event.getPlayer().getName() + ChatColor.RESET + ChatColor.GRAY + " ha salido de" + ChatColor.RESET + ChatColor.GOLD + ChatColor.BOLD + " Viciont Hardcore 3";
         event.setQuitMessage(message);
     }
 
@@ -172,9 +180,9 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         for (World world : Bukkit.getWorlds()) {
             for (Entity entity : world.getEntities()) {
                 if (entity instanceof Zombie zombie) {
-                    // Verifica si es un Corrupted Zombie revisando su nombre o usando PersistentDataContainer
+
                     if (zombie.getCustomName() != null && zombie.getCustomName().equals(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Zombie")) {
-                        dayOneChanges.startSnowballRunnable(zombie); // Inicia el runnable de bolas de nieve para este zombie
+                        dayOneChanges.startSnowballRunnable(zombie);
                     }
                 }
             }

@@ -32,10 +32,8 @@ public class MuerteHandler implements Listener {
                 ? player.getLastDamageCause().getCause().toString().replace("_", " ").toLowerCase()
                 : "desconocida";
 
-        // Cambiar el modo de juego a espectador
         player.setGameMode(GameMode.SPECTATOR);
 
-        // Asignar al jugador al equipo "Fantasma"
         ScoreboardManager manager = Bukkit.getScoreboardManager();
         if (manager != null) {
             Scoreboard scoreboard = manager.getMainScoreboard();
@@ -47,7 +45,6 @@ public class MuerteHandler implements Listener {
             team.addEntry(playerName);
         }
 
-        // Ejecutar comando /muertevct desde la consola
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "muertevct");
 
         // Mostrar en el action bar por más tiempo (por ejemplo, 5 segundos)
@@ -90,17 +87,17 @@ public class MuerteHandler implements Listener {
                                         String playerName = player.getName();
                                         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
                                             onlinePlayer.sendTitle(
-                                                    ChatColor.DARK_GRAY + "" + ChatColor.MAGIC + "۞" + ChatColor.RESET + ChatColor.GRAY + playerName + ChatColor.RESET + ChatColor.GRAY + ChatColor.MAGIC + "۞", // Título (nombre del jugador con formato obfuscado)
-                                                    ChatColor.DARK_PURPLE + "" + ChatColor.RESET + ChatColor.DARK_PURPLE + ChatColor.BOLD + "Entro al sufrimiento eterno de Viciont", // Subtítulo
+                                                    ChatColor.DARK_GRAY + "" + ChatColor.MAGIC + "!" + ChatColor.RESET + ChatColor.GRAY + playerName + ChatColor.RESET + ChatColor.GRAY + ChatColor.MAGIC + "!", // Título (nombre del jugador con formato obfuscado)
+                                                    ChatColor.DARK_PURPLE + "" + ChatColor.RESET + ChatColor.DARK_PURPLE + ChatColor.BOLD + "۞Entro al sufrimiento eterno de Viciont۞", // Subtítulo
                                                     50, // Tiempo de aparición
                                                     40, // Tiempo en pantalla
                                                     50  // Tiempo de desaparición
                                             );
                                         }
+                                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect give @a minecraft:blindness 2 0");
                                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:item.totem.use ambient @a ~ ~ ~ 100000 0.1");
                                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:entity.ender_dragon.death ambient @a ~ ~ ~ 100000 0.7");
-                                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect give @a minecraft:blindness 15 3");
-                                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect give @a minecraft:poison 6 0");
+                                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect give @a minecraft:wither 6 0");
                                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect give @a minecraft:mining_fatigue 20 9");
                                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect give @a minecraft:levitation 7 0");
                                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect give @a minecraft:nausea 10 3");

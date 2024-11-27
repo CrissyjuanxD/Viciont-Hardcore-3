@@ -5,6 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityResurrectEvent;
 import org.bukkit.inventory.ItemStack;
@@ -18,14 +19,14 @@ public class NormalTotemHandler implements Listener {
         this.plugin = plugin;
     }
 
-    private void broadcastNormalTotemMessage(Player player) {
+    public static void broadcastNormalTotemMessage(Player player) {
         String message = ChatColor.translateAlternateColorCodes('&', "\uDBE8\uDCF6" + ChatColor.YELLOW + ChatColor.BOLD + player.getName() + ChatColor.RESET + ChatColor.YELLOW + " ha consumido un tótem");
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             onlinePlayer.sendMessage(message);
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerTotemUse(EntityResurrectEvent event) {
         if (event.getEntity() instanceof Player) {
             Player player = (Player) event.getEntity();

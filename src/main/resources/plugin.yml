@@ -1,5 +1,5 @@
 name: Viciont_Hardcore3_Plugin
-version: 1.4.1
+version: 1.4.2
 main: vct.hardcore3.ViciontHardcore3
 author: CrissyJuanXD
 api-version: 1.21
@@ -47,5 +47,20 @@ commands:
     description: Comando para reproducir la animación de la Muerte.
     usage: /muertevct <json>
     permission: viciont_hardcore3.muertevct
+    permission-message: No tienes permiso para usar este comando.
+  bonusvct:
+    description: Comando para reproducir la animación de Bonus.
+    usage: /bonusvct <json>
+    permission: viciont_hardcore3.bonusvct
+    permission-message: No tienes permiso para usar este comando.
+  vcth:
+    description: Localiza y maneja las estructuras de Corrupted Villages.
+    usage: /<command> locate Corrupted_Village
+    permission: vicionthardcore3.command.vcth
+    permission-message: No tienes permiso para usar este comando.
+  estructure:
+    description: Localiza y maneja las estructuras de Vicion
+    usage: /estructure <CorruptedVillage>
+    permission: vicionthardcore3.command.estructure
     permission-message: No tienes permiso para usar este comando.
 

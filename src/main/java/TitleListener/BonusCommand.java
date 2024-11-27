@@ -7,11 +7,11 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-public class MuerteCommand implements CommandExecutor {
-    private final MuerteAnimation muerteAnimation;
+public class BonusCommand implements CommandExecutor {
+    private final BonusAnimation bonusAnimation;
 
-    public MuerteCommand(MuerteAnimation muerteAnimation) {
-        this.muerteAnimation = muerteAnimation;
+    public BonusCommand(BonusAnimation bonusAnimation) {
+        this.bonusAnimation = bonusAnimation;
     }
 
     @Override
@@ -24,10 +24,9 @@ public class MuerteCommand implements CommandExecutor {
         String jsonMessage = args.length > 0 ? String.join(" ", args) : "";
 
         for (Player player : Bukkit.getOnlinePlayers()) {
-            muerteAnimation.playAnimation(player, jsonMessage);
+            bonusAnimation.playAnimation(player, jsonMessage);
         }
 
         return true;
     }
 }
-
