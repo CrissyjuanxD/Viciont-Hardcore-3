@@ -1,5 +1,5 @@
 name: Viciont_Hardcore3_Plugin
-version: 1.4.2
+version: 1.4.4
 main: vct.hardcore3.ViciontHardcore3
 author: CrissyJuanXD
 api-version: 1.21
@@ -63,4 +63,29 @@ commands:
     usage: /estructure <CorruptedVillage>
     permission: vicionthardcore3.command.estructure
     permission-message: No tienes permiso para usar este comando.
-
+  testanim1:
+    description: Test animation command
+    usage: /testanim1
+  start:
+    description: Start the game
+    usage: /start <evento1|skybattle|force>
+    aliases: []
+  end:
+    description: End the game
+    usage: /end <evento1>
+    aliases: []
+  magic:
+    description: Teletransporta jugadores a coordenadas especificadas con efectos especiales.
+    usage: /magic tp <jugador o @a> <x> <y> <z>
+    permission: viciont_hardcore3.command.magic
+    permission-message: No tienes permiso para usar este comando.
+  playdisco:
+    description: Iniciar el efecto disco.
+    usage: /playdisco
+    permission: viciont_hardcore3.command.playdisco
+    permission-message: No tienes permiso para usar este comando.
+  stopdisco:
+    description: Detener el efecto disco.
+    usage: /stopdisco
+    permission: viciont_hardcore3.command.stopdisco
+    permission-message: No tienes permiso para usar este comando.

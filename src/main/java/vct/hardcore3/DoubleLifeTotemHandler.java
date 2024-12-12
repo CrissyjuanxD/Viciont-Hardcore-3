@@ -1,6 +1,6 @@
 package vct.hardcore3;
 
-import org.bukkit.ChatColor;
+import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -34,7 +34,9 @@ public class DoubleLifeTotemHandler implements Listener {
     }
 
     private void broadcastTotemMessage(Player player) {
-        String message = ChatColor.translateAlternateColorCodes('&', "\uDBE8\uDCF6" + ChatColor.YELLOW + ChatColor.BOLD + player.getName() + ChatColor.RESET + ChatColor.YELLOW + " ha consumido un tótem de doble vida");
+        String message = ChatColor.translateAlternateColorCodes('&', "\uDBE8\uDCF6"
+                + ChatColor.of("#007EB2") + ChatColor.BOLD + player.getName()
+                + ChatColor.RESET + ChatColor.of("#8EBFEC") + " ha consumido un tótem de doble vida");
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             onlinePlayer.sendMessage(message);
         }

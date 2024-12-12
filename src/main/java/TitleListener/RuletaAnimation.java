@@ -32,8 +32,9 @@ public class RuletaAnimation {
             @Override
             public void run() {
                 if (frame >= TOTAL_FRAMES) {
+                    // Enviar el JSON solo una vez, después de la animación
                     if (!jsonMessage.isEmpty()) {
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a " + jsonMessage);
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw " + player.getName() + " " + jsonMessage);
                     }
                     cancel();
                     return;
@@ -41,7 +42,7 @@ public class RuletaAnimation {
 
                 // Mostrar el frame actual con interpolación
                 String unicodeFrame = String.valueOf((char) (FRAME_PREFIX.codePointAt(0) + frame));
-                player.sendTitle(unicodeFrame, "", 0, 20, 0);
+                player.sendTitle(unicodeFrame, "", 0, 40, 0);
 
                 // Calcular y avanzar frames suavemente
                 accumulatedFrames += framesPerTick;

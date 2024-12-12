@@ -1,6 +1,6 @@
 package vct.hardcore3;
 
-import org.bukkit.ChatColor;
+import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -20,7 +20,10 @@ public class NormalTotemHandler implements Listener {
     }
 
     public static void broadcastNormalTotemMessage(Player player) {
-        String message = ChatColor.translateAlternateColorCodes('&', "\uDBE8\uDCF6" + ChatColor.YELLOW + ChatColor.BOLD + player.getName() + ChatColor.RESET + ChatColor.YELLOW + " ha consumido un tótem");
+        String message = ChatColor.translateAlternateColorCodes('&', "\uDBE8\uDCF6"
+                + ChatColor.of("#7C01BB") + ChatColor.BOLD + player.getName()
+                + ChatColor.RESET + ChatColor.of("#C198F3") + " ha consumido un tótem");
+
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             onlinePlayer.sendMessage(message);
         }

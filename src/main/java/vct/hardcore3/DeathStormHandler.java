@@ -29,13 +29,17 @@ public class DeathStormHandler implements Listener {
     private final Map<UUID, Integer> deathCount = new HashMap<>();
     private int remainingStormSeconds = 0;
     private boolean isDeathStormActive = false;
-    private boolean isDeathMessageActive = false;
+    private static boolean isDeathMessageActive = false;
     private final Random random = new Random();
 
     public DeathStormHandler(JavaPlugin plugin, DayHandler dayHandler) {
         this.plugin = plugin;
         this.dayHandler = dayHandler;
         loadStormData();
+    }
+
+    public static void setDeathMessageActive(boolean isActive) {
+        isDeathMessageActive = isActive;
     }
 
     @EventHandler
@@ -45,8 +49,18 @@ public class DeathStormHandler implements Listener {
         deathCount.put(playerUUID, deathCount.getOrDefault(playerUUID, 0) + 1);
 
         int currentDay = dayHandler.getCurrentDay();
-        int increment = 3600 * currentDay;
-        remainingStormSeconds += increment;
+        int increment;
+
+        // Calcular el incremento según el día actual
+        if (currentDay >= 15 && currentDay < 20) {
+            increment = (currentDay - 14); // Incremento de 1 a 5 horas entre los días 15 y 19
+        } else if (currentDay >= 20) {
+            increment = (currentDay - 19); // Incremento de 1 a 5 horas a partir del día 20
+        } else {
+            increment = currentDay; // Incremento normal desde el día 1 hasta el día 14
+        }
+
+        remainingStormSeconds += 3600 * increment; // Incrementar las horas de tormenta
         isDeathStormActive = true;
         isDeathMessageActive = true;
 
@@ -58,7 +72,7 @@ public class DeathStormHandler implements Listener {
             public void run() {
                 isDeathMessageActive = false;
             }
-        }.runTaskLater(plugin, 5 * 20);
+        }.runTaskLater(plugin, 25 * 20);
     }
 
     @EventHandler
@@ -77,9 +91,6 @@ public class DeathStormHandler implements Listener {
             event.setCancelled(true);
         }
     }
-
-    private BukkitRunnable stormTask;
-
     private void startStorm() {
         World world = Bukkit.getWorlds().get(0);
 
@@ -121,6 +132,9 @@ public class DeathStormHandler implements Listener {
 
         stormTask.runTaskTimer(plugin, 0, 20);
     }
+    private BukkitRunnable stormTask;
+
+
 
     private void spawnRandomLightning(World world) {
         int currentDay = dayHandler.getCurrentDay();
@@ -139,7 +153,7 @@ public class DeathStormHandler implements Listener {
         } else {
             minStrikes = 1;
             maxStrikes = 1;
-            intervalTicks = 400L; // 1 rayo cada 20 segundos
+            intervalTicks = 2500L;
         }
 
         // Obtener la cantidad de rayos a generar
@@ -152,7 +166,7 @@ public class DeathStormHandler implements Listener {
             chunkPlayerMap.put(chunkCenter, chunkPlayerMap.getOrDefault(chunkCenter, 0) + 1);
         }
 
-        // Filtrar los chunks con más de un jugador si es antes del día 20
+        // Filtrar los chunks con más de un jugador si es antes del día 30
         if (currentDay < 20) {
             chunkPlayerMap.entrySet().removeIf(entry -> entry.getValue() > 1);
         }
@@ -176,12 +190,12 @@ public class DeathStormHandler implements Listener {
 
                 strikesRemaining--;
             }
-        }.runTaskTimer(plugin, 0, intervalTicks); // Intervalo fijo entre rayos
+        }.runTaskTimer(plugin, 4, intervalTicks); // Intervalo fijo entre rayos
     }
 
     private void spawnLightning(World world, Location location, boolean afterDay20) {
         // Tamaño del área en chunks (6x6) convertido a bloques (96x96)
-        int chunkRange = 6 * 16; // Cada chunk tiene 16 bloques
+        int chunkRange = 13 * 16; // Cada chunk tiene 16 bloques
         Location lightningLocation;
         int maxAttempts = 100; // Limitar el número de intentos para encontrar un chunk válido
         int attempts = 0;
@@ -213,8 +227,11 @@ public class DeathStormHandler implements Listener {
             lightningLocation = location;
         }
 
-        // Invocar el rayo en la posición generada
-        world.strikeLightning(lightningLocation);
+        if (afterDay20 || dayHandler.getCurrentDay() >= 10) {
+            world.strikeLightning(lightningLocation);
+        } else {
+            world.strikeLightningEffect(lightningLocation); // Rayo sin efectos }
+        }
 
         // Obtener el bloque impactado
         Block block = world.getBlockAt(lightningLocation);

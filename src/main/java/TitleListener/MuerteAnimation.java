@@ -1,66 +1,103 @@
 package TitleListener;
 
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MuerteAnimation {
     private final JavaPlugin plugin;
     private static final int TOTAL_FRAMES = 184;
     private static final String FRAME_PREFIX = "\uE851"; // Unicode inicial
-    private static final int TICKS_DURATION = 120; // Duración en ticks para la animación (8 segundos x 20 ticks)
-    private static final int SOUND_DELAY_TICKS = 100; // Retraso para sonidos adicionales (5 segundos x 20 ticks)
+    private static final double ANIMATION_DURATION = 6.12; // Duración en segundos
+    private static final int SOUND_DELAY_TICKS = 160; // Retraso para sonidos adicionales (5 segundos x 20 ticks)
+
+    // Contador de animaciones en curso
+    private static int ongoingAnimations = 0;
 
     public MuerteAnimation(JavaPlugin plugin) {
         this.plugin = plugin;
     }
 
-    public void playAnimation(Player player, String jsonMessage) {
+    public synchronized void playAnimation(Player player, String jsonMessage) {
+        // Si no hay animaciones en curso, cambiar la tasa de ticks a 30
+        if (ongoingAnimations == 0) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tick rate 30");
+        }
 
-        player.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 150, 1, true, false, false));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 150, 0, true, false, false));
-        player.playSound(player.getLocation(), "minecraft:custom.emuerte", 300.0f, 1.0f);
-        player.playSound(player.getLocation(), "minecraft:entity.allay.death", 100.0f, 0.7f);
-        player.playSound(player.getLocation(), "minecraft:entity.blaze.death", 100.0f, 0.7f);
+        // Incrementar el contador de animaciones en curso
+        ongoingAnimations++;
+
+        // Aplicar efectos inmediatos
+        Bukkit.getOnlinePlayers().forEach(p -> {
+            p.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 120, 1, true, false, false));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 120, 0, true, false, false));
+            p.playSound(p.getLocation(), "minecraft:custom.emuerte", 300.0f, 1.0f);
+            p.playSound(p.getLocation(), "minecraft:entity.allay.death", 100.0f, 0.7f);
+            p.playSound(p.getLocation(), "minecraft:entity.blaze.death", 100.0f, 0.7f);
+        });
+
+        // Aplicar lentitud a todos los mobs
+        Bukkit.getWorlds().forEach(world -> {
+            for (Entity entity : world.getEntities()) {
+                if (entity instanceof LivingEntity && !(entity instanceof Player)) {
+                    ((LivingEntity) entity).addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 160, 1, true, false, false));
+                }
+            }
+        });
+
         new BukkitRunnable() {
             @Override
             public void run() {
-                player.playSound(player.getLocation(), "minecraft:entity.skeleton_horse.death", 100.0f, 0.5f);
+                Bukkit.getOnlinePlayers().forEach(p -> p.playSound(p.getLocation(), "minecraft:entity.skeleton_horse.death", 100.0f, 0.5f));
             }
         }.runTaskLater(plugin, SOUND_DELAY_TICKS);
 
-
-        // Calcular frames por tick
-        double framesPerTick = (double) TOTAL_FRAMES / TICKS_DURATION;
+        // Generar lista de caracteres Unicode para los frames
+        List<String> unicodeFrames = generateUnicodeFrames(FRAME_PREFIX, TOTAL_FRAMES);
 
         new BukkitRunnable() {
-            int frame = 0;
-            double accumulatedFrames = 0; // Acumulador para avanzar frames cada tick
+            int frameIndex = 0;
 
             @Override
             public void run() {
-                if (frame >= TOTAL_FRAMES) {
+                if (frameIndex >= TOTAL_FRAMES) {
                     if (!jsonMessage.isEmpty()) {
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a " + jsonMessage);
+                    }
+                    // Decrementar el contador de animaciones en curso y cambiar la tasa de ticks de vuelta a 20 si no hay más animaciones en curso
+                    synchronized (MuerteAnimation.this) {
+                        ongoingAnimations--;
+                        if (ongoingAnimations == 0) {
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tick rate 20");
+                        }
                     }
                     cancel();
                     return;
                 }
 
-                // Muestra el frame actual
-                String unicodeFrame = String.valueOf((char) (FRAME_PREFIX.codePointAt(0) + frame));
-                player.sendTitle(unicodeFrame, "", 0, 20, 0); // Mostrar por 5 ticks
+                // Mostrar el frame actual a todos los jugadores
+                String unicodeFrame = unicodeFrames.get(frameIndex);
+                Bukkit.getOnlinePlayers().forEach(p -> p.sendTitle(unicodeFrame, "", 0, 10, 0)); // Mostrar por 10 ticks
 
-                // Incrementa el acumulador y calcular avance de frames
-                accumulatedFrames += framesPerTick;
-                while (accumulatedFrames >= 1) {
-                    frame++;
-                    accumulatedFrames--;
-                }
+                frameIndex++;
             }
         }.runTaskTimer(plugin, 0, 1);
+    }
+
+    private List<String> generateUnicodeFrames(String prefix, int totalFrames) {
+        List<String> unicodeFrames = new ArrayList<>();
+        int baseCodePoint = prefix.codePointAt(0);
+        for (int i = 0; i < totalFrames; i++) {
+            unicodeFrames.add(String.valueOf((char) (baseCodePoint + i)));
+        }
+        return unicodeFrames;
     }
 }

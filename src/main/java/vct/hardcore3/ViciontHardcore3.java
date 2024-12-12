@@ -4,9 +4,11 @@ import Commands.PingCommand;
 import Enchants.*;
 /*import Estructures.CorruptedVillage;*/
 import Estructures.CorruptedVillage;
+import Events.Skybattle.EventoHandler;
 import TitleListener.*;
 import list.VHList;
 import org.bukkit.*;
+import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Zombie;
@@ -23,6 +25,9 @@ import chat.chatgeneral;
 import Dificultades.DayOneChanges;
 
 import java.util.Objects;
+import org.bukkit.command.Command;
+
+import org.bukkit.entity.Player;
 
 public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
@@ -36,6 +41,9 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private DayOneChanges dayOneChanges;
     private DoubleLifeTotemHandler doubleLifeTotemHandler;
     private NormalTotemHandler normalTotemHandler;
+
+    //Eventos
+    private EventoHandler eventoHandler;
 
     @Override
     public void onEnable() {
@@ -58,6 +66,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
         // Inicializa correctamente el DayHandler y asigna a la variable de instancia
         dayHandler = new DayHandler(this);
+        getServer().getPluginManager().registerEvents(new MuerteHandler(this), this);
 
         // DeathStorm
         deathStormHandler = new DeathStormHandler(this, dayHandler);
@@ -112,13 +121,15 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         // Registro de EnchantDelete
         getServer().getPluginManager().registerEvents(new EnchantDelete(this), this);
 
-        //Inicializa el manejador de muerte
-        new MuerteHandler(this);
-
-        // Inicializar RuletaAnimation y MuerteAnimation
+        // Inicializar RuletaAnimation, TP, Disco y MuerteAnimation
         ruletaAnimation = new RuletaAnimation(this);
         muerteAnimation = new MuerteAnimation(this);
         bonusAnimation = new BonusAnimation(this);
+        DiscoCommand discoCommand = new DiscoCommand(this);
+        this.getCommand("magic").setExecutor(new MagicTP(this));
+        this.getCommand("playdisco").setExecutor(discoCommand);
+        this.getCommand("stopdisco").setExecutor(discoCommand);
+        getServer().getPluginManager().registerEvents(discoCommand, this);
 
         // Registrar el comando y su ejecutor
         getCommand("ruletavct").setExecutor(new RuletaCommand(ruletaAnimation));
@@ -136,6 +147,41 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         new DayOneChanges(this).registerCustomRecipe(); // Registrar receta personalizada
         applySnowballRunnableToLoadedCorruptedZombies();
 
+        this.getCommand("testanim1").setExecutor(this);
+
+        // Inicializar EventoHandler
+                this.eventoHandler = new EventoHandler(this);
+                getServer().getPluginManager().registerEvents(eventoHandler, this);
+
+                this.getCommand("start").setExecutor((sender, command, label, args) -> {
+                    if (args.length == 1) {
+                        switch (args[0].toLowerCase()) {
+                            case "evento1":
+                                eventoHandler.iniciarEvento();
+                                break;
+                            case "skybattle":
+                                eventoHandler.iniciarSecuenciaInicioSkyBattle();
+                                break;
+                            case "force":
+                                eventoHandler.forzarEvento();
+                                break;
+                            default:
+                                sender.sendMessage("Uso incorrecto del comando. Usa /start <evento1|skybattle|force>");
+                        }
+                    } else {
+                        sender.sendMessage("Uso incorrecto del comando. Usa /start <evento1|skybattle|force>");
+                    }
+                    return true;
+                });
+
+                this.getCommand("end").setExecutor((sender, command, label, args) -> {
+                    if (args.length == 1 && args[0].equalsIgnoreCase("evento1")) {
+                        eventoHandler.terminarEvento();
+                    } else {
+                        sender.sendMessage("Uso incorrecto del comando. Usa /end <evento1>");
+                    }
+                    return true;
+                });
     }
 
     @Override
@@ -188,5 +234,27 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
             }
         }
     }
+
+        @Override
+        public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+            if (command.getName().equalsIgnoreCase("testanim1")) {
+                if (sender instanceof Player) {
+                    Player player = (Player) sender;
+                    playDeathAnimation(player);
+                    return true;
+                } else {
+                    sender.sendMessage(ChatColor.RED + "Este comando solo puede ser usado por jugadores.");
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        public void playDeathAnimation(Player player) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "execute as " + player.getName() + " run title @a title {\"text\":\"\\uE851\", \"color\":\"red\"}");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "execute as " + player.getName() + " run playsound minecraft:entity.blaze.death master @a ~ ~ ~ 1 1 1");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "execute as " + player.getName() + " run particle minecraft:smoke ~ ~ ~ 1 1 1 0.1 10");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a {\"text\":\"Animación de muerte activada\"}");
+        }
 }
 
