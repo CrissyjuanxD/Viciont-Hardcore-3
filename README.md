@@ -25,4 +25,4 @@ Basicamente se tendra que jugar de una manera distinta al Minecraft Vanilla
 
 Plugin inspirado en **Permadeath** y **Dedsafio** 
 
-El plugin esta en fase alpha y llevare un 4% de todo lo que quiero hacer, y si hay fallos de estructuras o redundancia, lo siento, soy muy nuevo con los Plugins.
+El plugin esta en fase alpha y llevare un 10% de todo lo que quiero hacer, y si hay fallos de estructuras o redundancia, lo siento, soy muy nuevo con los Plugins.
