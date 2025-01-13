@@ -36,7 +36,6 @@ public class CorruptedVillage implements Listener, CommandExecutor {
         this.plugin = plugin;
         plugin.getCommand("estructure").setExecutor(this);
 
-        // Crear carpeta "schem" si no existe
         File schemFolder = new File(plugin.getDataFolder(), "schem");
         if (!schemFolder.exists() && schemFolder.mkdirs()) {
             plugin.getLogger().info("Carpeta 'schem' creada exitosamente.");
@@ -82,7 +81,7 @@ public class CorruptedVillage implements Listener, CommandExecutor {
                             potentialLocation.getBlockX(), potentialLocation.getBlockY(), potentialLocation.getBlockZ()
                     );
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), coordinatesMessage);
-                }, 200L); // 200 ticks = 10 segundos
+                }, 200L);
             });
         });
         return true;
@@ -99,7 +98,7 @@ public class CorruptedVillage implements Listener, CommandExecutor {
             int x = generateRandomCoordinate();
             int z = generateRandomCoordinate();
             int y = bukkitWorld.getHighestBlockYAt(x, z);
-            return new Location(bukkitWorld, x, y, z); // No cargar chunks aún
+            return new Location(bukkitWorld, x, y, z);
         }
         return null;
     }
@@ -121,7 +120,7 @@ public class CorruptedVillage implements Listener, CommandExecutor {
                 for (BlockState state : chunk.getTileEntities()) {
                     if (state.getType() == Material.CHEST) {
                         plugin.getLogger().info("Cofre encontrado en: " + state.getLocation());
-                        return false; // No es válido si hay cofres
+                        return false;
                     }
                 }
             }
@@ -134,10 +133,8 @@ public class CorruptedVillage implements Listener, CommandExecutor {
             return false;
         }
 
-        return true; // Ubicación válida si no hay cofres y el bloque inferior es sólido
+        return true;
     }
-
-
 
     private int generateRandomCoordinate() {
         int coordinate = random.nextInt(500) + 1000; // Evitar coordenadas cercanas al spawn

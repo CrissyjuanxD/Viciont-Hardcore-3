@@ -10,8 +10,8 @@ import org.bukkit.scheduler.BukkitRunnable;
 public class BonusAnimation {
     private final JavaPlugin plugin;
     private static final int TOTAL_FRAMES = 110;
-    private static final String FRAME_PREFIX = "\uE732"; // Unicode inicial del primer frame
-    private static final int TICKS_DURATION = 120; // Duración en ticks para la animación (8 segundos x 20 ticks)
+    private static final String FRAME_PREFIX = "\uE732";
+    private static final int TICKS_DURATION = 120;
 
     public BonusAnimation (JavaPlugin plugin) {
         this.plugin = plugin;
@@ -27,7 +27,7 @@ public class BonusAnimation {
 
         new BukkitRunnable() {
             int frame = 0;
-            double accumulatedFrames = 0; // Acumulador para frames fraccionados
+            double accumulatedFrames = 0;
 
             @Override
             public void run() {
@@ -39,11 +39,11 @@ public class BonusAnimation {
                     return;
                 }
 
-                // Mostrar el frame actual con interpolación
+                // frame actual con interpolación
                 String unicodeFrame = String.valueOf((char) (FRAME_PREFIX.codePointAt(0) + frame));
                 player.sendTitle(unicodeFrame, "", 0, 20, 0);
 
-                // Calcular y avanzar frames suavemente
+                // Calcula y avanza frames suavemente
                 accumulatedFrames += framesPerTick;
                 while (accumulatedFrames >= 1) {
                     frame++;

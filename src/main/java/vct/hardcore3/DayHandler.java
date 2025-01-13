@@ -1,5 +1,7 @@
     package vct.hardcore3;
     
+    import Dificultades.DayFourChanges;
+    import Dificultades.DayTwoChanges;
     import org.bukkit.Bukkit;
     import org.bukkit.entity.Player;
     import org.bukkit.plugin.java.JavaPlugin;
@@ -18,11 +20,15 @@
         private int remainingDaySeconds = 86400;
         private BukkitRunnable dayTask;
         private DayOneChanges dayOneChanges;
+        private DayTwoChanges dayTwoChange;
+        private DayFourChanges dayFourChanges;
         private boolean dayOneChangesApplied = false;
     
         public DayHandler(JavaPlugin plugin) {
             this.plugin = plugin;
-            dayOneChanges = new DayOneChanges(plugin);
+            dayOneChanges = new DayOneChanges(plugin, this);
+            dayTwoChange = new DayTwoChanges(plugin);
+            dayFourChanges = new DayFourChanges(plugin);
             loadDayData();
             startDayTimer();
             applyCurrentDayChanges();
@@ -39,14 +45,14 @@
                 public void run() {
                     if (remainingDaySeconds <= 0) {
                         advanceDay();
-                        remainingDaySeconds = 86400; // Reiniciar a 24 horas
+                        remainingDaySeconds = 86400;
                     }
     
                     remainingDaySeconds--;
                 }
             };
     
-            dayTask.runTaskTimer(plugin, 0, 20);  // Ejecutar cada segundo
+            dayTask.runTaskTimer(plugin, 0, 20);
         }
     
         // Avanzar el día
@@ -63,7 +69,7 @@
             revertCurrentDayChanges();  // Revertir los cambios antes de cambiar el día
             currentDay = day;
             remainingDaySeconds = 86400;  // Reiniciar el temporizador al cambiar de día
-            startDayTimer();  // Reiniciar el temporizador
+            startDayTimer();
 
             for (Player player : Bukkit.getOnlinePlayers()) {
                 player.sendMessage(ChatColor.GOLD + "El día ha sido cambiado manualmente al día " + currentDay + ".");
@@ -79,16 +85,27 @@
                 dayOneChanges.apply();
                 dayOneChangesApplied = true;
             }
-        }
-
-        private void revertCurrentDayChanges() {
-            if (dayOneChangesApplied && currentDay < 1) {  // Revierte si ya se aplicó el cambio del día 1
-                dayOneChanges.revert();
-                dayOneChangesApplied = false;
+            if (currentDay >= 2) {
+                dayTwoChange.apply();
+            }
+            if (currentDay >= 4) {
+                dayFourChanges.apply();
             }
         }
 
-    
+        private void revertCurrentDayChanges() {
+            if (dayOneChangesApplied && currentDay < 1) {
+                dayOneChanges.revert();
+                dayOneChangesApplied = false;
+            }
+            if (currentDay < 2) {
+                dayTwoChange.revert();
+            }
+            if (currentDay < 4) {
+                dayFourChanges.revert();
+            }
+        }
+
         public int getCurrentDay() {
             return currentDay;
         }

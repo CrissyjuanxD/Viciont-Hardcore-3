@@ -3,10 +3,14 @@ package Enchants;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-public class GiveEssenceCommand implements CommandExecutor {
+import java.util.ArrayList;
+import java.util.List;
+
+public class GiveEssenceCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -71,6 +75,26 @@ public class GiveEssenceCommand implements CommandExecutor {
         player.getInventory().addItem(essence);
         player.sendMessage("Has recibido la " + essence.getItemMeta().getDisplayName() + "!");
         return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        List<String> completions = new ArrayList<>();
+
+        if (args.length == 1) {
+            List<String> essences = List.of(
+                    "proteccion", "irrompibilidad", "mending", "eficiencia", "fortuna",
+                    "filo", "castigo", "artrópodos", "caida", "saqueo", "agilidad", "toque", "poder"
+            );
+
+            for (String essence : essences) {
+                if (essence.toLowerCase().startsWith(args[0].toLowerCase())) {
+                    completions.add(essence);
+                }
+            }
+        }
+
+        return completions;
     }
 }
 

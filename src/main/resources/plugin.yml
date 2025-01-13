@@ -1,5 +1,5 @@
 name: Viciont_Hardcore3_Plugin
-version: 1.4.4
+version: 1.5.0
 main: vct.hardcore3.ViciontHardcore3
 author: CrissyJuanXD
 api-version: 1.21
@@ -76,7 +76,7 @@ commands:
     aliases: []
   magic:
     description: Teletransporta jugadores a coordenadas especificadas con efectos especiales.
-    usage: /magic tp <jugador o @a> <x> <y> <z>
+    usage: /magic tp <jugador o @a> <x y z | spawn>
     permission: viciont_hardcore3.command.magic
     permission-message: No tienes permiso para usar este comando.
   playdisco:
@@ -89,3 +89,14 @@ commands:
     usage: /stopdisco
     permission: viciont_hardcore3.command.stopdisco
     permission-message: No tienes permiso para usar este comando.
+  spawnvct:
+    description: Spawnea un mob personalizado en tu ubicación
+    usage: /spawnvct <mob> [jugador (opcional)] [x] [y] [z]
+    permission: viciont_hardcore3.command.spawnvct
+    permission-message: No tienes permiso para usar este comando.
+  addtiempo:
+    description: Añade un temporizador en la bossbar.
+    usage: /addtiempo [nombre opcional] <tiempo> [on/off]
+  removetiempo:
+    description: Elimina un temporizador de la bossbar.
+    usage: /removetiempo [nombre opcional]

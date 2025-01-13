@@ -2,9 +2,6 @@ package TitleListener;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarStyle;
-import org.bukkit.boss.BossBar;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -14,17 +11,19 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.HashSet;
 
 public class DiscoCommand implements Listener, CommandExecutor {
 
     private final JavaPlugin plugin;
     private final Set<Player> activeDiscoPlayers = new HashSet<>();
-    private final Map<Player, BossBar> bossBars = new HashMap<>();
+    private final Map<Player, BukkitTask> discoTasks = new HashMap<>();
     private final ChatColor[] colors = {
             ChatColor.AQUA, ChatColor.RED, ChatColor.GREEN, ChatColor.YELLOW, ChatColor.DARK_PURPLE, ChatColor.LIGHT_PURPLE
     };
@@ -90,11 +89,6 @@ public class DiscoCommand implements Listener, CommandExecutor {
     }
 
     private void startDiscoTask(Player player) {
-        BossBar bossBar = Bukkit.createBossBar("\uEAA5", BarColor.WHITE, BarStyle.SOLID);
-        bossBar.addPlayer(player);
-        bossBar.setVisible(true);
-        bossBars.put(player, bossBar);
-
         BukkitTask task = new BukkitRunnable() {
             int index = 0;
 
@@ -105,20 +99,20 @@ public class DiscoCommand implements Listener, CommandExecutor {
                     return;
                 }
 
-                bossBar.setTitle(colors[index] + "\uEAA5");
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(colors[index] + "\uEAA5"));
                 index = (index + 1) % colors.length;
             }
         }.runTaskTimer(plugin, 0L, 10L);
 
-        bossBars.put(player, bossBar);
+        discoTasks.put(player, task);
     }
 
     private void stopDiscoTask(Player player) {
-        BossBar bossBar = bossBars.remove(player);
+        BukkitTask task = discoTasks.remove(player);
 
-        if (bossBar != null) {
-            bossBar.removeAll();
-            bossBar.setVisible(false);
+        if (task != null) {
+            task.cancel();
         }
+        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(""));
     }
 }

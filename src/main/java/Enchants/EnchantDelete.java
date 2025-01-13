@@ -44,7 +44,6 @@ public class EnchantDelete implements Listener {
         Map<Enchantment, Integer> enchantsToAdd = event.getEnchantsToAdd();
         boolean removedAny = enchantsToAdd.entrySet().removeIf(entry -> prohibitedEnchantments.contains(entry.getKey()));
 
-        // Si se eliminó algún encantamiento, actualizar el item encantado
         if (removedAny) {
             item.addUnsafeEnchantments(enchantsToAdd);
             event.getEnchanter().sendMessage(ChatColor.GRAY + "No se puede encantar con este encantamiento, y si se encanto, se ha removido del item");
@@ -54,7 +53,6 @@ public class EnchantDelete implements Listener {
     @EventHandler
     public void onVillagerInventoryOpen(InventoryOpenEvent event) {
         if (event.getInventory().getHolder() instanceof Villager villager) {
-            // Crear una copia modificable de la lista de recetas
             List<MerchantRecipe> recipes = new ArrayList<>(villager.getRecipes());
 
             // Iterar sobre la lista copiada y eliminar las recetas no deseadas
@@ -67,7 +65,6 @@ public class EnchantDelete implements Listener {
                 return false;
             });
 
-            // Actualizar las recetas del aldeano con la lista modificada
             villager.setRecipes(recipes);
         }
     }
@@ -79,7 +76,7 @@ public class EnchantDelete implements Listener {
         if (result.getType() == org.bukkit.Material.ENCHANTED_BOOK) {
             EnchantmentStorageMeta meta = (EnchantmentStorageMeta) result.getItemMeta();
             if (meta != null && meta.getStoredEnchants().keySet().stream().anyMatch(prohibitedEnchantments::contains)) {
-                event.setCancelled(true); // Cancelar la creación de la receta si contiene un encantamiento prohibido
+                event.setCancelled(true);
             }
         }
     }

@@ -26,7 +26,7 @@ public class EnhancedEnchantmentTable {
         ItemStack diamondPlate = new ItemStack(Material.DIAMOND);
         ItemMeta meta = diamondPlate.getItemMeta();
         meta.setDisplayName("§bPlaca de Diamante");
-        meta.setCustomModelData(1);  // Custom Model Data
+        meta.setCustomModelData(1);
         diamondPlate.setItemMeta(meta);
         return diamondPlate;
     }
@@ -54,7 +54,7 @@ public class EnhancedEnchantmentTable {
         ShapedRecipe tableRecipe = new ShapedRecipe(new NamespacedKey(plugin, "enhanced_enchantment_table"), createEnhancedEnchantmentTable());
         tableRecipe.shape("DPD", "PTP", "BIB");
         tableRecipe.setIngredient('B', Material.BOOKSHELF);
-        tableRecipe.setIngredient('P', Material.DIAMOND); // "Placa de Diamante", falta la diamond plate
+        tableRecipe.setIngredient('P', Material.DIAMOND);
         tableRecipe.setIngredient('T', Material.ENCHANTING_TABLE);
         tableRecipe.setIngredient('I', Material.GOLD_BLOCK);
         tableRecipe.setIngredient('D', Material.IRON_BLOCK);

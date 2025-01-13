@@ -32,6 +32,10 @@ public class DeathStormHandler implements Listener {
     private static boolean isDeathMessageActive = false;
     private final Random random = new Random();
 
+    private static final net.md_5.bungee.api.ChatColor COLOR_PRIMARIO = net.md_5.bungee.api.ChatColor.of("#9179D4");
+    private static final net.md_5.bungee.api.ChatColor COLOR_TIEMPO = net.md_5.bungee.api.ChatColor.of("#7700A0");
+    private static final net.md_5.bungee.api.ChatColor COLOR_GRIS = net.md_5.bungee.api.ChatColor.GRAY;
+
     public DeathStormHandler(JavaPlugin plugin, DayHandler dayHandler) {
         this.plugin = plugin;
         this.dayHandler = dayHandler;
@@ -53,14 +57,14 @@ public class DeathStormHandler implements Listener {
 
         // Calcular el incremento según el día actual
         if (currentDay >= 15 && currentDay < 20) {
-            increment = (currentDay - 14); // Incremento de 1 a 5 horas entre los días 15 y 19
+            increment = (currentDay - 14);
         } else if (currentDay >= 20) {
-            increment = (currentDay - 19); // Incremento de 1 a 5 horas a partir del día 20
+            increment = (currentDay - 19);
         } else {
-            increment = currentDay; // Incremento normal desde el día 1 hasta el día 14
+            increment = currentDay;
         }
 
-        remainingStormSeconds += 3600 * increment; // Incrementar las horas de tormenta
+        remainingStormSeconds += 3600 * increment;
         isDeathStormActive = true;
         isDeathMessageActive = true;
 
@@ -91,6 +95,7 @@ public class DeathStormHandler implements Listener {
             event.setCancelled(true);
         }
     }
+
     private void startStorm() {
         World world = Bukkit.getWorlds().get(0);
 
@@ -119,10 +124,28 @@ public class DeathStormHandler implements Listener {
                 int hours = remainingStormSeconds / 3600;
                 int minutes = (remainingStormSeconds % 3600) / 60;
                 int seconds = remainingStormSeconds % 60;
-                String timeMessage = String.format(ChatColor.GRAY + "Quedan " + ChatColor.DARK_AQUA + ChatColor.BOLD + ChatColor.UNDERLINE + "%02d:%02d:%02d" + ChatColor.RESET + ChatColor.GRAY + " horas de DeathStorm", hours, minutes, seconds);
+
+                TextComponent message = new TextComponent();
+                TextComponent quedanText = new TextComponent("Quedan ");
+                quedanText.setColor(COLOR_PRIMARIO);
+                message.addExtra(quedanText);
+
+                TextComponent clockSymbol = new TextComponent("⌚ ");
+                clockSymbol.setColor(COLOR_GRIS);
+                message.addExtra(clockSymbol);
+                TextComponent timeComponent = new TextComponent(
+                        String.format("%02d:%02d:%02d", hours, minutes, seconds)
+                );
+                timeComponent.setColor(COLOR_TIEMPO);
+                timeComponent.setBold(true);
+                timeComponent.setUnderlined(true);
+                message.addExtra(timeComponent);
+                TextComponent stormMessage = new TextComponent(" horas de DeathStorm");
+                stormMessage.setColor(COLOR_PRIMARIO);
+                message.addExtra(stormMessage);
 
                 for (Player player : Bukkit.getOnlinePlayers()) {
-                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(timeMessage));
+                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, message);
                 }
 
                 remainingStormSeconds--;
@@ -132,10 +155,8 @@ public class DeathStormHandler implements Listener {
 
         stormTask.runTaskTimer(plugin, 0, 20);
     }
+
     private BukkitRunnable stormTask;
-
-
-
     private void spawnRandomLightning(World world) {
         int currentDay = dayHandler.getCurrentDay();
 
@@ -145,11 +166,11 @@ public class DeathStormHandler implements Listener {
         if (currentDay >= 20) {
             minStrikes = 6;
             maxStrikes = 15;
-            intervalTicks = 20L; // 1 rayo cada segundo
+            intervalTicks = 20L;
         } else if (currentDay >= 15) {
             minStrikes = 4;
             maxStrikes = 7;
-            intervalTicks = 140L; // 1 rayo cada 7 segundos
+            intervalTicks = 140L;
         } else {
             minStrikes = 1;
             maxStrikes = 1;
@@ -171,7 +192,6 @@ public class DeathStormHandler implements Listener {
             chunkPlayerMap.entrySet().removeIf(entry -> entry.getValue() > 1);
         }
 
-        // Ejecutar rayos de forma programada
         new BukkitRunnable() {
             int strikesRemaining = lightningCount;
 
@@ -185,19 +205,19 @@ public class DeathStormHandler implements Listener {
                 for (Location chunkCenter : chunkPlayerMap.keySet()) {
                     // Limitar a un rayo por área de 6x6 chunks
                     spawnLightning(world, chunkCenter, currentDay >= 20);
-                    break; // Solo invoca un rayo por ejecución
+                    break;
                 }
 
                 strikesRemaining--;
             }
-        }.runTaskTimer(plugin, 4, intervalTicks); // Intervalo fijo entre rayos
+        }.runTaskTimer(plugin, 4, intervalTicks);
     }
 
     private void spawnLightning(World world, Location location, boolean afterDay20) {
         // Tamaño del área en chunks (6x6) convertido a bloques (96x96)
-        int chunkRange = 13 * 16; // Cada chunk tiene 16 bloques
+        int chunkRange = 13 * 16;
         Location lightningLocation;
-        int maxAttempts = 100; // Limitar el número de intentos para encontrar un chunk válido
+        int maxAttempts = 100;
         int attempts = 0;
 
         do {
@@ -205,9 +225,8 @@ public class DeathStormHandler implements Listener {
             double offsetX = (random.nextDouble() - 0.5) * chunkRange;
             double offsetZ = (random.nextDouble() - 0.5) * chunkRange;
 
-            // Calcular la nueva posición del rayo
             lightningLocation = location.clone().add(offsetX, 0, offsetZ);
-            lightningLocation.setY(world.getHighestBlockYAt(lightningLocation)); // Ajustar a la altura del terreno
+            lightningLocation.setY(world.getHighestBlockYAt(lightningLocation));
 
             // Verificar si el chunk contiene jugadores
             Chunk targetChunk = lightningLocation.getChunk();
@@ -218,11 +237,10 @@ public class DeathStormHandler implements Listener {
             if (!afterDay20 && chunkHasPlayers) {
                 attempts++;
             } else {
-                break; // Encontramos una ubicación válida
+                break;
             }
         } while (attempts < maxAttempts);
 
-        // Si se supera el número de intentos, usamos la ubicación inicial para evitar un bucle infinito
         if (attempts >= maxAttempts) {
             lightningLocation = location;
         }
@@ -230,28 +248,21 @@ public class DeathStormHandler implements Listener {
         if (afterDay20 || dayHandler.getCurrentDay() >= 10) {
             world.strikeLightning(lightningLocation);
         } else {
-            world.strikeLightningEffect(lightningLocation); // Rayo sin efectos }
+            world.strikeLightningEffect(lightningLocation);
         }
 
         // Obtener el bloque impactado
         Block block = world.getBlockAt(lightningLocation);
         int currentDay = dayHandler.getCurrentDay();
 
-        // Lógica de daño según el día y afterDay20
         if (afterDay20 || currentDay >= 15) {
-            // A partir del día 15 o si es después del día 20
             if (block.getType() != Material.OBSIDIAN && block.getType() != Material.BEDROCK) {
-                block.setType(Material.FIRE); // Los bloques no protegidos se convierten en fuego
+                block.setType(Material.FIRE);
             }
         } else {
-            // Antes del día 15, los bloques no se afectan
-            block.setType(block.getType()); // Los bloques permanecen intactos
+            block.setType(block.getType());
         }
     }
-
-
-
-
 
     public void resetStorm() {
         remainingStormSeconds = 0;

@@ -1,26 +1,23 @@
 package vct.hardcore3;
 
-import Commands.PingCommand;
+import Commands.*;
+import Dificultades.DayFourChanges;
+import Dificultades.DayTwoChanges;
 import Enchants.*;
-/*import Estructures.CorruptedVillage;*/
 import Estructures.CorruptedVillage;
+import Events.DamageLogListener;
 import Events.Skybattle.EventoHandler;
 import TitleListener.*;
 import list.VHList;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Zombie;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.ChatColor;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import Commands.DeathStormCommand;
-import Commands.DayCommandHandler;
-import Commands.ReviveCommand;
 import chat.chatgeneral;
 import Dificultades.DayOneChanges;
 
@@ -39,10 +36,12 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private MuerteAnimation muerteAnimation;
     private BonusAnimation bonusAnimation;
     private DayOneChanges dayOneChanges;
+    private DayTwoChanges dayTwoChanges;
+    private DayFourChanges dayFourChanges;
     private DoubleLifeTotemHandler doubleLifeTotemHandler;
     private NormalTotemHandler normalTotemHandler;
+    private SpawnMobs spawnMobs;
 
-    //Eventos
     private EventoHandler eventoHandler;
 
     @Override
@@ -107,6 +106,16 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         // Registrar el comando /ping
         Objects.requireNonNull(this.getCommand("ping")).setExecutor(new PingCommand(this));
 
+        //comandos generales
+        Objects.requireNonNull(this.getCommand("spawnvct")).setExecutor(new SpawnMobs(this));
+
+        // Registrar el comando para el temporizador;
+        TiempoCommand tiempoCommand = new TiempoCommand(this);
+        this.getCommand("addtiempo").setExecutor(tiempoCommand);
+        this.getCommand("removetiempo").setExecutor(tiempoCommand);
+        this.getCommand("addtiempo").setTabCompleter(tiempoCommand);
+        this.getCommand("removetiempo").setTabCompleter(tiempoCommand);
+
         // Registrar eventos de list
         new VHList(this).runTaskTimer(this, 0, 20);
 
@@ -139,17 +148,20 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         //Registrar CorruptedVillage
         getServer().getPluginManager().registerEvents(new CorruptedVillage(this), this);
 
-        //Loottables con Esencias
-        getServer().getPluginManager().registerEvents(new LootHandler(this), this);
-
         // Inicializa los cambios del día 1
-        dayOneChanges = new DayOneChanges(this);
-        new DayOneChanges(this).registerCustomRecipe(); // Registrar receta personalizada
-        applySnowballRunnableToLoadedCorruptedZombies();
+        dayOneChanges = new DayOneChanges(this, dayHandler);
+        dayOneChanges.registerCustomRecipe();
 
-        this.getCommand("testanim1").setExecutor(this);
+        // Inicializa los cambios del día 2
+        dayTwoChanges = new DayTwoChanges(this);
 
-        // Inicializar EventoHandler
+        // Inicializa los cambios del día 4
+        dayFourChanges = new DayFourChanges(this);
+
+        //Loottables
+        getServer().getPluginManager().registerEvents(new LootHandler(this, dayFourChanges), this);
+
+        // Inicializar EventoHandler y Eventos Generales
                 this.eventoHandler = new EventoHandler(this);
                 getServer().getPluginManager().registerEvents(eventoHandler, this);
 
@@ -182,6 +194,8 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
                     }
                     return true;
                 });
+
+        getServer().getPluginManager().registerEvents(new DamageLogListener(this), this);
     }
 
     @Override
@@ -205,34 +219,18 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         event.setJoinMessage(message);
     }
 
-    //Formateo del chat
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         String message = ChatColor.GRAY + "" + ChatColor.BOLD + "۞ " + ChatColor.RESET + ChatColor.GRAY + ChatColor.BOLD + event.getPlayer().getName() + ChatColor.RESET + ChatColor.GRAY + " ha salido de" + ChatColor.RESET + ChatColor.GOLD + ChatColor.BOLD + " Viciont Hardcore 3";
         event.setQuitMessage(message);
     }
 
-
-    // Método para acceder a DayHandler
     public DayHandler getDayHandler() {
-        return dayHandler;  // Retorna la instancia correctamente inicializada
+        return dayHandler;
     }
 
     public DoubleLifeTotemHandler getDoubleLifeTotemHandler() {
         return doubleLifeTotemHandler;
-    }
-
-    public void applySnowballRunnableToLoadedCorruptedZombies() {
-        for (World world : Bukkit.getWorlds()) {
-            for (Entity entity : world.getEntities()) {
-                if (entity instanceof Zombie zombie) {
-
-                    if (zombie.getCustomName() != null && zombie.getCustomName().equals(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Zombie")) {
-                        dayOneChanges.startSnowballRunnable(zombie);
-                    }
-                }
-            }
-        }
     }
 
         @Override

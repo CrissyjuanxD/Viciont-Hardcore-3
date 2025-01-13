@@ -3,7 +3,6 @@ package TitleListener;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -21,21 +20,23 @@ public class MagicTP implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (args.length != 5) {
-            sender.sendMessage(ChatColor.RED + "Uso correcto: /magic tp <jugador o @a> <x> <y> <z>");
+        if (args.length != 5 && args.length != 3) {
+            sender.sendMessage(ChatColor.RED + "Uso correcto: /magic tp <jugador o @a> <x> <y> <z> o /magic tp <jugador o @a> spawn");
             return true;
         }
 
         String targetName = args[1];
-        double x, y, z;
-
-        try {
-            x = Double.parseDouble(args[2]);
-            y = Double.parseDouble(args[3]);
-            z = Double.parseDouble(args[4]);
-        } catch (NumberFormatException e) {
-            sender.sendMessage(ChatColor.RED + "Las coordenadas deben ser números válidos.");
-            return true;
+        boolean useSpawn = args.length == 3 && args[2].equalsIgnoreCase("spawn");
+        double x = 0, y = 0, z = 0;
+        if (!useSpawn && args.length == 5) {
+            try {
+                x = Double.parseDouble(args[2]);
+                y = Double.parseDouble(args[3]);
+                z = Double.parseDouble(args[4]);
+            } catch (NumberFormatException e) {
+                sender.sendMessage(ChatColor.RED + "Las coordenadas deben ser números válidos.");
+                return true;
+            }
         }
 
         Player[] players;
@@ -55,18 +56,27 @@ public class MagicTP implements CommandExecutor {
             player.sendTitle("\uEAA4", "", 80, 80, 20);
         }
 
+        boolean finalUseSpawn = useSpawn;
+        double finalX = x, finalY = y, finalZ = z;
 
         new BukkitRunnable() {
             @Override
             public void run() {
                 for (Player player : players) {
-                    player.teleport(new Location(player.getWorld(), x, y, z));
+                    if (finalUseSpawn) {
+                        Location bedSpawn = player.getBedSpawnLocation();
+                        if (bedSpawn != null) {
+                            player.teleport(bedSpawn);
+                        } else {
+                            player.teleport(player.getWorld().getSpawnLocation());
+                        }
+                    } else {
+                        player.teleport(new Location(player.getWorld(), finalX, finalY, finalZ));
+                    }
                 }
             }
         }.runTaskLater(plugin, 120);
 
         return true;
     }
-
-
 }

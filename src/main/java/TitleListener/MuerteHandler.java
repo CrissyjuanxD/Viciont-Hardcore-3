@@ -27,7 +27,7 @@ public class MuerteHandler implements Listener {
     private final JavaPlugin plugin;
     private final MuerteAnimation muerteAnimation;
     private BukkitRunnable currentDeathMessageTask;
-    private final Map<Player, Location> deathLocations = new HashMap<>(); // Mapa para almacenar las ubicaciones de muerte
+    private final Map<Player, Location> deathLocations = new HashMap<>();
 
     public MuerteHandler(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -38,26 +38,23 @@ public class MuerteHandler implements Listener {
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
-        Location deathLocation = player.getLocation(); // Guardar la ubicación de la muerte
-        deathLocations.put(player, deathLocation); // Almacenar la ubicación de muerte en el mapa
+        Location deathLocation = player.getLocation();
+        deathLocations.put(player, deathLocation);
 
         String playerName = player.getName();
         String deathCause = (player.getLastDamageCause() != null && player.getLastDamageCause().getCause() != null)
                 ? player.getLastDamageCause().getCause().toString().replace("_", " ").toLowerCase()
                 : "desconocida";
 
-        // Cambiar el modo de juego del jugador a Espectador
         player.setGameMode(GameMode.SPECTATOR);
 
-        // Cancelar la teletransportación del evento de respawn
         new BukkitRunnable() {
             @Override
             public void run() {
-                player.teleport(deathLocation); // Asegurarse de que el jugador permanece en la ubicación de la muerte
+                player.teleport(deathLocation);
             }
-        }.runTaskLater(plugin, 1); // Ejecutar un tick después
+        }.runTaskLater(plugin, 1);
 
-        // Gestionar el equipo "Fantasma" en el Scoreboard
         ScoreboardManager manager = Bukkit.getScoreboardManager();
         if (manager != null) {
             Scoreboard scoreboard = manager.getMainScoreboard();
@@ -69,27 +66,25 @@ public class MuerteHandler implements Listener {
             team.addEntry(playerName);
         }
 
-        muerteAnimation.playAnimation(player, ""); // Aquí estamos llamando directamente al método playAnimation
+        muerteAnimation.playAnimation(player, "");
 
-        // Preparar el mensaje del Action Bar
         String actionBarMessage = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + playerName + ChatColor.RESET
                 + ChatColor.GRAY + ChatColor.BOLD + " ha muerto por " + ChatColor.GOLD + ChatColor.BOLD + deathCause;
 
-        // Cancelar el mensaje de muerte anterior, si existe
         if (currentDeathMessageTask != null && !currentDeathMessageTask.isCancelled()) {
             currentDeathMessageTask.cancel();
         }
 
-        // Crear una tarea repetitiva para mostrar el Action Bar
+        // tarea repetitiva para mostrar el Action Bar
         currentDeathMessageTask = new BukkitRunnable() {
-            int duration = 7 * 20; // Duración de 7 segundos en ticks (20 ticks/segundo)
+            int duration = 7 * 20;
             int counter = 0;
 
             @Override
             public void run() {
                 if (counter < duration) {
                     sendActionBarToAllPlayers(actionBarMessage);
-                    counter += 20; // Incrementa cada segundo
+                    counter += 20;
                 } else {
                     this.cancel();
                     resetDeathMessageFlag();
@@ -98,7 +93,6 @@ public class MuerteHandler implements Listener {
         };
         currentDeathMessageTask.runTaskTimer(plugin, 0, 20);
 
-        // Programar efectos y sonidos en el tiempo adecuado
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -132,10 +126,10 @@ public class MuerteHandler implements Listener {
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
-        Location deathLocation = deathLocations.remove(player); // Obtener y eliminar la ubicación de muerte del mapa
+        Location deathLocation = deathLocations.remove(player);
 
         if (deathLocation != null) {
-            event.setRespawnLocation(deathLocation); // Establecer la ubicación de respawn en la ubicación de la muerte
+            event.setRespawnLocation(deathLocation);
         }
     }
 
@@ -165,9 +159,9 @@ public class MuerteHandler implements Listener {
             onlinePlayer.sendTitle(
                     ChatColor.DARK_GRAY + "" + ChatColor.MAGIC + "O" + ChatColor.RESET + ChatColor.GRAY + playerName + ChatColor.RESET + ChatColor.GRAY + ChatColor.MAGIC + "O", // Título (nombre del jugador con formato obfuscado)
                     ChatColor.DARK_PURPLE + "" + ChatColor.RESET + ChatColor.DARK_PURPLE + ChatColor.BOLD + "۞Entro al sufrimiento eterno de Viciont۞", // Subtítulo
-                    10, // Tiempo de aparición
-                    70, // Tiempo en pantalla
-                    20  // Tiempo de desaparición
+                    10,
+                    70,
+                    20
             );
         }
     }

@@ -1,10 +1,13 @@
 package Enchants;
 
+import Dificultades.DayFourChanges;
+import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.LootGenerateEvent;
 import org.bukkit.inventory.ItemStack;
-import vct.hardcore3.ViciontHardcore3;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,11 +16,13 @@ import java.util.Random;
 
 public class LootHandler implements Listener {
 
-    private final ViciontHardcore3 plugin;
+    private final JavaPlugin plugin;
     private final Random random = new Random();
+    private final DayFourChanges dayFourChanges;
 
-    public LootHandler(ViciontHardcore3 plugin) {
+    public LootHandler(JavaPlugin plugin, DayFourChanges dayFourChanges) {
         this.plugin = plugin;
+        this.dayFourChanges = dayFourChanges;
     }
 
     @EventHandler
@@ -30,13 +35,10 @@ public class LootHandler implements Listener {
         List<ItemStack> extraLoot = new ArrayList<>();
         int essenceCount = determineEssenceCount();
 
-        // Añadir esencias únicas
         addUniqueRandomEssences(extraLoot, essenceCount);
 
-        // Agregar las esencias al loot del evento
         event.getLoot().addAll(extraLoot);
 
-        // Limitar las esencias a un máximo de 3
         limitEssences(event.getLoot());
     }
 
@@ -47,22 +49,21 @@ public class LootHandler implements Listener {
     private int determineEssenceCount() {
         int roll = random.nextInt(100) + 1;
 
-        if (roll <= 25) {
+        if (roll <= 15) {
             return 3;
-        } else if (roll <= 50) {
+        } else if (roll <= 35) {
             return 2;
         } else {
             return 1;
         }
     }
 
-
     private void addUniqueRandomEssences(List<ItemStack> loot, int count) {
         List<ItemStack> allEssences = getAllEssences();
-        Collections.shuffle(allEssences, random); // Mezclar aleatoriamente
+        Collections.shuffle(allEssences, random);
 
         for (int i = 0; i < count && i < allEssences.size(); i++) {
-            loot.add(allEssences.get(i)); // Añadir esencias únicas
+            loot.add(allEssences.get(i));
         }
     }
 
@@ -94,12 +95,9 @@ public class LootHandler implements Listener {
             }
         }
 
-        // Si hay más de 3, eliminar las extras
         if (essences.size() > 3) {
             // Mantener solo las primeras 3 esencias
             List<ItemStack> extraEssences = essences.subList(3, essences.size());
-
-            // Remover las esencias adicionales
             loot.removeAll(extraEssences);
         }
     }
@@ -108,6 +106,31 @@ public class LootHandler implements Listener {
         if (item == null || !item.hasItemMeta()) return false;
 
         String displayName = item.getItemMeta().getDisplayName();
-        return displayName.contains("Esencia") || displayName.contains("Essence"); // Ajustar según el nombre
+        return displayName.contains("Esencia") || displayName.contains("Essence");
+    }
+
+    // Evento para modificar el loot al generarse en cofres UPGRADE NETHERITE
+    @EventHandler
+    public void onLootGenerate2(LootGenerateEvent event) {
+        if (event.getWorld().getEnvironment() != World.Environment.NETHER) {
+            return;
+        }
+
+        List<ItemStack> loot = event.getLoot();
+
+        for (int i = 0; i < loot.size(); i++) {
+            ItemStack item = loot.get(i);
+
+            // Reemplazar Netherite Upgrade Template por Upgrade Vacío
+            if (item != null && item.getType() == Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE) {
+                loot.set(i, dayFourChanges.getUpgradeVacio());
+            }
+
+            // Eliminar Ancient Debris
+            if (item != null && item.getType() == Material.ANCIENT_DEBRIS) {
+                loot.remove(i);
+                i--;
+            }
+        }
     }
 }

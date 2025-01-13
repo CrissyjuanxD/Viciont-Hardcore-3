@@ -15,11 +15,10 @@ import java.util.List;
 public class MuerteAnimation {
     private final JavaPlugin plugin;
     private static final int TOTAL_FRAMES = 184;
-    private static final String FRAME_PREFIX = "\uE851"; // Unicode inicial
-    private static final double ANIMATION_DURATION = 6.12; // Duración en segundos
-    private static final int SOUND_DELAY_TICKS = 160; // Retraso para sonidos adicionales (5 segundos x 20 ticks)
+    private static final String FRAME_PREFIX = "\uE851";
+    private static final double ANIMATION_DURATION = 6.12;
+    private static final int SOUND_DELAY_TICKS = 160;
 
-    // Contador de animaciones en curso
     private static int ongoingAnimations = 0;
 
     public MuerteAnimation(JavaPlugin plugin) {
@@ -27,24 +26,20 @@ public class MuerteAnimation {
     }
 
     public synchronized void playAnimation(Player player, String jsonMessage) {
-        // Si no hay animaciones en curso, cambiar la tasa de ticks a 30
         if (ongoingAnimations == 0) {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tick rate 30");
         }
 
-        // Incrementar el contador de animaciones en curso
         ongoingAnimations++;
 
-        // Aplicar efectos inmediatos
         Bukkit.getOnlinePlayers().forEach(p -> {
-            p.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 120, 1, true, false, false));
-            p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 120, 0, true, false, false));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 190, 1, true, false, false));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 190, 0, true, false, false));
             p.playSound(p.getLocation(), "minecraft:custom.emuerte", 300.0f, 1.0f);
             p.playSound(p.getLocation(), "minecraft:entity.allay.death", 100.0f, 0.7f);
             p.playSound(p.getLocation(), "minecraft:entity.blaze.death", 100.0f, 0.7f);
         });
 
-        // Aplicar lentitud a todos los mobs
         Bukkit.getWorlds().forEach(world -> {
             for (Entity entity : world.getEntities()) {
                 if (entity instanceof LivingEntity && !(entity instanceof Player)) {
@@ -60,7 +55,6 @@ public class MuerteAnimation {
             }
         }.runTaskLater(plugin, SOUND_DELAY_TICKS);
 
-        // Generar lista de caracteres Unicode para los frames
         List<String> unicodeFrames = generateUnicodeFrames(FRAME_PREFIX, TOTAL_FRAMES);
 
         new BukkitRunnable() {
@@ -83,9 +77,11 @@ public class MuerteAnimation {
                     return;
                 }
 
-                // Mostrar el frame actual a todos los jugadores
+                // frame actual a todos los jugadores
                 String unicodeFrame = unicodeFrames.get(frameIndex);
-                Bukkit.getOnlinePlayers().forEach(p -> p.sendTitle(unicodeFrame, "", 0, 10, 0)); // Mostrar por 10 ticks
+                String fixedFrame = "§r" + "\u2009".repeat(300) + unicodeFrame + "\u2009".repeat(300);
+                Bukkit.getOnlinePlayers().forEach(p -> p.sendTitle(fixedFrame, "", 0, 10, 0));
+
 
                 frameIndex++;
             }

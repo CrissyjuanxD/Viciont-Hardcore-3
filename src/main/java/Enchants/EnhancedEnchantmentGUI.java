@@ -68,7 +68,7 @@ public class EnhancedEnchantmentGUI implements Listener {
             }
         }
 
-        playerInventoryContents.put(player, player.getInventory().getContents().clone()); // Guardar contenido del inventario
+        playerInventoryContents.put(player, player.getInventory().getContents().clone());
         player.openInventory(gui);
     }
 
@@ -237,14 +237,13 @@ public class EnhancedEnchantmentGUI implements Listener {
                         updateEssenceLore(essence, usesLeft);
                         gui.setItem(38, essence);
                     } else {
-                        gui.setItem(38, null); // Remueve la esencia
+                        gui.setItem(38, null);
                         sendMessageOnce(player, ChatColor.RED + "La esencia se ha agotado.");
                     }
 
                     player.setLevel(player.getLevel() - 3);
                     player.updateInventory();
 
-                    // Reproducir sonido de encantamiento
                     player.playSound(player.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1.0f, 1.0f);
 
                     sendMessageOnce(player, ChatColor.GREEN + "¡Encantamiento exitoso!");
@@ -265,7 +264,6 @@ public class EnhancedEnchantmentGUI implements Listener {
         }
         String essenceName = essence.getItemMeta().getDisplayName();
 
-        // Verificar el nombre con el color
         switch (enchantment.getKey().getKey()) {
             case "protection":
                 return essenceName.equals(ChatColor.BLUE + "Esencia de Protección");
@@ -335,7 +333,6 @@ public class EnhancedEnchantmentGUI implements Listener {
                 }
             }
 
-            // Agregar la línea actualizada de "Usos restantes"
             lore.add(ChatColor.GRAY + "Usos restantes: " + usesLeft);
             meta.setLore(lore);
             essence.setItemMeta(meta);
@@ -422,7 +419,6 @@ public class EnhancedEnchantmentGUI implements Listener {
 
         if (event.getView().getTitle().equals(title)) {
             for (int slot : event.getRawSlots()) {
-                // Solo cancelar el arrastre si el slot no es 36, 37 ni 38
                 if (slot < event.getInventory().getSize() && (slot < 36 || slot > 38)) {
                     event.setCancelled(true);
                     return;
@@ -459,7 +455,6 @@ public class EnhancedEnchantmentGUI implements Listener {
                         }
                     }
 
-                    // Si el jugador no tiene el ítem, lo agrega
                     if (!itemAlreadyInInventory) {
                         player.getInventory().addItem(item);
                     }
@@ -491,7 +486,7 @@ public class EnhancedEnchantmentGUI implements Listener {
             for (int[] offset : offsets) {
                 Block adjacentBlock = world.getBlockAt(blockLocation.clone().add(offset[0], 0, offset[1]));
                 if (adjacentBlock.getType() == Material.LIGHT) {
-                    adjacentBlock.setType(Material.AIR); // Elimina el bloque de luz
+                    adjacentBlock.setType(Material.AIR);
                 }
             }
 
@@ -508,7 +503,7 @@ public class EnhancedEnchantmentGUI implements Listener {
                         .findFirst()
                         .orElse(0L);
 
-                if (currentTime - lastMessageTime >= 10000) { // 10,000 milisegundos = 10 segundos
+                if (currentTime - lastMessageTime >= 10000) {
                     player.setMetadata("lastMessageTime", new FixedMetadataValue(plugin, currentTime));
                     player.sendMessage(ChatColor.GRAY + "Necesitas un pico de diamante o mejor para romper la Mesa de Encantamientos Mejorada.");
                 }
@@ -534,10 +529,10 @@ public class EnhancedEnchantmentGUI implements Listener {
                         return;
                     }
 
-                    double radius = 1.5;  // Radio del círculo
-                    double centerX = blockLocation.getX() + 0.5;  // partículas en el bloque (X)
-                    double centerY = blockLocation.getY() + 0.5;  // Altura de las partículas
-                    double centerZ = blockLocation.getZ() + 0.5;  // partículas en el bloque (Z)
+                    double radius = 1.5;
+                    double centerX = blockLocation.getX() + 0.5;
+                    double centerY = blockLocation.getY() + 0.5;
+                    double centerZ = blockLocation.getZ() + 0.5;
 
                     // Número de partículas en el círculo
                     int numParticles = 15;
@@ -546,15 +541,15 @@ public class EnhancedEnchantmentGUI implements Listener {
                     for (int i = 0; i < numParticles; i++) {
                         double angle = (2 * Math.PI / numParticles) * i;  // Distribuir las partículas de manera uniforme en el círculo
 
-                        double x = centerX + radius * Math.cos(angle);  // Calcula la posición X de la partícula
-                        double z = centerZ + radius * Math.sin(angle);  // Calcula la posición Z de la partícula
+                        double x = centerX + radius * Math.cos(angle);
+                        double z = centerZ + radius * Math.sin(angle);
 
                         // Genera la partícula en la posición calculada
-                        world.spawnParticle(Particle.PORTAL, x, centerY, z, 1, 0, 0, 0, 0);  // Un solo "Particle.PORTAL" por partícula
+                        world.spawnParticle(Particle.PORTAL, x, centerY, z, 1, 0, 0, 0, 0);
                     }
                 }
             };
-            particleTask.runTaskTimer(plugin, 0, 2); // Ejecuta cada 2 ticks
+            particleTask.runTaskTimer(plugin, 0, 2);
             particleTasks.put(blockLocation, particleTask);
 
             // Coloca los bloques de luz alrededor del bloque
@@ -570,7 +565,6 @@ public class EnhancedEnchantmentGUI implements Listener {
                         ItemStack droppedItem = new ItemStack(adjacentBlock.getType());
                         adjacentBlock.getWorld().dropItemNaturally(adjacentBlock.getLocation(), droppedItem);
                     }
-                    // Coloca el bloque de luz
                     adjacentBlock.setType(Material.LIGHT);
                     adjacentBlock.setBlockData(Bukkit.createBlockData("minecraft:light[level=10]"));
                 }

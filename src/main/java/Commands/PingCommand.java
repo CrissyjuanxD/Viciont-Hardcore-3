@@ -33,7 +33,6 @@ public class PingCommand implements CommandExecutor {
         // tiempo actual en milisegundos
         long currentTime = System.currentTimeMillis();
 
-        // cooldown
         if (cooldowns.containsKey(playerUUID)) {
             long lastUse = cooldowns.get(playerUUID);
             long timeLeft = (lastUse + 10000) - currentTime;
