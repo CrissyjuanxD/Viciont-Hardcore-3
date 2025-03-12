@@ -9,6 +9,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -45,26 +46,6 @@ public class MuerteHandler implements Listener {
         String deathCause = (player.getLastDamageCause() != null && player.getLastDamageCause().getCause() != null)
                 ? player.getLastDamageCause().getCause().toString().replace("_", " ").toLowerCase()
                 : "desconocida";
-
-        player.setGameMode(GameMode.SPECTATOR);
-
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                player.teleport(deathLocation);
-            }
-        }.runTaskLater(plugin, 1);
-
-        ScoreboardManager manager = Bukkit.getScoreboardManager();
-        if (manager != null) {
-            Scoreboard scoreboard = manager.getMainScoreboard();
-            Team team = scoreboard.getTeam("Fantasma");
-            if (team == null) {
-                team = scoreboard.registerNewTeam("Fantasma");
-                team.setDisplayName(ChatColor.GRAY + "Fantasma");
-            }
-            team.addEntry(playerName);
-        }
 
         muerteAnimation.playAnimation(player, "");
 
@@ -121,6 +102,19 @@ public class MuerteHandler implements Listener {
                 }.runTaskLater(plugin, 3 * 20);
             }
         }.runTaskLater(plugin, 9 * 20);
+    }
+
+    @EventHandler
+    public void onEntityDamage(EntityDamageEvent event) {
+        // Verificar si la entidad que recibe daño es un jugador
+        if (event.getEntity() instanceof Player) {
+            Player player = (Player) event.getEntity();
+
+            // Verificar si el jugador está en modo espectador y si el daño es del vacío
+            if (player.getGameMode() == GameMode.SPECTATOR && event.getCause() == EntityDamageEvent.DamageCause.VOID) {
+                event.setCancelled(true); // Cancelar el daño
+            }
+        }
     }
 
     @EventHandler

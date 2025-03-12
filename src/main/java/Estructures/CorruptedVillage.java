@@ -15,17 +15,16 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World.Environment;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockState;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 
 public class CorruptedVillage implements Listener, CommandExecutor {
 
@@ -55,35 +54,29 @@ public class CorruptedVillage implements Listener, CommandExecutor {
             return false;
         }
 
-        // Ejecutar la búsqueda de ubicación de manera asíncrona
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            Location potentialLocation = findPotentialLocation(); // Buscar coordenadas preliminares (sin chunks)
+            Location potentialLocation = findPotentialLocation();
             if (potentialLocation == null) {
                 sender.sendMessage(ChatColor.RED + "No se pudo encontrar una ubicación válida para la estructura.");
                 return;
             }
 
-            // Validar y pegar la estructura en el hilo principal
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                if (!isLocationValid(potentialLocation)) { // Validación en el hilo principal
-                    sender.sendMessage(ChatColor.RED + "La ubicación encontrada no es válida.");
-                    return;
-                }
-
-                if (!pasteStructure(potentialLocation, "CorruptedVillage1_V6.schem")) {
-                    sender.sendMessage(ChatColor.RED + "Error al pegar la estructura.");
-                    return;
-                }
-
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    String coordinatesMessage = String.format(
-                            "ruletavct [\"\",{\"text\":\"\\n\"},{\"text\":\"\\u06de Estructura \\u27a4\",\"bold\":true,\"color\":\"#6E02A5\"},{\"text\":\"\\n\\n\"},{\"text\":\"Se ha encontrado una Corrupted Village\\nen las coordenadas:\",\"color\":\"#A56CD7\"},{\"text\":\" %d %d %d\",\"color\":\"gold\"}]",
-                            potentialLocation.getBlockX(), potentialLocation.getBlockY(), potentialLocation.getBlockZ()
-                    );
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), coordinatesMessage);
-                }, 200L);
+            // Cargar chunks necesarios antes de pegar la estructura
+            loadChunksAround(potentialLocation, 2).thenRun(() -> {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (!pasteStructure(potentialLocation, "CorruptedVillage1_V6.schem")) {
+                        sender.sendMessage(ChatColor.RED + "Error al pegar la estructura.");
+                    } else {
+                        String coordinatesMessage = String.format(
+                                "ruletavct [\"\",{\"text\":\"\\n\"},{\"text\":\"\\u06de Estructura \\u27a4\",\"bold\":true,\"color\":\"#6E02A5\"},{\"text\":\"\\n\\n\"},{\"text\":\"Se ha encontrado una Corrupted Village\\nen las coordenadas:\",\"color\":\"#A56CD7\"},{\"text\":\" %d %d %d\",\"color\":\"gold\"}]",
+                                potentialLocation.getBlockX(), potentialLocation.getBlockY(), potentialLocation.getBlockZ()
+                        );
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), coordinatesMessage);
+                    }
+                });
             });
         });
+
         return true;
     }
 
@@ -94,52 +87,66 @@ public class CorruptedVillage implements Listener, CommandExecutor {
             return null;
         }
 
-        for (int attempts = 0; attempts < 100; attempts++) { // Limitar a 100 intentos
+        for (int attempts = 0; attempts < 50; attempts++) {
             int x = generateRandomCoordinate();
             int z = generateRandomCoordinate();
-            int y = bukkitWorld.getHighestBlockYAt(x, z);
-            return new Location(bukkitWorld, x, y, z);
+
+            Location baseLocation = findLowestGrassBlock(bukkitWorld, x, z);
+            if (baseLocation == null || baseLocation.getY() > 75) {
+                continue;
+            }
+
+            if (isLocationValid(baseLocation)) {
+                return baseLocation;
+            }   
         }
+
         return null;
     }
 
-    private boolean isLocationValid(Location location) {
-        int baseChunkX = location.getChunk().getX();
-        int baseChunkZ = location.getChunk().getZ();
-        org.bukkit.World world = location.getWorld();
+    private CompletableFuture<Void> loadChunksAround(Location location, int radius) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            org.bukkit.World world = location.getWorld();
+            if (world == null) {
+                future.completeExceptionally(new IllegalStateException("World is null"));
+                return;
+            }
 
-        // Revisar chunks adyacentes (radio de 4)
-        for (int cx = -4; cx <= 4; cx++) {
-            for (int cz = -4; cz <= 4; cz++) {
-                Chunk chunk = world.getChunkAt(baseChunkX + cx, baseChunkZ + cz);
-                if (!chunk.isLoaded()) {
-                    chunk.load(true);
-                }
-
-                // Solo buscar cofres en este chunk
-                for (BlockState state : chunk.getTileEntities()) {
-                    if (state.getType() == Material.CHEST) {
-                        plugin.getLogger().info("Cofre encontrado en: " + state.getLocation());
-                        return false;
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    Chunk chunk = world.getChunkAt(location.getChunk().getX() + dx, location.getChunk().getZ() + dz);
+                    if (!chunk.isLoaded()) {
+                        chunk.load(true); // Forzar la carga del chunk
                     }
                 }
             }
-        }
 
-        // Verificar que el bloque debajo es sólido
-        Block blockBelow = location.clone().subtract(0, 1, 0).getBlock();
-        if (blockBelow.getType().isAir() || blockBelow.isLiquid()) {
-            plugin.getLogger().info("Ubicación no válida, bloque inferior no es sólido: " + blockBelow.getType());
-            return false;
-        }
+            future.complete(null);
+        });
+        return future;
+    }
 
-        return true;
+    private Location findLowestGrassBlock(org.bukkit.World world, int x, int z) {
+        int y = world.getHighestBlockYAt(x, z);
+        Block block;
+        do {
+            block = world.getBlockAt(x, y--, z);
+        } while (y >= 10 && block.getType() != Material.GRASS_BLOCK);
+
+        return (block.getType() == Material.GRASS_BLOCK) ? block.getLocation().add(0, 1, 0) : null;
     }
 
     private int generateRandomCoordinate() {
-        int coordinate = random.nextInt(500) + 1000; // Evitar coordenadas cercanas al spawn
-        if (random.nextBoolean()) coordinate = -coordinate;
-        return coordinate;
+        return random.nextInt(10000) - 5000;
+    }
+
+    private boolean isLocationValid(Location location) {
+        org.bukkit.World world = location.getWorld();
+        if (world == null) return false;
+
+        Block baseBlock = world.getBlockAt(location.getBlockX(), location.getBlockY() - 1, location.getBlockZ());
+        return baseBlock.getType() == Material.GRASS_BLOCK;
     }
 
     private boolean pasteStructure(Location location, String schematicName) {
@@ -154,10 +161,12 @@ public class CorruptedVillage implements Listener, CommandExecutor {
             World weWorld = BukkitAdapter.adapt(location.getWorld());
 
             try (EditSession editSession = WorldEdit.getInstance().newEditSession(weWorld)) {
+                ClipboardHolder holder = new ClipboardHolder(clipboard);
                 Operations.complete(
-                        new ClipboardHolder(clipboard)
+                        holder
                                 .createPaste(editSession)
                                 .to(BukkitAdapter.asBlockVector(location))
+                                .ignoreAirBlocks(true)
                                 .build()
                 );
                 plugin.getLogger().info("Estructura pegada correctamente en: " + location);

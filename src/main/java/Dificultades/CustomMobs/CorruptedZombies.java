@@ -1,10 +1,13 @@
 package Dificultades.CustomMobs;
 
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.persistence.PersistentDataType;
@@ -53,16 +56,28 @@ public class CorruptedZombies implements Listener {
         }
     }
 
-
     // Crear un Corrupted Zombie personalizado
     public Zombie spawnCorruptedZombie(Location location) {
         Zombie CorruptedZombie = (Zombie) location.getWorld().spawnEntity(location, EntityType.ZOMBIE);
-        CorruptedZombie.getPersistentDataContainer().set(corruptedKey, PersistentDataType.BYTE, (byte) 1);
-        CorruptedZombie.setCustomName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Zombie");
-        CorruptedZombie.setCustomNameVisible(true);
-        CorruptedZombie.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 0)); // Velocidad
-        startSnowballRunnable(CorruptedZombie);
+        applyCorruptedZombieAttributes(CorruptedZombie);
         return CorruptedZombie;
+    }
+
+    public void transformToCorruptedZombie(Zombie zombie) {
+        applyCorruptedZombieAttributes(zombie);
+    }
+
+    private void applyCorruptedZombieAttributes(Zombie zombie) {
+        zombie.getPersistentDataContainer().set(corruptedKey, PersistentDataType.BYTE, (byte) 1);
+        zombie.setCustomName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Zombie");
+        zombie.setCustomNameVisible(true);
+        Objects.requireNonNull(zombie.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE)).setBaseValue(3.0);
+        zombie.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 0)); // Velocidad
+        startSnowballRunnable(zombie);
+
+        if (zombie.getVehicle() instanceof Chicken) {
+            zombie.getVehicle().remove();
+        }
     }
 
     private boolean isCorrupted(Zombie zombie) {
@@ -82,7 +97,7 @@ public class CorruptedZombies implements Listener {
 
             if (zombie.getTarget() instanceof Player player) {
                 // Verificar que el jugador está en rango
-                if (isPlayerInRange(zombie, player) && Math.random() < 0.3) {
+                if (isPlayerInRange(zombie, player) && Math.random() < 0.4) {
                     lanzarSnowball(zombie, player);
                 }
             }
@@ -105,14 +120,7 @@ public class CorruptedZombies implements Listener {
         }
         double distanceXZ = zombie.getLocation().distanceSquared(player.getLocation()) - Math.pow(zombie.getLocation().getY() - player.getLocation().getY(), 2);
         double distanceY = Math.abs(zombie.getLocation().getY() - player.getLocation().getY());
-        return distanceXZ <= 7 * 7 && distanceY <= 7;
-    }
-
-    @EventHandler
-    public void onZombieAttack(EntityDamageByEntityEvent event) {
-        if (event.getDamager() instanceof Zombie zombie && event.getEntity() instanceof Player player && isCorrupted(zombie)) {
-            event.setDamage(2);
-        }
+        return distanceXZ <= 15 * 15 && distanceY <= 15;
     }
 
     private void lanzarSnowball(Zombie zombie, Player player) {
@@ -141,6 +149,7 @@ public class CorruptedZombies implements Listener {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (snowball.isValid()) {
                 snowball.getWorld().playSound(snowball.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_BLAST, 1.0F, 2.0F);
+                snowball.getWorld().playSound(snowball.getLocation(), Sound.ENTITY_BREEZE_SHOOT, 1.0F, 0.8F);
             }
         }, 20L);
     }
@@ -187,6 +196,51 @@ public class CorruptedZombies implements Listener {
             snowball.getWorld().spawnParticle(Particle.EXPLOSION, impactLocation, 8);
             snowball.getWorld().playSound(impactLocation, Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, 1.0F, 2.0F);
         }
+    }
+
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) {
+        Player player = event.getPlayer();
+        Location from = event.getFrom();
+        Location to = event.getTo();
+
+        // Verificar si el jugador realmente se movió (no solo giró la cámara)
+        if (from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ()) {
+            return;
+        }
+
+        Location playerLocation = player.getLocation();
+        double maxDistanceSquared = 30 * 30; // 30 bloques al cuadrado
+
+        // Obtiene entidades cercanas y filtra solo arañas sin PersistentDataKey
+        for (Entity entity : player.getNearbyEntities(30, 30, 30)) {
+            if (entity instanceof Zombie zombie &&
+                    zombie.getCustomName() != null &&
+                    zombie.getCustomName().equals(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Zombie") &&
+                    !zombie.getPersistentDataContainer().has(corruptedKey, PersistentDataType.BYTE)) {
+
+                // Usa distanceSquared para evitar la raíz cuadrada
+                if (playerLocation.distanceSquared(zombie.getLocation()) <= maxDistanceSquared) {
+                    transformToCorruptedZombie(zombie);
+                }
+            }
+        }
+    }
+
+    public NamespacedKey getCorruptedKey() {
+        return corruptedKey;
+    }
+
+
+    @EventHandler
+    public void onWorldLoad(WorldLoadEvent event) {
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            for (Entity entity : event.getWorld().getEntities()) {
+                if (entity instanceof Zombie zombie && isCorrupted(zombie)) {
+                    startSnowballRunnable(zombie);
+                }
+            }
+        }, 20L); // Se retrasa 1 segundo para evitar posibles problemas de carga
     }
 
 }

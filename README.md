@@ -1,9 +1,8 @@
-<p align="center">
-<img src="https://github.com/CrissyjuanxD/Viciont-Hardcore-3/blob/master/assets/MINECRAFT%20VH3%20Titlle.png" />
-</p>
-
 <h1 align="center"> VICIONT HARDCORE 3 </h1>
 
+<p align="center">
+<img src="https://github.com/CrissyjuanxD/imagenes_ropositorios/blob/main/MINECRAFT%20VH3%20Titlle.png" />
+</p>
 
 Este es mi Primer Plugin Grande que estoy haciendo, ya he hecho varios pero han sido pequeñitos.
 
@@ -23,6 +22,6 @@ Entre medio de cada cambio de dificultad habra algun evento para conseguir una *
 
 Basicamente se tendra que jugar de una manera distinta al Minecraft Vanilla
 
-Plugin inspirado en **Permadeath** y **Dedsafio** 
+Plugin inspirado en **Permadeath** y **Dedsafio**
 
-El plugin esta en fase alpha y llevare un 4% de todo lo que quiero hacer, y si hay fallos de estructuras o redundancia, lo siento, soy muy nuevo con los Plugins.
+El plugin esta en fase alpha y llevare un 15% de todo lo que quiero hacer, y si hay fallos de estructuras o redundancia, lo siento, soy muy nuevo con los Plugins.

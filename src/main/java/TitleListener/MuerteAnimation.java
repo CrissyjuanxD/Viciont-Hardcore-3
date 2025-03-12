@@ -33,11 +33,11 @@ public class MuerteAnimation {
         ongoingAnimations++;
 
         Bukkit.getOnlinePlayers().forEach(p -> {
-            p.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 190, 1, true, false, false));
-            p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 190, 0, true, false, false));
-            p.playSound(p.getLocation(), "minecraft:custom.emuerte", 300.0f, 1.0f);
-            p.playSound(p.getLocation(), "minecraft:entity.allay.death", 100.0f, 0.7f);
-            p.playSound(p.getLocation(), "minecraft:entity.blaze.death", 100.0f, 0.7f);
+            p.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 160, 1, true, false, false));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 160, 0, true, false, false));
+            p.playSound(p.getLocation(), "minecraft:custom.emuerte", 10.0f, 1.0f);
+            p.playSound(p.getLocation(), "minecraft:entity.allay.death", 10.0f, 0.7f);
+            p.playSound(p.getLocation(), "minecraft:entity.blaze.death", 10.0f, 0.7f);
         });
 
         Bukkit.getWorlds().forEach(world -> {

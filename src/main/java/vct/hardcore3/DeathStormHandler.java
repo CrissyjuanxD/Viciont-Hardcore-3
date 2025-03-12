@@ -2,12 +2,16 @@ package vct.hardcore3;
 
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -55,7 +59,6 @@ public class DeathStormHandler implements Listener {
         int currentDay = dayHandler.getCurrentDay();
         int increment;
 
-        // Calcular el incremento según el día actual
         if (currentDay >= 15 && currentDay < 20) {
             increment = (currentDay - 14);
         } else if (currentDay >= 20) {
@@ -96,6 +99,24 @@ public class DeathStormHandler implements Listener {
         }
     }
 
+    @EventHandler
+    public void onMonsterSpawnForDeathStorm(CreatureSpawnEvent event) {
+        if (!isDeathStormActive) return;
+        int currentDay = dayHandler.getCurrentDay();
+        if (currentDay < 6) return;
+
+        if (event.getEntity() instanceof org.bukkit.entity.Monster) {
+            LivingEntity mob = (LivingEntity) event.getEntity();
+            // Usar el tiempo restante de la DeathStorm para determinar la duración del efecto.
+            // Se multiplica por 20 para convertir segundos a ticks.
+            int effectDuration = Math.max(20, remainingStormSeconds * 20); // Mínimo 1 segundo (20 ticks)
+
+            // Aplicar Fuerza I y Velocidad I, con partículas visibles.
+            mob.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, effectDuration, 0, false, true));
+            mob.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, effectDuration, 0, false, true));
+        }
+    }
+
     private void startStorm() {
         World world = Bukkit.getWorlds().get(0);
 
@@ -111,9 +132,9 @@ public class DeathStormHandler implements Listener {
             public void run() {
                 if (remainingStormSeconds <= 0) {
                     cancel();
+                    isDeathStormActive = false;
                     world.setStorm(false);
                     world.setThundering(false);
-                    isDeathStormActive = false;
                     return;
                 }
 
@@ -177,7 +198,6 @@ public class DeathStormHandler implements Listener {
             intervalTicks = 2500L;
         }
 
-        // Obtener la cantidad de rayos a generar
         int lightningCount = random.nextInt(maxStrikes - minStrikes + 1) + minStrikes;
 
         // Mapear chunks con jugadores
@@ -187,7 +207,6 @@ public class DeathStormHandler implements Listener {
             chunkPlayerMap.put(chunkCenter, chunkPlayerMap.getOrDefault(chunkCenter, 0) + 1);
         }
 
-        // Filtrar los chunks con más de un jugador si es antes del día 30
         if (currentDay < 20) {
             chunkPlayerMap.entrySet().removeIf(entry -> entry.getValue() > 1);
         }
@@ -221,19 +240,16 @@ public class DeathStormHandler implements Listener {
         int attempts = 0;
 
         do {
-            // Generar un desplazamiento aleatorio dentro del área de 6x6 chunks
             double offsetX = (random.nextDouble() - 0.5) * chunkRange;
             double offsetZ = (random.nextDouble() - 0.5) * chunkRange;
 
             lightningLocation = location.clone().add(offsetX, 0, offsetZ);
             lightningLocation.setY(world.getHighestBlockYAt(lightningLocation));
 
-            // Verificar si el chunk contiene jugadores
             Chunk targetChunk = lightningLocation.getChunk();
             boolean chunkHasPlayers = world.getPlayers().stream()
                     .anyMatch(player -> player.getLocation().getChunk().equals(targetChunk));
 
-            // Si no es después del día 20, evitamos los chunks con jugadores
             if (!afterDay20 && chunkHasPlayers) {
                 attempts++;
             } else {
@@ -251,7 +267,7 @@ public class DeathStormHandler implements Listener {
             world.strikeLightningEffect(lightningLocation);
         }
 
-        // Obtener el bloque impactado
+        // bloque impactado
         Block block = world.getBlockAt(lightningLocation);
         int currentDay = dayHandler.getCurrentDay();
 
@@ -270,14 +286,17 @@ public class DeathStormHandler implements Listener {
         saveStormData();
     }
 
-    public void addStormHours(int hours) {
-        remainingStormSeconds += hours * 3600;
-        isDeathStormActive = true;
+    public void addStormSeconds(int seconds) {
+        remainingStormSeconds += seconds;
+        if (!isDeathStormActive) {
+            isDeathStormActive = true;
+            startStorm();
+        }
         saveStormData();
     }
 
-    public void removeStormHours(int hours) {
-        remainingStormSeconds = Math.max(remainingStormSeconds - (hours * 3600), 0);
+    public void removeStormSeconds(int seconds) {
+        remainingStormSeconds = Math.max(remainingStormSeconds - seconds, 0);
         if (remainingStormSeconds == 0) {
             isDeathStormActive = false;
         }

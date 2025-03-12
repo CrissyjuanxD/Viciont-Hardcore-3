@@ -10,6 +10,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import vct.hardcore3.DayHandler;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,8 +23,13 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
     private final CorruptedSpider corruptedSpider;
     private final QueenBeeHandler queenBeeHandler;
     private final GuardianBlaze guardianBlaze;
+    private final GuardianCorruptedSkeleton guardianCorruptedSkeleton;
+    private final CorruptedSkeleton corruptedSkeleton;
+    private final DayHandler dayHandler;
 
-    public SpawnMobs(JavaPlugin plugin) {
+    private final CustomDolphin customDolphin;
+
+    public SpawnMobs(JavaPlugin plugin, DayHandler dayHandler) {
         this.plugin = plugin;
         this.bombitaSpawner = new Bombita(plugin);
         this.iceologerSpawner = new Iceologer(plugin);
@@ -31,6 +37,10 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
         this.corruptedSpider = new CorruptedSpider(plugin);
         this.queenBeeHandler = new QueenBeeHandler(plugin);
         this.guardianBlaze = new GuardianBlaze(plugin);
+        this.guardianCorruptedSkeleton = new GuardianCorruptedSkeleton(plugin);
+        this.dayHandler = dayHandler;
+        this.corruptedSkeleton = new CorruptedSkeleton(plugin, dayHandler);
+        this.customDolphin = new CustomDolphin(plugin);
         plugin.getCommand("spawnvct").setExecutor(this);
         plugin.getCommand("spawnvct").setTabCompleter(this);
     }
@@ -103,6 +113,34 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
                 sender.sendMessage("¡Guardian Blaze ha sido spawneado en " + locationToString(location) + "!");
                 break;
 
+            case "guardiancorruptedskeleton":
+                guardianCorruptedSkeleton.spawnGuardianCorruptedSkeleton(location);
+                sender.sendMessage("¡Guardian Corrupted Skeleton ha sido spawneado en " + locationToString(location) + "!");
+                break;
+
+            case "corruptedskeleton":
+                if (args.length >= 2) {
+                    String variantName = args[1].toUpperCase(); // Convertir a mayúsculas para coincidir con el enum
+                    corruptedSkeleton.spawnCorruptedSkeleton(location, variantName);
+                    sender.sendMessage("¡Corrupted Skeleton (" + variantName + ") ha sido spawneado en " + locationToString(location) + "!");
+                } else {
+                    // Si no se especifica una variante, spawnear una aleatoria
+                    corruptedSkeleton.spawnCorruptedSkeleton(location, null);
+                    sender.sendMessage("¡Corrupted Skeleton (aleatorio) ha sido spawneado en " + locationToString(location) + "!");
+                }
+                break;
+
+            case "customdolphin":
+                String dolphinType = args[1];
+                if (!dolphinType.equalsIgnoreCase("Pingo") && !dolphinType.equalsIgnoreCase("Pinga")) {
+                    sender.sendMessage("Tipo de delfín no válido. Usa Pingo o Pinga.");
+                    return true;
+                }
+
+                customDolphin.spawnDolphin(location, dolphinType);
+                sender.sendMessage("¡Delfín " + dolphinType + " ha sido spawneado en " + locationToString(location) + "!");
+                break;
+
             default:
                 sender.sendMessage("Mob no reconocido. Usa /spawnvct <bombita|iceologer|corruptedzombie|corruptedspider|queenbee>");
                 break;
@@ -127,6 +165,18 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
             suggestions.add("corruptedspider");
             suggestions.add("queenbee");
             suggestions.add("guardianblaze");
+            suggestions.add("guardiancorruptedskeleton");
+            suggestions.add("corruptedskeleton");
+            suggestions.add("customdolphin");
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("corruptedskeleton")) {
+            // Sugerencias para las variantes del Corrupted Skeleton
+            for (CorruptedSkeleton.Variant variant : CorruptedSkeleton.Variant.values()) {
+                suggestions.add(variant.name().toLowerCase()); // Convertir a minúsculas para coincidir con el comando
+            }
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("customdolphin")) {
+            // Sugerencias para los tipos de delfín
+            suggestions.add("Pingo");
+            suggestions.add("Pinga");
         } else if (args.length == 2) {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 suggestions.add(player.getName());

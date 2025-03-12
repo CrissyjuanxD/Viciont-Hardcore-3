@@ -1,5 +1,5 @@
 name: Viciont_Hardcore3_Plugin
-version: 1.5.0
+version: 1.5.1
 main: vct.hardcore3.ViciontHardcore3
 author: CrissyJuanXD
 api-version: 1.21
@@ -7,6 +7,13 @@ commands:
   revive:
     description: Revive a player.
     usage: /revive <player>
+    permission: viciont_hardcore3.revive
+    permission-message: No tienes permiso para usar este comando.
+  revivecoords:
+    description: Configura las coordenadas del revive.
+    usage: /revivecoords <x> <y> <z>
+    permission: viciont_hardcore3.revivecoords
+    permission-message: No tienes permiso para usar este comando.
   resetdeathstorm:
     description: Resetea la DeathStorm
     usage: /resetdeathstorm
@@ -63,9 +70,6 @@ commands:
     usage: /estructure <CorruptedVillage>
     permission: vicionthardcore3.command.estructure
     permission-message: No tienes permiso para usar este comando.
-  testanim1:
-    description: Test animation command
-    usage: /testanim1
   start:
     description: Start the game
     usage: /start <evento1|skybattle|force>
@@ -94,9 +98,24 @@ commands:
     usage: /spawnvct <mob> [jugador (opcional)] [x] [y] [z]
     permission: viciont_hardcore3.command.spawnvct
     permission-message: No tienes permiso para usar este comando.
+  eggvct:
+    description: Da un huevo para spawnear un mob personalizado.
+    usage: /<command> <mob>
+    permission: viciont_hardcore3.command.eggvct
+    permission-message: No tienes permiso para usar este comando.
+  customspawner:
+    description: Configura un spawner para generar mobs personalizados
+    usage: /customspawner <mob>
+    permission: viciont_hardcore3.command.spawner
+    permission-message: No tienes permiso para usar este comando.
   addtiempo:
     description: Añade un temporizador en la bossbar.
     usage: /addtiempo [nombre opcional] <tiempo> [on/off]
   removetiempo:
     description: Elimina un temporizador de la bossbar.
     usage: /removetiempo [nombre opcional]
+  givevct:
+    description: Da un item especial del plugin a un jugador.
+    usage: /givevct <item> [cantidad] [jugador]
+    permission: viciont_hardcore3.command.givevct
+    permission-message: No tienes permiso para usar este comando.

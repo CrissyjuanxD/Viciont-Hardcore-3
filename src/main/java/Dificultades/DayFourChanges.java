@@ -1,6 +1,7 @@
 package Dificultades;
 
 import Dificultades.CustomMobs.GuardianBlaze;
+import Dificultades.CustomMobs.GuardianCorruptedSkeleton;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.*;
@@ -32,6 +33,7 @@ public class DayFourChanges implements Listener {
     private final Set<Player> playersInBed = new HashSet<>();
     private final int requiredPlayers = 4;
     private final GuardianBlaze blazespawmer;
+    private final GuardianCorruptedSkeleton guardianCorruptedSkeleton;
 
     private final NamespacedKey uuidKey;
     private final NamespacedKey upgradeKey;
@@ -40,6 +42,7 @@ public class DayFourChanges implements Listener {
     public DayFourChanges(JavaPlugin plugin) {
         this.plugin = plugin;
         this.blazespawmer = new GuardianBlaze(plugin);
+        this.guardianCorruptedSkeleton = new GuardianCorruptedSkeleton(plugin);
         this.uuidKey = new NamespacedKey(plugin, "creator_uuid");
         this.upgradeKey = new NamespacedKey(plugin, "is_upgrade");
 
@@ -53,14 +56,20 @@ public class DayFourChanges implements Listener {
             Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "gamerule playersSleepingPercentage 250");
             registerRecipes();
             blazespawmer.apply();
+            guardianCorruptedSkeleton.apply();
         }
     }
 
     public void revert() {
         if (isApplied) {
             isApplied = false;
-            Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "gamerule playersSleepingPercentage 0");
             blazespawmer.revert();
+            guardianCorruptedSkeleton.revert();
+
+            Bukkit.removeRecipe(new NamespacedKey(plugin, "fragment_upgrade"));
+            Bukkit.removeRecipe(new NamespacedKey(plugin, "duplicador"));
+            Bukkit.removeRecipe(new NamespacedKey(plugin, "netherite_upgrade"));
+            Bukkit.removeRecipe(new NamespacedKey(plugin, "netherite_duplicado"));
         }
     }
 
@@ -289,7 +298,7 @@ public class DayFourChanges implements Listener {
         // ===== Fragmento de Upgrade =====
         ItemStack fragmentoUpgrade = createCustomItem(Material.ECHO_SHARD, 101, "Fragmento de Upgrade de Netherite");
         ShapedRecipe fragmentRecipe = new ShapedRecipe(new NamespacedKey(plugin, "fragment_upgrade"), fragmentoUpgrade);
-        fragmentRecipe.shape("SDS", "DSD", "SDS");
+        fragmentRecipe.shape("SDS", "D D", "SDS");
         fragmentRecipe.setIngredient('D', Material.DIAMOND);
         fragmentRecipe.setIngredient('S', Material.NETHERITE_SCRAP);
         Bukkit.addRecipe(fragmentRecipe);

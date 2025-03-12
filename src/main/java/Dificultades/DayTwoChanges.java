@@ -1,6 +1,8 @@
     package Dificultades;
 
     import Dificultades.CustomMobs.Bombita;
+    import Dificultades.CustomMobs.CorruptedSpider;
+    import Dificultades.CustomMobs.CorruptedZombies;
     import Dificultades.CustomMobs.Iceologer;
     import org.bukkit.*;
     import org.bukkit.entity.*;
@@ -19,12 +21,16 @@
         private boolean isApplied = false;
         private final Bombita bombitaSpawner;
         private final Iceologer iceologerSpawner;
+        private final CorruptedZombies corruptedZombies;
+        private final CorruptedSpider corruptedSpiders;
         private final Map<LivingEntity, Long> trackedMobs = new HashMap<>();
 
         public DayTwoChanges(JavaPlugin plugin) {
             this.plugin = plugin;
             this.bombitaSpawner = new Bombita(plugin);
             this.iceologerSpawner = new Iceologer(plugin);
+            this.corruptedZombies = new CorruptedZombies(plugin);
+            this.corruptedSpiders = new CorruptedSpider(plugin);
         }
 
         public void apply() {
@@ -148,25 +154,20 @@
             List<Location> spawnLocations = getSpawnLocations(event, count);
 
             for (Location location : spawnLocations) {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                        "spawnvct " + mobType + " " +
-                                location.getBlockX() + " " +
-                                location.getBlockY() + " " +
-                                location.getBlockZ());
+                LivingEntity corruptedMob = null;
 
-                for (Entity entity : location.getWorld().getNearbyEntities(location, 5, 5, 5)) {
-                    if ((mobType.equals("corruptedzombie") && entity instanceof Zombie) ||
-                            (mobType.equals("corruptedspider") && entity instanceof Spider)) {
+                if (mobType.equals("corruptedzombie")) {
+                    corruptedMob = corruptedZombies.spawnCorruptedZombie(location);
+                } else if (mobType.equals("corruptedspider")) {
+                    corruptedMob = corruptedSpiders.spawnCorruptedSpider(location);
+                }
 
-                        if (entity instanceof Zombie) {
-                            ((Zombie) entity).addPotionEffect(new PotionEffect(
-                                    PotionEffectType.FIRE_RESISTANCE, Integer.MAX_VALUE, 0, false, false));
-                        }
-                        trackedMobs.put((LivingEntity) entity, System.currentTimeMillis());
-                    }
+                if (corruptedMob != null) {
+                    trackedMobs.put(corruptedMob, System.currentTimeMillis());
                 }
             }
         }
+
 
         // Obtener ubicaciones de spawn cerca de los Raiders
         private List<Location> getSpawnLocations(RaidSpawnWaveEvent event, int count) {

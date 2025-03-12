@@ -13,6 +13,7 @@
     import org.bukkit.inventory.ItemStack;
     import org.bukkit.inventory.ShapedRecipe;
     import org.bukkit.inventory.meta.ItemMeta;
+    import org.bukkit.persistence.PersistentDataType;
     import org.bukkit.plugin.java.JavaPlugin;
     import org.bukkit.potion.PotionEffect;
     import org.bukkit.potion.PotionEffectType;
@@ -39,6 +40,7 @@
         public void apply() {
             if (!isApplied) {
                 // eventos solo cuando se aplica
+                Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "gamerule playersSleepingPercentage 0");
                 corruptedZombies.apply();
                 corruptedSpider.apply();
                 Bukkit.getPluginManager().registerEvents(this, plugin);
@@ -60,13 +62,21 @@
 
         @EventHandler
         public void onCreatureSpawn(CreatureSpawnEvent event) {
+            if (!isApplied) return; // Asegúrate de que los cambios estén aplicados
+
+            // Verificar si el mob ya es corrupto (zombie o araña)
+            if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE) ||
+                    event.getEntity().getPersistentDataContainer().has(corruptedSpider.getCorruptedKey(), PersistentDataType.BYTE)) {
+                return; // Si ya es corrupto, no hacer nada
+            }
+
             int currentDay = dayHandler.getCurrentDay();
             int zombieProbability;
             int spiderProbability;
 
             if (currentDay >= 10) {
-                zombieProbability = 1;
-                spiderProbability = 1;
+                zombieProbability = 2;
+                spiderProbability = 2;
             } else if (currentDay >= 7) {
                 zombieProbability = 7;
                 spiderProbability = 7;
@@ -78,7 +88,7 @@
                 spiderProbability = 25;
             }
 
-            if (isApplied && event.getEntityType() == EntityType.ZOMBIE) {
+            if (event.getEntityType() == EntityType.ZOMBIE) {
                 if (random.nextInt(zombieProbability) == 0) {
                     Zombie zombie = (Zombie) event.getEntity();
                     corruptedZombies.spawnCorruptedZombie(zombie.getLocation());
@@ -86,7 +96,7 @@
                 }
             }
 
-            if (isApplied && event.getEntityType() == EntityType.SPIDER) {
+            if (event.getEntityType() == EntityType.SPIDER) {
                 if (random.nextInt(spiderProbability) == 0) {
                     Spider spider = (Spider) event.getEntity();
                     corruptedSpider.spawnCorruptedSpider(spider.getLocation());
@@ -121,12 +131,19 @@
 
         @EventHandler
         public void onPlayerEat(PlayerItemConsumeEvent event) {
-            if (isApplied && event.getItem().getType() == Material.COOKED_BEEF && event.getItem().getItemMeta().hasCustomModelData() && event.getItem().getItemMeta().getCustomModelData() == 2) {
-                Player player = event.getPlayer();
-                player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 300, 0));
-                player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 60, 0));
-            }
+            if (!isApplied) return;
+
+            ItemStack item = event.getItem();
+            if (item.getType() != Material.COOKED_BEEF) return;
+
+            ItemMeta meta = item.getItemMeta();
+            if (meta == null || !meta.hasCustomModelData() || meta.getCustomModelData() != 2) return;
+
+            Player player = event.getPlayer();
+            player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 300, 0, false, false, true));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 60, 0, false, false, true));
         }
+
 
         @EventHandler
         public void onPortalEnter(PlayerPortalEvent event) {

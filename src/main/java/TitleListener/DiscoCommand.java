@@ -25,7 +25,7 @@ public class DiscoCommand implements Listener, CommandExecutor {
     private final Set<Player> activeDiscoPlayers = new HashSet<>();
     private final Map<Player, BukkitTask> discoTasks = new HashMap<>();
     private final ChatColor[] colors = {
-            ChatColor.AQUA, ChatColor.RED, ChatColor.GREEN, ChatColor.YELLOW, ChatColor.DARK_PURPLE, ChatColor.LIGHT_PURPLE
+            ChatColor.AQUA, ChatColor.RED, ChatColor.GREEN, ChatColor.YELLOW, ChatColor.DARK_PURPLE,
     };
 
     public DiscoCommand(JavaPlugin plugin) {

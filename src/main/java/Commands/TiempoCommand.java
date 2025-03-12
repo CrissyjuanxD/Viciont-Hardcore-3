@@ -36,16 +36,10 @@ public class TiempoCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "Este comando solo puede ser ejecutado por jugadores.");
-            return true;
-        }
-
-        Player player = (Player) sender;
-
+        // Eliminar la verificación de si el sender es un jugador
         if (label.equalsIgnoreCase("addtiempo")) {
             if (args.length < 1 || args.length > 3) {
-                player.sendMessage(ChatColor.RED + "Uso: /addtiempo [nombre opcional] <tiempo> [on/off]");
+                sender.sendMessage(ChatColor.RED + "Uso: /addtiempo [nombre opcional] <tiempo> [on/off]");
                 return true;
             }
 
@@ -68,20 +62,20 @@ public class TiempoCommand implements CommandExecutor, TabCompleter {
 
             // Validar formato del tiempo (hh:mm:ss)
             if (!timeString.matches("\\d{2}:\\d{2}:\\d{2}")) {
-                player.sendMessage(ChatColor.RED + "Formato de tiempo inválido. Usa hh:mm:ss.");
+                sender.sendMessage(ChatColor.RED + "Formato de tiempo inválido. Usa hh:mm:ss.");
                 return true;
             }
 
             // Validar si la opción de sonido es válida
             if (!soundOption.equals("on") && !soundOption.equals("off")) {
-                player.sendMessage(ChatColor.RED + "Uso: 'on' o 'off' para sonido.");
+                sender.sendMessage(ChatColor.RED + "Uso: 'on' o 'off' para sonido.");
                 return true;
             }
 
             // Convertir tiempo a segundos
             int totalSeconds = parseTimeToSeconds(timeString);
             if (totalSeconds <= 0) {
-                player.sendMessage(ChatColor.RED + "El tiempo debe ser mayor que 0.");
+                sender.sendMessage(ChatColor.RED + "El tiempo debe ser mayor que 0.");
                 return true;
             }
 
@@ -92,7 +86,7 @@ public class TiempoCommand implements CommandExecutor, TabCompleter {
 
             // Crear o actualizar la BossBar
             createBossBar(name, totalSeconds, timeString, soundOption);
-            player.sendMessage(ChatColor.GREEN + "Se agregó el temporizador con el nombre: " + ChatColor.RESET + name);
+            sender.sendMessage(ChatColor.GREEN + "Se agregó el temporizador con el nombre: " + ChatColor.RESET + name);
             return true;
         }
 
@@ -101,9 +95,9 @@ public class TiempoCommand implements CommandExecutor, TabCompleter {
             if (args.length == 0) {
                 boolean removed = removeFirstUnnamedBossBar();
                 if (removed) {
-                    player.sendMessage(ChatColor.GREEN + "Se eliminó la primera BossBar sin nombre.");
+                    sender.sendMessage(ChatColor.GREEN + "Se eliminó la primera BossBar sin nombre.");
                 } else {
-                    player.sendMessage(ChatColor.RED + "No hay BossBars sin nombre.");
+                    sender.sendMessage(ChatColor.RED + "No hay BossBars sin nombre.");
                 }
                 return true;
             }
@@ -111,11 +105,11 @@ public class TiempoCommand implements CommandExecutor, TabCompleter {
             if (args.length == 1) {
                 String name = args[0];
                 removeBossBar(name);
-                player.sendMessage(ChatColor.GREEN + "Se eliminó el temporizador con el nombre: " + name);
+                sender.sendMessage(ChatColor.GREEN + "Se eliminó el temporizador con el nombre: " + name);
                 return true;
             }
 
-            player.sendMessage(ChatColor.RED + "Uso: /removetiempo [nombre opcional]");
+            sender.sendMessage(ChatColor.RED + "Uso: /removetiempo [nombre opcional]");
             return true;
         }
         return false;
@@ -152,8 +146,11 @@ public class TiempoCommand implements CommandExecutor, TabCompleter {
             if (timeLeft <= 0) {
                 bossBar.setTitle(ChatColor.RED + "Tiempo Terminado!");
                 bossBar.setProgress(0.0);
-
-                Bukkit.getScheduler().runTaskLater(plugin, () -> removeBossBar(name), 100L);
+                // Reproducir sonido solo cuando el tiempo termina
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_DIDGERIDOO, 1.0f, 0.1f);
+                }
+                Bukkit.getScheduler().runTaskLater(plugin, () -> removeBossBar(name), 50L);
                 return;
             }
 
@@ -175,7 +172,7 @@ public class TiempoCommand implements CommandExecutor, TabCompleter {
             // Reproducir sonido si está activado
             if (soundSettings.getOrDefault(name, true)) {
                 for (Player player : Bukkit.getOnlinePlayers()) {
-                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1f);
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 1f, 1.5f);
                 }
             }
         }, 0L, 20L);

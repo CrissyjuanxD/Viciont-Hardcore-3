@@ -46,18 +46,7 @@
             <artifactId>spigot-api</artifactId>
             <version>1.21-R0.1-SNAPSHOT</version>
         </dependency>
-        <dependency>
-            <groupId>com.sk89q.worldedit</groupId>
-            <artifactId>worldedit-bukkit</artifactId>
-            <version>7.3.7-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.sk89q.worldedit</groupId>
-            <artifactId>worldedit-core</artifactId>
-            <version>7.3.8-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
+
         <dependency>
             <groupId>net.kyori</groupId>
             <artifactId>adventure-platform-bukkit</artifactId>

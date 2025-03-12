@@ -1,7 +1,7 @@
 package chat;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.event.Listener;
@@ -22,26 +22,55 @@ import java.util.Date;
 import java.util.Objects;
 
 public class chatgeneral implements Listener {
+
     @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
-        String message = event.getMessage();
         Player player = event.getPlayer();
         Scoreboard scoreboard = player.getScoreboard();
         Team team = scoreboard.getEntryTeam(player.getName());
 
-        // prefijos y sufijos del equipo
-        String prefix = team != null ? team.getPrefix() : "";
-        String suffix = team != null ? team.getSuffix() : "";
-        ChatColor teamColor = team != null ? team.getColor() : ChatColor.WHITE;
+        // Prefijos y sufijos del equipo
+        String prefix = (team != null) ? team.getPrefix() : "";
+        String suffix = (team != null) ? team.getSuffix() : "";
 
-        String formattedMessage = ChatColor.translateAlternateColorCodes('&', prefix + teamColor + player.getName() + ChatColor.RESET + suffix + "&7 ➤ &f" + message);
+        // Color del nombre basado en el equipo
+        ChatColor playerNameColor = getTeamColor(team);
+
+        // Formatear el mensaje con colores correctos
+        String formattedMessage = prefix + playerNameColor + player.getName() + ChatColor.RESET + suffix + ChatColor.WHITE + ": " + event.getMessage();
+
         event.setFormat(formattedMessage);
     }
 
+    // Método para obtener el color del equipo
+    private ChatColor getTeamColor(Team team) {
+        if (team == null) {
+            return ChatColor.WHITE; // Si el jugador no tiene equipo, color blanco
+        }
+        String teamName = team.getName();
+
+            // Personalizar colores según el nombre del equipo
+            switch (teamName) {
+                case "Admin":
+                    return ChatColor.of("#F6763A");
+                case "Mod":
+                    return ChatColor.of("#00BFFF");
+                case "Helper":
+                    return ChatColor.of("#67E590");
+                case "TSurvivor":
+                    return ChatColor.of("#9455ED");
+                case "Survivor+":
+                    return ChatColor.of("#F4C657");
+                case "ZFantasma":
+                    return ChatColor.of("#555555");
+                default:
+                    return ChatColor.RESET; // Color por defecto si no hay un equipo registrado
+            }
+    }
+
+    // Mensajes de Moderacion
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
-
-
         Player player = event.getPlayer();
         Block block = event.getClickedBlock();
         if (block != null && block.getType() == Material.CHEST && event.getAction() == Action.RIGHT_CLICK_BLOCK && !player.isSneaking()) {

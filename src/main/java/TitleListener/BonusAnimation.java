@@ -21,7 +21,7 @@ public class BonusAnimation {
         // Agregar efectos al jugador
         player.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 50, 1, true, false, false));
         player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 50, 0, true, false, false));
-        player.playSound(player.getLocation(), "minecraft:custom.bonus", 1.0f, 1.0f);
+        player.playSound(player.getLocation(), "minecraft:custom.bonus", 10.0f, 1.0f);
 
         double framesPerTick = (double) TOTAL_FRAMES / TICKS_DURATION;
 

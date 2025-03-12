@@ -8,6 +8,9 @@ import org.bukkit.boss.BossBar;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.world.WorldLoadEvent;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
@@ -31,25 +34,34 @@ public class QueenBeeHandler implements Listener {
     private final Map<UUID, String> deathCauseMap = new HashMap<>();
     private final Map<UUID, BukkitRunnable> activeBehaviors = new HashMap<>();
     private final Map<UUID, Long> lastAttackTime = new HashMap<>();
-    private final long MAX_IDLE_TIME = 200;
-    private boolean monitorActivo = false;
+    private final NamespacedKey queenbeekey;
 
     public QueenBeeHandler(JavaPlugin plugin) {
         this.plugin = plugin;
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        this.queenbeekey = new NamespacedKey(plugin, "queenbee");
     }
 
     // Spawnea la Abeja Reina
-    public void spawnQueenBee(Location location) {
+    public Bee spawnQueenBee(Location location) {
         Bee bee = (Bee) Objects.requireNonNull(location.getWorld()).spawnEntity(location, EntityType.BEE);
+        applyQueenBeeAttributes(bee);
+        return bee;
+    }
 
+    public void transformToQueenBee(Bee bee){
+        applyQueenBeeAttributes(bee);
+    }
+
+    private void applyQueenBeeAttributes(Bee bee) {
         bee.setCustomName(ChatColor.GOLD + "Abeja Reina");
         bee.setCustomNameVisible(true);
         Objects.requireNonNull(bee.getAttribute(Attribute.GENERIC_MAX_HEALTH)).setBaseValue(500.0);
         bee.setHealth(500.0);
         Objects.requireNonNull(bee.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED)).setBaseValue(0.35);
         bee.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1, false, false));
-        Objects.requireNonNull(bee.getAttribute(Attribute.GENERIC_SCALE)).setBaseValue(2.5);
+        bee.getPersistentDataContainer().set(queenbeekey, PersistentDataType.BYTE, (byte) 1);
+        Objects.requireNonNull(bee.getAttribute(Attribute.GENERIC_SCALE)).setBaseValue(3);
         bee.setSilent(true);
         bee.setRemoveWhenFarAway(false);
         bee.setAI(true);
@@ -73,14 +85,33 @@ public class QueenBeeHandler implements Listener {
         isRegenerating.put(bee.getUniqueId(), false);
         isAttacking.put(bee.getUniqueId(), false);
 
-        startBossBehavior(bee, bossBar);
+        startBossBehavior(bee);
+    }
 
-        // Asegura que el monitor esté activo
-        if (!monitorActivo) {
-            startBeeMonitor();
-            monitorActivo = true;
+    private void updateBossBar(Bee bee) {
+        UUID beeId = bee.getUniqueId();
+        BossBar bossBar = bossBars.get(beeId);
+
+        if (bossBar != null && !bee.isDead()) {
+            double healthPercentage = Math.max(0.0, bee.getHealth() / 500.0);
+            bossBar.setProgress(healthPercentage);
         }
     }
+
+    @EventHandler
+    public void onEntityDamage(EntityDamageEvent event) {
+        if (event.getEntity() instanceof Bee bee && isQueenBee(bee)) {
+            Bukkit.getScheduler().runTask(plugin, () -> updateBossBar(bee));
+        }
+    }
+
+    @EventHandler
+    public void onEntityRegainHealth(EntityRegainHealthEvent event) {
+        if (event.getEntity() instanceof Bee bee && isQueenBee(bee)) {
+            Bukkit.getScheduler().runTask(plugin, () -> updateBossBar(bee));
+        }
+    }
+
 
     @EventHandler
     public void onTargetChange(EntityTargetEvent event) {
@@ -107,8 +138,6 @@ public class QueenBeeHandler implements Listener {
                 bee.getWorld().spawnParticle(Particle.SMOKE, bee.getLocation(), 10, 0.5, 1.0, 0.5, 0.1);
                 bee.getWorld().playSound(bee.getLocation(), Sound.ENTITY_BEE_STING, 1f, 0.1f);
                 deathCauseMap.put(player.getUniqueId(), "Abeja Reina");
-                // Reinicia el comportamiento del jefe
-                startBossBehavior(bee, bossBars.get(bee.getUniqueId()));
 
                 // Empuja al jugador ligeramente hacia atrás
                 Vector knockback = player.getLocation().toVector()
@@ -178,8 +207,7 @@ public class QueenBeeHandler implements Listener {
         return bee.getCustomName() != null && bee.getCustomName().contains("Abeja Reina");
     }
 
-    // Comportamiento principal de la Abeja Reina
-    private void startBossBehavior(Bee bee, BossBar bossBar) {
+    private void startBossBehavior(Bee bee) {
         if (activeBehaviors.containsKey(bee.getUniqueId())) {
             return; // Evita tareas duplicadas si ya hay una activa
         }
@@ -188,42 +216,42 @@ public class QueenBeeHandler implements Listener {
             @Override
             public void run() {
                 if (bee.isDead()) {
-                    if (bossBar != null) {
-                        bossBar.removeAll();
-                    }
-                    activeBehaviors.remove(bee.getUniqueId()); // Elimina la referencia
+                    activeBehaviors.remove(bee.getUniqueId());
                     cancel();
                     return;
                 }
-
-                // Actualiza la barra de vida
-                bossBar.setProgress(Math.max(0.0, bee.getHealth() / 500.0));
 
                 // Si ya está atacando, no permite nuevas acciones
                 if (isAttacking.getOrDefault(bee.getUniqueId(), false)) {
                     return;
                 }
 
-                random.nextDouble();
-                int action = random.nextInt(8);
+                // Verifica la salud actual de la abeja (ataque de recuperacion)
+                double health = bee.getHealth();
+                if (health < 250.0) {
+                    double chance = random.nextDouble();
+                    if (chance <= 0.24) {
+                        regenerateBee(bee);
+                        return; // Sal de la ejecución actual para evitar otras acciones
+                    }
+                }
+
+                // Selecciona y ejecuta una acción aleatoria (ataques principales)
+                int action = random.nextInt(6);
                 switch (action) {
                     case 0 -> launchSpikes(bee);
                     case 1 -> launchExplosiveAttack(bee);
                     case 2 -> poisonCircle(bee);
                     case 3 -> summonAngryBees(bee);
                     case 4 -> meleeAttack(bee);
-                    case 5 -> enableProjectileDamage(bee);
-                    case 6 -> regenerateBee(bee);
-                    case 7 -> executeFlightAttack(bee);
+                    case 5 -> executeFlightAttack(bee);
                 }
             }
         };
-        behaviorTask.runTaskTimer(plugin, 0L, 50L); // Cada 60 ticks (3 segundos)
 
+        behaviorTask.runTaskTimer(plugin, 0L, 50L);
         activeBehaviors.put(bee.getUniqueId(), behaviorTask); // Añade la tarea activa
     }
-
-
 
     private void launchSpikes(Bee bee) {
         isAttacking.put(bee.getUniqueId(), true);
@@ -537,11 +565,23 @@ public class QueenBeeHandler implements Listener {
             // Evitar que entre en el Bee Nest
             angryBee.setCannotEnterHiveTicks(Integer.MAX_VALUE);
 
+            // Asigna un nombre personalizado con color dorado usando concatenación
+            angryBee.setCustomName(ChatColor.GOLD + "Abeja Guardiana " + (i + 1));
+            angryBee.setCustomNameVisible(true); // Opcional, para mostrar el nombre
+
             // Selecciona un jugador aleatorio como objetivo
             Player target = getRandomPlayer(bee);
             if (target != null) {
                 angryBee.setTarget(target);
             }
+
+            // Matar la abeja después de 1 minuto (1200 ticks)
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    angryBee.remove();
+                }
+            }.runTaskLater(plugin, 1200L); // 1 minuto en ticks (20 ticks = 1 segundo)
         }
 
         new BukkitRunnable() {
@@ -553,7 +593,6 @@ public class QueenBeeHandler implements Listener {
     }
 
     // 4. Ataque cuerpo a cuerpo
-// Ataque cuerpo a cuerpo de la abeja reina
     private void meleeAttack(Bee bee) {
         if (isAttacking.getOrDefault(bee.getUniqueId(), false)) return; // Ya está atacando
         isAttacking.put(bee.getUniqueId(), true);
@@ -576,35 +615,7 @@ public class QueenBeeHandler implements Listener {
     }
 
 
-    // 5. Habilitar daño por proyectiles temporalmente
-    private void enableProjectileDamage(Bee bee) {
-        if (isAttacking.getOrDefault(bee.getUniqueId(), false)) return; // Ya está atacando
-        canBeShot.put(bee.getUniqueId(), true);
-
-        // Aplica glowing a la abeja para indicar que ya puede recibir daño
-        bee.setGlowing(true);
-
-        // Mensaje en el chat para los jugadores cercanos (radio de 50 bloques)
-        bee.getWorld().getNearbyEntities(bee.getLocation(), 50, 50, 50).forEach(entity -> {
-            if (entity instanceof Player) {
-                entity.sendMessage(ChatColor.GOLD + "La ABEJA REINA ya no tiene protección a los Proyectiles durante 10 SEGUNDOS.");
-            }
-        });
-
-        // Reproduce el sonido de escudo
-        bee.getWorld().playSound(bee.getLocation(), Sound.ITEM_SHIELD_BLOCK, 5.0f, 0.6f);
-
-        // Desactiva el glowing después de 5 segundos
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                canBeShot.put(bee.getUniqueId(), false);
-                bee.setGlowing(false); // Quita el efecto de glowing
-            }
-        }.runTaskLater(plugin, 200L); // Habilitado durante 5 segundos
-    }
-
-    // 6. Regeneración sobre el bee nest
+    // 5. Regeneración sobre el bee nest
     private void regenerateBee(Bee bee) {
         if (isAttacking.getOrDefault(bee.getUniqueId(), false)) return; // Ya está atacando
         // Verificar si la abeja ya está regenerándose
@@ -664,6 +675,21 @@ public class QueenBeeHandler implements Listener {
         }.runTaskLater(plugin, 100L); // 5 segundos
     }
 
+    @EventHandler
+    public void onProjectileDamage(EntityDamageByEntityEvent event) {
+        if (event.getEntity() instanceof Bee bee) {
+            // Verificamos si la abeja es la "Abeja Reina" usando PersistentDataContainer
+            if (bee.getPersistentDataContainer().has(queenbeekey, PersistentDataType.BYTE)) {
+                if (event.getDamager() instanceof Projectile) {
+                    double originalDamage = event.getDamage();
+                    double reducedDamage = originalDamage * 0.5; // 50% menos daño
+                    event.setDamage(reducedDamage);
+                }
+            }
+        }
+    }
+
+
 
     @EventHandler
     public void onTarget(EntityTargetEvent event) {
@@ -711,41 +737,13 @@ public class QueenBeeHandler implements Listener {
         return closestPlayer;
     }
 
-    // Detecta daño por proyectiles
     @EventHandler
-    public void onProjectileHit(ProjectileHitEvent event) {
-        if (event.getHitEntity() instanceof Bee bee && bee.getCustomName() != null && bee.getCustomName().equals(ChatColor.GOLD + "Abeja Reina")) {
-            if (!canBeShot.getOrDefault(bee.getUniqueId(), false)) {
-                event.setCancelled(true); // Inmune a proyectiles si no está en estado vulnerable
-            }
-        }
-    }
-
-    // Drop al morir
-    @EventHandler
-    public void onQueenBeeDeath(EntityDamageEvent event) {
-        if (event.getEntity() instanceof Bee bee && bee.getCustomName() != null && bee.getCustomName().equals(ChatColor.GOLD + "Abeja Reina")) {
-            if (bee.getHealth() - event.getFinalDamage() <= 0) { // Muere
-
-                // Crear el drop personalizado
-                ItemStack sting = new ItemStack(Material.YELLOW_DYE);
-                ItemMeta meta = sting.getItemMeta();
-                assert meta != null;
-                meta.setDisplayName(ChatColor.GOLD + "Aguijón de la Abeja Reina");
-                meta.setCustomModelData(1);
-                sting.setItemMeta(meta);
-
-                bee.getWorld().dropItem(bee.getLocation(), sting);
-            }
-        }
-    }
-
-    @EventHandler
-    public void onEntityDeath(PlayerDeathEvent event) {
-        Player player = event.getEntity();
-        String cause = deathCauseMap.get(player.getUniqueId());
+    public void onQueenBeeDeath(EntityDeathEvent event) {
+        // Verifica si la entidad es un jugador
+        if (event.getEntity() instanceof Player player) {
+            String cause = deathCauseMap.get(player.getUniqueId());
             if (cause != null) {
-                // Definir los mensajes según la causa de la muerte
+                // Define los mensajes según la causa de la muerte
                 String deathMessage = "";
 
                 switch (cause) {
@@ -759,34 +757,81 @@ public class QueenBeeHandler implements Listener {
                         deathMessage = player.getName() + " ha muerto por el aguijón explosivo de la " + ChatColor.YELLOW + ChatColor.BOLD + "Abeja Reina";
                         break;
                 }
+
                 // Establece el mensaje de muerte personalizado
-                event.setDeathMessage(deathMessage);
+                event.getEntity().getServer().broadcastMessage(deathMessage);
 
                 // Limpia la causa de muerte después de que haya sido procesada
                 deathCauseMap.remove(player.getUniqueId());
             }
-    }
+            return; // Evita procesar lógica de la abeja reina si es un jugador
+        }
 
-    private void startBeeMonitor() {
-        if (monitorActivo) return;
-        monitorActivo = true;
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                for (World world : Bukkit.getWorlds()) {
-                    for (Bee bee : world.getEntitiesByClass(Bee.class)) {
-                        if (isQueenBee(bee)) {
-                            // Resetea el comportamiento si estuvo inactiva
-                            long lastTime = lastAttackTime.getOrDefault(bee.getUniqueId(), 0L);
-                            if (System.currentTimeMillis() - lastTime > MAX_IDLE_TIME * 50) {
-                                startBossBehavior(bee, bossBars.get(bee.getUniqueId()));
-                                lastAttackTime.put(bee.getUniqueId(), System.currentTimeMillis());
-                            }
-                        }
-                    }
+        // Verifica si la entidad es la Abeja Reina
+        if (event.getEntity() instanceof Bee bee && bee.getCustomName() != null
+                && bee.getCustomName().equals(ChatColor.GOLD + "Abeja Reina")) {
+
+            // Drop personalizado al morir
+            ItemStack sting = new ItemStack(Material.YELLOW_DYE);
+            ItemMeta meta = sting.getItemMeta();
+            assert meta != null;
+            meta.setDisplayName(ChatColor.GOLD + "Aguijón de la Abeja Reina");
+            meta.setCustomModelData(1);
+            sting.setItemMeta(meta);
+            bee.getWorld().dropItem(bee.getLocation(), sting);
+
+            // Eliminar BossBar asociada
+            UUID beeId = bee.getUniqueId();
+            if (bossBars.containsKey(beeId)) {
+                BossBar bossBar = bossBars.remove(beeId);
+                if (bossBar != null) {
+                    bossBar.removeAll();
                 }
             }
-        }.runTaskTimer(plugin, 0L, 100L);
+        }
+    }
+
+    @EventHandler
+    public void onWorldLoad(WorldLoadEvent event) {
+        World world = event.getWorld();
+
+        // Obtiene solo las abejas en el mundo
+        for (Bee bee : world.getEntitiesByClass(Bee.class)) {
+            // Si la abeja tiene el nombre personalizado de "Abeja Reina"
+            if (bee.getCustomName() != null && bee.getCustomName().equals(ChatColor.GOLD + "Abeja Reina")) {
+                // Elimina el PersistentDataContainer
+                bee.getPersistentDataContainer().remove(queenbeekey);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) {
+        Player player = event.getPlayer();
+        Location from = event.getFrom();
+        Location to = event.getTo();
+
+        // Verificar si el jugador realmente se movió (no solo giró la cámara)
+        if (from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ()) {
+            return;
+        }
+
+        Location playerLocation = player.getLocation();
+        double maxDistanceSquared = 30 * 30; // 30 bloques al cuadrado
+
+        // Obtiene entidades cercanas y filtra solo arañas sin PersistentDataKey
+        for (Entity entity : player.getNearbyEntities(30, 30, 30)) {
+            if (entity instanceof Bee bee &&
+                    bee.getCustomName() != null &&
+                    bee.getCustomName().equals(ChatColor.GOLD + "Abeja Reina") &&
+                    !bee.getPersistentDataContainer().has(queenbeekey, PersistentDataType.BYTE)) {
+
+                // Usa distanceSquared para evitar la raíz cuadrada
+                if (playerLocation.distanceSquared(bee.getLocation()) <= maxDistanceSquared) {
+                    transformToQueenBee(bee);
+                }
+            }
+        }
     }
 
 }

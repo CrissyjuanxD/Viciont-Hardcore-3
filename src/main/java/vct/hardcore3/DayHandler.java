@@ -1,14 +1,12 @@
     package vct.hardcore3;
     
-    import Dificultades.DayFourChanges;
-    import Dificultades.DayTwoChanges;
+    import Dificultades.*;
     import org.bukkit.Bukkit;
     import org.bukkit.entity.Player;
     import org.bukkit.plugin.java.JavaPlugin;
     import org.bukkit.ChatColor;
     import org.bukkit.scheduler.BukkitRunnable;
-    import Dificultades.DayOneChanges;
-    
+
     import java.io.IOException;
     import java.nio.file.Files;
     import java.nio.file.Path;
@@ -22,13 +20,18 @@
         private DayOneChanges dayOneChanges;
         private DayTwoChanges dayTwoChange;
         private DayFourChanges dayFourChanges;
-        private boolean dayOneChangesApplied = false;
+        private DaySixChanges daySixChanges;
+        private DaySevenChanges daySevenChanges;
+        private DayTenChanges dayTenChanges;
     
         public DayHandler(JavaPlugin plugin) {
             this.plugin = plugin;
             dayOneChanges = new DayOneChanges(plugin, this);
             dayTwoChange = new DayTwoChanges(plugin);
             dayFourChanges = new DayFourChanges(plugin);
+            daySixChanges = new DaySixChanges(plugin);
+            daySevenChanges = new DaySevenChanges(plugin, this);
+            dayTenChanges = new DayTenChanges(plugin);
             loadDayData();
             startDayTimer();
             applyCurrentDayChanges();
@@ -81,9 +84,8 @@
 
 
         private void applyCurrentDayChanges() {
-            if (currentDay >= 1 && !dayOneChangesApplied) {
+            if (currentDay >= 1) {
                 dayOneChanges.apply();
-                dayOneChangesApplied = true;
             }
             if (currentDay >= 2) {
                 dayTwoChange.apply();
@@ -91,18 +93,41 @@
             if (currentDay >= 4) {
                 dayFourChanges.apply();
             }
+            if (currentDay >= 6) {
+                daySixChanges.apply();
+            }
+            if (currentDay >= 7) {
+                daySevenChanges.apply();
+            }
+            if (currentDay >= 10) {
+                dayTenChanges.apply();
+            }
         }
 
         private void revertCurrentDayChanges() {
-            if (dayOneChangesApplied && currentDay < 1) {
-                dayOneChanges.revert();
-                dayOneChangesApplied = false;
+            // Revertir cambios del día 10 si están aplicados
+            if (currentDay < 10) {
+                dayTenChanges.revert();
             }
+            // Revertir cambios del día 7 si están aplicados
+            if (currentDay < 7) {
+                daySevenChanges.revert();
+            }
+            // Revertir cambios del día 6 si están aplicados
+            if (currentDay < 6) {
+                daySixChanges.revert();
+            }
+            // Revertir cambios del día 4 si están aplicados
+            if (currentDay < 4) {
+                dayFourChanges.revert();
+            }
+            // Revertir cambios del día 2 si están aplicados
             if (currentDay < 2) {
                 dayTwoChange.revert();
             }
-            if (currentDay < 4) {
-                dayFourChanges.revert();
+            // Revertir cambios del día 1 si están aplicados
+            if (currentDay < 1) {
+                dayOneChanges.revert();
             }
         }
 

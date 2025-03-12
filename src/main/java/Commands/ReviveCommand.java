@@ -1,16 +1,22 @@
 package Commands;
 
-import org.bukkit.ChatColor;
-import org.bukkit.Bukkit;
+import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import vct.hardcore3.ViciontHardcore3;
 
-public class ReviveCommand implements CommandExecutor {
-    private ViciontHardcore3 plugin;
-    private String Prefix = ChatColor.translateAlternateColorCodes('&', "&d&lViciont&5&lHardcore &5&l3&7➤ &f");
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class ReviveCommand implements CommandExecutor, TabCompleter {
+    private final ViciontHardcore3 plugin;
 
     public ReviveCommand(ViciontHardcore3 plugin) {
         this.plugin = plugin;
@@ -19,40 +25,91 @@ public class ReviveCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(Prefix + ChatColor.RED + "Este comando solo puede ser usado por jugadores.");
+            sender.sendMessage(ChatColor.RED + "Este comando solo puede ser usado por jugadores.");
             return true;
         }
 
         Player player = (Player) sender;
         if (!player.isOp()) {
-            player.sendMessage(Prefix + ChatColor.RED + "No tienes permiso para usar este comando.");
+            player.sendMessage(ChatColor.RED + "No tienes permiso para usar este comando.");
             return true;
         }
 
         if (args.length == 0) {
-            player.sendMessage(Prefix + ChatColor.RED + "Debes especificar el nombre del jugador a revivir.");
+            player.sendMessage(ChatColor.RED + "Debes especificar el nombre del jugador a revivir.");
             return true;
         }
 
         Player target = Bukkit.getPlayer(args[0]);
         if (target == null) {
-            player.sendMessage(Prefix + ChatColor.RED + "El jugador especificado no está en línea.");
+            player.sendMessage(ChatColor.RED + "El jugador especificado no está en línea.");
             return true;
         }
 
-        Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "execute at @a run playsound minecraft:block.fire.extinguish ambient @a ~ ~ ~ 20 0.2"), 10L);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "execute at @a run playsound minecraft:block.bubble_column.whirlpool_ambient ambient @a ~ ~ ~ 25 0.5"), 10L);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tp " + target.getName() + " 1321 68 2792 "), 60L);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "weather thunder"), 60L);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "execute at @a run title @a times 20 50 20"), 61L);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "execute at @a run title @a title {\"text\":\"\uE072\"}"), 61L);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "execute at @a run title @a subtitle [\"\",{\"text\":\"el jugador \",\"bold\":true,\"italic\":true,\"color\":\"aqua\"},{\"text\":\"" + target.getName() + "\",\"bold\":true,\"italic\":true,\"color\":\"gold\"}]"), 61L);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "execute at @a run playsound minecraft:item.totem.use ambient @a ~ ~ ~ 5 0.6"), 62L);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "execute at @a run playsound minecraft:item.trident.thunder ambient @a ~ ~ ~ 5 2"), 62L);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect give " + target.getName() + " minecraft:slowness 15 4"), 63L);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect give " + target.getName() + " minecraft:nausea 15 5"), 63L);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamemode survival " + target.getName()), 83L);
+        FileConfiguration config = plugin.getConfig();
+        if (!config.contains("revive.x") || !config.contains("revive.y") || !config.contains("revive.z")) {
+            player.sendMessage(ChatColor.RED + "Las coordenadas de revive no han sido configuradas. Usa /revivecoords <x> <y> <z>.");
+            return true;
+        }
+
+        double x = config.getDouble("revive.x");
+        double y = config.getDouble("revive.y");
+        double z = config.getDouble("revive.z");
+
+        Location reviveLocation = new Location(target.getWorld(), x, y, z);
+
+        // Sonidos iniciales
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                online.playSound(online.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 20f, 0.2f);
+                online.playSound(online.getLocation(), Sound.BLOCK_BUBBLE_COLUMN_WHIRLPOOL_AMBIENT, 25f, 0.5f);
+            }
+        }, 10L);
+
+        // Teletransportar y cambiar clima
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            target.teleport(reviveLocation);
+            target.getWorld().setStorm(true);
+        }, 60L);
+
+        // Mensaje y efectos visuales con título
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                online.sendTitle(ChatColor.WHITE + "\uE072",
+                        ChatColor.AQUA + "El jugador " + ChatColor.GOLD + target.getName(),
+                        20, 50, 20);
+            }
+        }, 61L);
+
+        // Sonidos de revive
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            target.getWorld().playSound(target.getLocation(), Sound.ITEM_TOTEM_USE, 5f, 0.6f);
+            target.getWorld().playSound(target.getLocation(), Sound.ITEM_TRIDENT_THUNDER, 5f, 2f);
+        }, 62L);
+
+        // Efectos de poción
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 300, 4));
+            target.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 300, 5));
+        }, 63L);
+
+        // Cambio de modo de juego
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            target.setGameMode(GameMode.SURVIVAL);
+        }, 83L);
 
         return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (command.getName().equalsIgnoreCase("revive") && args.length == 1) {
+            List<String> playerNames = new ArrayList<>();
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                playerNames.add(p.getName());
+            }
+            return playerNames;
+        }
+        return Collections.emptyList();
     }
 }

@@ -1,16 +1,18 @@
 package vct.hardcore3;
 
 import Commands.*;
-import Dificultades.DayFourChanges;
-import Dificultades.DayTwoChanges;
+import Dificultades.*;
+import Dificultades.CustomMobs.CorruptedZombies;
+import Dificultades.CustomMobs.CustomDolphin;
 import Enchants.*;
 import Estructures.CorruptedVillage;
 import Events.DamageLogListener;
 import Events.Skybattle.EventoHandler;
+import Security.PingMonitor.PingMonitor;
 import TitleListener.*;
+import items.DoubleLifeTotem;
 import list.VHList;
 import org.bukkit.*;
-import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -19,12 +21,8 @@ import org.bukkit.ChatColor;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import chat.chatgeneral;
-import Dificultades.DayOneChanges;
 
 import java.util.Objects;
-import org.bukkit.command.Command;
-
-import org.bukkit.entity.Player;
 
 public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
@@ -38,11 +36,20 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private DayOneChanges dayOneChanges;
     private DayTwoChanges dayTwoChanges;
     private DayFourChanges dayFourChanges;
-    private DoubleLifeTotemHandler doubleLifeTotemHandler;
+    private DaySixChanges daySixChanges;
+    private DayTenChanges dayTenChanges;
+    private DoubleLifeTotem doubleLifeTotemHandler;
     private NormalTotemHandler normalTotemHandler;
-    private SpawnMobs spawnMobs;
+    private PingMonitor pingMonitor;
+    public static boolean shuttingDown = false;
+    private DamageLogListener damageLogListener;
 
     private EventoHandler eventoHandler;
+    private GameModeTeamHandler gameModeTeamHandler;
+
+    private CorruptedZombies corruptedZombies;
+    private CustomDolphin customDolphin;
+
 
     @Override
     public void onEnable() {
@@ -53,15 +60,19 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         Bukkit.getServer().getPluginManager().registerEvents(this, this);
 
         // Registra evento de revivir
-        Objects.requireNonNull(this.getCommand("revive")).setExecutor(new ReviveCommand(this));
+        ReviveCommand reviveCommand = new ReviveCommand(this);
+        ReviveCoordsCommand reviveCoordsCommand = new ReviveCoordsCommand(this);
+        this.getCommand("revive").setExecutor(reviveCommand);
+        this.getCommand("revive").setTabCompleter(reviveCommand);
+        this.getCommand("revivecoords").setExecutor(reviveCoordsCommand);
 
         // Inicializa los manejadores de eventos de totems
-        doubleLifeTotemHandler = new DoubleLifeTotemHandler(this);
+        doubleLifeTotemHandler = new DoubleLifeTotem(this);
         normalTotemHandler = new NormalTotemHandler(this);
-
         // Registra los eventos de totems
-        getServer().getPluginManager().registerEvents(doubleLifeTotemHandler, this);
         getServer().getPluginManager().registerEvents(normalTotemHandler, this);
+        getServer().getPluginManager().registerEvents(doubleLifeTotemHandler, this);
+
 
         // Inicializa correctamente el DayHandler y asigna a la variable de instancia
         dayHandler = new DayHandler(this);
@@ -76,15 +87,10 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         PluginCommand addCommand = getCommand("adddeathstorm");
         PluginCommand removeCommand = getCommand("removedeathstorm");
 
-        if (resetCommand != null) {
-            resetCommand.setExecutor(new DeathStormCommand(deathStormHandler));
-        }
-        if (addCommand != null) {
-            addCommand.setExecutor(new DeathStormCommand(deathStormHandler));
-        }
-        if (removeCommand != null) {
-            removeCommand.setExecutor(new DeathStormCommand(deathStormHandler));
-        }
+        DeathStormCommand deathStormCommand = new DeathStormCommand(deathStormHandler);
+        if (resetCommand != null) resetCommand.setExecutor(deathStormCommand);
+        if (addCommand != null) addCommand.setExecutor(deathStormCommand);
+        if (removeCommand != null) removeCommand.setExecutor(deathStormCommand);
 
         // Comandos de días
         PluginCommand changeDayCommand = getCommand("cambiardia");
@@ -100,14 +106,27 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         // Cargar datos de DeathStorm al iniciar
         deathStormHandler.loadStormData();
 
-        // Registrar eventos de chat
-        getServer().getPluginManager().registerEvents(new chatgeneral(), this);
+        // Registrar eventos de chat y teams
+        chatgeneral chatGeneralHandler = new chatgeneral();
+        gameModeTeamHandler = new GameModeTeamHandler(this);
+        FirstJoinHandler firstJoinHandler = new FirstJoinHandler(this);
+        getServer().getPluginManager().registerEvents(chatGeneralHandler, this);
+        getServer().getPluginManager().registerEvents(gameModeTeamHandler, this);
+        getServer().getPluginManager().registerEvents(firstJoinHandler, this);
 
         // Registrar el comando /ping
         Objects.requireNonNull(this.getCommand("ping")).setExecutor(new PingCommand(this));
+        pingMonitor = new PingMonitor(this);
+        pingMonitor.startMonitoring();
+        getLogger().info("PingMonitor activado.");
 
         //comandos generales
-        Objects.requireNonNull(this.getCommand("spawnvct")).setExecutor(new SpawnMobs(this));
+        Objects.requireNonNull(this.getCommand("spawnvct")).setExecutor(new SpawnMobs(this, dayHandler));
+        Objects.requireNonNull(this.getCommand("eggvct")).setExecutor(new EggSpawnerCommand(this));
+        ItemsCommands itemsCommands = new ItemsCommands(this);
+        getCommand("givevct").setExecutor(itemsCommands);
+        getCommand("givevct").setTabCompleter(itemsCommands);
+
 
         // Registrar el comando para el temporizador;
         TiempoCommand tiempoCommand = new TiempoCommand(this);
@@ -117,10 +136,12 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         this.getCommand("removetiempo").setTabCompleter(tiempoCommand);
 
         // Registrar eventos de list
-        new VHList(this).runTaskTimer(this, 0, 20);
+        new VHList(this).runTaskTimer(this, 0, 10);
+
 
         // Registrar el comando "giveessence"
-        this.getCommand("giveessence").setExecutor(new GiveEssenceCommand());
+        GiveEssenceCommand giveEssenceCommand = new GiveEssenceCommand();
+        Objects.requireNonNull(this.getCommand("giveessence")).setExecutor(giveEssenceCommand);
 
         // Registra la clase EnhancedEnchantmentTable para crear los ítems y recetas
         new EnhancedEnchantmentTable(this);
@@ -157,6 +178,12 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
         // Inicializa los cambios del día 4
         dayFourChanges = new DayFourChanges(this);
+
+        // Inicializa los cambios del día 6
+        daySixChanges = new DaySixChanges(this);
+
+        // Inicializa los cambios del día 10
+        dayTenChanges = new DayTenChanges(this);
 
         //Loottables
         getServer().getPluginManager().registerEvents(new LootHandler(this, dayFourChanges), this);
@@ -195,7 +222,14 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
                     return true;
                 });
 
-        getServer().getPluginManager().registerEvents(new DamageLogListener(this), this);
+        damageLogListener = new DamageLogListener(this);
+        getServer().getPluginManager().registerEvents(damageLogListener, this);
+
+        //mobs
+        corruptedZombies = new CorruptedZombies(this);
+
+        customDolphin = new CustomDolphin(this);
+        getServer().getPluginManager().registerEvents(customDolphin, this);
     }
 
     @Override
@@ -210,8 +244,17 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
             Bukkit.getLogger().severe("deathStormHandler is null, cannot save storm data.");
         }
 
-    }
+        if (damageLogListener != null) {
+            try {
+                damageLogListener.saveDamageLogState();
+            } catch (Exception e) {
+                getLogger().severe("Error al guardar DamageLogState: " + e.getMessage());
+            }
+        }
 
+        shuttingDown = true;
+
+    }
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
@@ -229,30 +272,9 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         return dayHandler;
     }
 
-    public DoubleLifeTotemHandler getDoubleLifeTotemHandler() {
+    public DoubleLifeTotem getDoubleLifeTotemHandler() {
         return doubleLifeTotemHandler;
     }
 
-        @Override
-        public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-            if (command.getName().equalsIgnoreCase("testanim1")) {
-                if (sender instanceof Player) {
-                    Player player = (Player) sender;
-                    playDeathAnimation(player);
-                    return true;
-                } else {
-                    sender.sendMessage(ChatColor.RED + "Este comando solo puede ser usado por jugadores.");
-                    return false;
-                }
-            }
-            return false;
-        }
-
-        public void playDeathAnimation(Player player) {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "execute as " + player.getName() + " run title @a title {\"text\":\"\\uE851\", \"color\":\"red\"}");
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "execute as " + player.getName() + " run playsound minecraft:entity.blaze.death master @a ~ ~ ~ 1 1 1");
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "execute as " + player.getName() + " run particle minecraft:smoke ~ ~ ~ 1 1 1 0.1 10");
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a {\"text\":\"Animación de muerte activada\"}");
-        }
 }
 
