@@ -15,7 +15,6 @@ public class TiempoListener implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        // Restaurar todas las BossBars para el jugador al reconectarse
         for (BossBar bossBar : tiempoCommand.getAllBossBars()) {
             bossBar.addPlayer(event.getPlayer());
         }

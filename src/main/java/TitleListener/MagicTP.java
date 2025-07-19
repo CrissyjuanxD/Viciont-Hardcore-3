@@ -1,16 +1,14 @@
 package TitleListener;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
+import org.bukkit.*;
+import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import java.util.ArrayList;
+import java.util.List;
 
-public class MagicTP implements CommandExecutor {
+public class MagicTP implements CommandExecutor, TabCompleter { // Añadido TabCompleter aquí
 
     private final JavaPlugin plugin;
 
@@ -20,63 +18,100 @@ public class MagicTP implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (args.length != 5 && args.length != 3) {
-            sender.sendMessage(ChatColor.RED + "Uso correcto: /magic tp <jugador o @a> <x> <y> <z> o /magic tp <jugador o @a> spawn");
+        // Validación básica
+        if (args.length != 4 && args.length != 2) { // Corregido de 1 a 2 para coincidir con el mensaje de ayuda
+            sender.sendMessage(ChatColor.RED + "Uso correcto: /magictp <jugador|@a> <x> <y> <z> o /magictp <jugador|@a> spawn");
             return true;
         }
 
-        String targetName = args[1];
-        boolean useSpawn = args.length == 3 && args[2].equalsIgnoreCase("spawn");
-        double x = 0, y = 0, z = 0;
-        if (!useSpawn && args.length == 5) {
+        String targetName = args[0];
+        boolean useSpawn = args.length == 2 && args[1].equalsIgnoreCase("spawn");
+
+        // Procesar coordenadas si no es spawn
+        final Location targetLocation; // Marcada como final para resolver el primer error
+        if (!useSpawn && args.length == 4) {
             try {
-                x = Double.parseDouble(args[2]);
-                y = Double.parseDouble(args[3]);
-                z = Double.parseDouble(args[4]);
+                double x = Double.parseDouble(args[1]);
+                double y = Double.parseDouble(args[2]);
+                double z = Double.parseDouble(args[3]);
+                targetLocation = new Location(Bukkit.getWorlds().get(0), x, y, z);
             } catch (NumberFormatException e) {
                 sender.sendMessage(ChatColor.RED + "Las coordenadas deben ser números válidos.");
                 return true;
             }
+        } else {
+            targetLocation = null; // Inicialización necesaria
         }
 
-        Player[] players;
+        // Obtener jugadores objetivo
+        final List<Player> players = new ArrayList<>(); // Marcada como final
         if (targetName.equalsIgnoreCase("@a")) {
-            players = Bukkit.getOnlinePlayers().toArray(new Player[0]);
+            players.addAll(Bukkit.getOnlinePlayers());
         } else {
             Player player = Bukkit.getPlayer(targetName);
             if (player == null) {
                 sender.sendMessage(ChatColor.RED + "El jugador especificado no está en línea.");
                 return true;
             }
-            players = new Player[]{player};
+            players.add(player);
         }
 
+        // Efectos visuales y de sonido
         for (Player player : players) {
             player.playSound(player.getLocation(), "minecraft:custom.transition_1", 1.0f, 1.0f);
             player.sendTitle("\uEAA4", "", 80, 80, 20);
         }
 
-        boolean finalUseSpawn = useSpawn;
-        double finalX = x, finalY = y, finalZ = z;
-
         new BukkitRunnable() {
             @Override
             public void run() {
+                World overworld = Bukkit.getWorlds().get(0);
+
                 for (Player player : players) {
-                    if (finalUseSpawn) {
+                    if (useSpawn) {
                         Location bedSpawn = player.getBedSpawnLocation();
                         if (bedSpawn != null) {
                             player.teleport(bedSpawn);
                         } else {
-                            player.teleport(player.getWorld().getSpawnLocation());
+                            player.teleport(overworld.getSpawnLocation());
                         }
-                    } else {
-                        player.teleport(new Location(player.getWorld(), finalX, finalY, finalZ));
+                    } else if (targetLocation != null) { // Verificación añadida para seguridad
+                        player.teleport(targetLocation);
                     }
                 }
             }
         }.runTaskLater(plugin, 120);
 
         return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        List<String> completions = new ArrayList<>();
+
+        if (args.length == 1) {
+            completions.add("@a");
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                completions.add(player.getName());
+            }
+        } else if (args.length == 2 && !args[0].equalsIgnoreCase("@a")) {
+            completions.add("spawn");
+            if (sender instanceof Player) {
+                Player p = (Player) sender;
+                completions.add(String.valueOf(p.getLocation().getBlockX()));
+            }
+        } else if (args.length == 3 && !args[1].equalsIgnoreCase("spawn")) {
+            if (sender instanceof Player) {
+                Player p = (Player) sender;
+                completions.add(String.valueOf(p.getLocation().getBlockY()));
+            }
+        } else if (args.length == 4 && !args[1].equalsIgnoreCase("spawn")) {
+            if (sender instanceof Player) {
+                Player p = (Player) sender;
+                completions.add(String.valueOf(p.getLocation().getBlockZ()));
+            }
+        }
+
+        return completions;
     }
 }

@@ -11,6 +11,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.block.Action;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
@@ -42,7 +43,7 @@ public class EnhancedEnchantmentGUI implements Listener {
         ItemMeta meta = pane.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(" ");
-            meta.setCustomModelData(1);
+            meta.setCustomModelData(2);
             pane.setItemMeta(meta);
         }
         return pane;
@@ -51,13 +52,13 @@ public class EnhancedEnchantmentGUI implements Listener {
     public void openEnhancedEnchantmentTableGUI(Player player) {
         Inventory gui = Bukkit.createInventory(null, 54,"\u3201\u3201" + ChatColor.WHITE + "\u3200");
         Enchantment[] enchantments = {
-                Enchantment.PROTECTION, Enchantment.UNBREAKING, Enchantment.MENDING,
+                Enchantment.PROTECTION, Enchantment.UNBREAKING,
                 Enchantment.EFFICIENCY, Enchantment.FORTUNE, Enchantment.SHARPNESS,
                 Enchantment.SMITE, Enchantment.BANE_OF_ARTHROPODS, Enchantment.FEATHER_FALLING,
-                Enchantment.LOOTING, Enchantment.DEPTH_STRIDER, Enchantment.SILK_TOUCH,
+                Enchantment.LOOTING, Enchantment.DEPTH_STRIDER,
                 Enchantment.POWER
         };
-        int[] slots = { 13, 14, 15, 16, 22, 23, 24, 25, 31, 32, 33, 34, 40 };
+        int[] slots = { 13, 14, 15, 16, 22, 23, 24, 25, 31, 32, 33, };
         for (int i = 0; i < enchantments.length; i++) {
             gui.setItem(slots[i], createEnchantmentBook(enchantments[i], 1));
         }
@@ -86,12 +87,24 @@ public class EnhancedEnchantmentGUI implements Listener {
         return book;
     }
 
+    private boolean isIllegalEnchantedBook(ItemStack item) {
+        if (item == null || item.getType() != Material.ENCHANTED_BOOK || !item.hasItemMeta()) {
+            return false;
+        }
+
+        ItemMeta meta = item.getItemMeta();
+        if (!meta.hasDisplayName()) return false;
+
+        String name = ChatColor.stripColor(meta.getDisplayName());
+
+        // Detectar por una parte específica del nombre, ajusta según tu caso
+        return name.contains("Nivel") && !name.contains("Esencia"); // por ejemplo
+    }
 
     private String formatEnchantmentName(String key) {
         Map<String, String> enchantmentNames = new HashMap<>();
         enchantmentNames.put("protection", "Protección");
         enchantmentNames.put("unbreaking", "Irrompibilidad");
-        enchantmentNames.put("mending", "Reparación");
         enchantmentNames.put("efficiency", "Eficiencia");
         enchantmentNames.put("fortune", "Fortuna");
         enchantmentNames.put("sharpness", "Filo");
@@ -100,7 +113,6 @@ public class EnhancedEnchantmentGUI implements Listener {
         enchantmentNames.put("feather_falling", "Caída de Pluma");
         enchantmentNames.put("looting", "Saqueo");
         enchantmentNames.put("depth_strider", "Agilidad Acuática");
-        enchantmentNames.put("silk_touch", "Toque de Seda");
         enchantmentNames.put("power", "Poder");
 
         return enchantmentNames.getOrDefault(key, key);
@@ -179,12 +191,11 @@ public class EnhancedEnchantmentGUI implements Listener {
 
                     ItemStack itemToEnchant = gui.getItem(36);
                     if (itemToEnchant == null) {
-                        sendMessageOnce(player, ChatColor.RED + "Coloca un objeto en el slot de encantamiento.");
                         return;
                     }
 
                     if (!selectedEnchantment.canEnchantItem(itemToEnchant)) {
-                        sendMessageOnce(player, ChatColor.RED + "Este encantamiento no se puede aplicar a este objeto.");
+                        sendMessageOnce(player, ChatColor.RED + "۞ Este encantamiento no se puede aplicar a este objeto.");
                         return;
                     }
 
@@ -192,30 +203,29 @@ public class EnhancedEnchantmentGUI implements Listener {
                     int existingLevel = itemMeta != null ? itemMeta.getEnchantLevel(selectedEnchantment) : 0;
 
                     if (existingLevel >= selectedEnchantment.getMaxLevel()) {
-                        sendMessageOnce(player, ChatColor.RED + "Este encantamiento ya está en su nivel máximo.");
                         return;
                     }
 
                     ItemStack lapis = gui.getItem(37);
                     if (lapis == null || lapis.getAmount() < 3) {
-                        sendMessageOnce(player, ChatColor.RED + "Necesitas al menos 3 de lapislázuli.");
+                        sendMessageOnce(player, ChatColor.RED + "۞ Necesitas al menos 3 de lapislázuli.");
                         return;
                     }
 
                     ItemStack essence = gui.getItem(38);
                     if (essence == null || !isValidEssence(essence, selectedEnchantment)) {
-                        sendMessageOnce(player, ChatColor.RED + "Necesitas la esencia correspondiente.");
+                        sendMessageOnce(player, ChatColor.RED + "۞ Necesitas la esencia correspondiente.");
                         return;
                     }
 
                     // Verificar que solo haya una esencia en el slot 38
                     if (essence.getAmount() > 1) {
-                        sendMessageOnce(player, ChatColor.RED + "Solo puedes usar una esencia.");
+                        sendMessageOnce(player, ChatColor.GRAY + "۞ Solo puedes usar una esencia.");
                         return;
                     }
 
-                    if (player.getLevel() < 3) {
-                        sendMessageOnce(player, ChatColor.RED + "Necesitas al menos 3 niveles de experiencia.");
+                    if (player.getLevel() < 4) {
+                        sendMessageOnce(player, ChatColor.RED + "۞ Necesitas al menos 4 niveles de experiencia.");
                         return;
                     }
 
@@ -238,15 +248,12 @@ public class EnhancedEnchantmentGUI implements Listener {
                         gui.setItem(38, essence);
                     } else {
                         gui.setItem(38, null);
-                        sendMessageOnce(player, ChatColor.RED + "La esencia se ha agotado.");
                     }
 
-                    player.setLevel(player.getLevel() - 3);
+                    player.setLevel(player.getLevel() - 4);
                     player.updateInventory();
 
                     player.playSound(player.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1.0f, 1.0f);
-
-                    sendMessageOnce(player, ChatColor.GREEN + "¡Encantamiento exitoso!");
                 }
             }
         }
@@ -269,8 +276,6 @@ public class EnhancedEnchantmentGUI implements Listener {
                 return essenceName.equals(ChatColor.BLUE + "Esencia de Protección");
             case "unbreaking":
                 return essenceName.equals(ChatColor.BLUE + "Esencia de Irrompibilidad");
-            case "mending":
-                return essenceName.equals(ChatColor.BLUE + "Esencia de Reparación");
             case "efficiency":
                 return essenceName.equals(ChatColor.BLUE + "Esencia de Eficiencia");
             case "fortune":
@@ -287,8 +292,6 @@ public class EnhancedEnchantmentGUI implements Listener {
                 return essenceName.equals(ChatColor.BLUE + "Esencia de Saqueo");
             case "depth_strider":
                 return essenceName.equals(ChatColor.BLUE + "Esencia de Agilidad Acuática");
-            case "silk_touch":
-                return essenceName.equals(ChatColor.BLUE + "Esencia de Toque de Seda");
             case "power":
                 return essenceName.equals(ChatColor.BLUE + "Esencia de Poder");
             default:
@@ -339,8 +342,6 @@ public class EnhancedEnchantmentGUI implements Listener {
         }
     }
 
-
-
     private void updateEnchantmentBooksInGUI(Inventory gui, ItemStack itemInSlot36) {
         if (itemInSlot36 != null && itemInSlot36.hasItemMeta()) {
             ItemMeta itemMeta = itemInSlot36.getItemMeta();
@@ -356,9 +357,8 @@ public class EnhancedEnchantmentGUI implements Listener {
         }
     }
 
-
     private void updateAllMatchingBooks(Inventory gui, Enchantment enchantment, int currentLevel) {
-        int[] slots = { 13, 14, 15, 16, 22, 23, 24, 25, 31, 32, 33, 34, 40 };
+        int[] slots = { 13, 14, 15, 16, 22, 23, 24, 25, 31, 32, 33 };
 
         for (int slot : slots) {
             ItemStack book = gui.getItem(slot);
@@ -390,9 +390,8 @@ public class EnhancedEnchantmentGUI implements Listener {
         }
     }
 
-
     private void resetEnchantmentBooksToLevel1(Inventory gui) {
-        int[] slots = { 13, 14, 15, 16, 22, 23, 24, 25, 31, 32, 33, 34, 40 };
+        int[] slots = { 13, 14, 15, 16, 22, 23, 24, 25, 31, 32, 33 };
         for (int slot : slots) {
             ItemStack book = gui.getItem(slot);
             if (book != null && book.getType() == Material.ENCHANTED_BOOK) {
@@ -411,8 +410,6 @@ public class EnhancedEnchantmentGUI implements Listener {
         }
     }
 
-
-
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
         String title = "\u3201\u3201" +  ChatColor.WHITE + "\u3200";
@@ -427,15 +424,46 @@ public class EnhancedEnchantmentGUI implements Listener {
         }
     }
 
-
     @EventHandler
     public void onPlayerInteractWithBlock(PlayerInteractEvent event) {
+        // Ignorar si no es la mano principal (evita múltiples ejecuciones)
+        if (event.getHand() != EquipmentSlot.HAND) return;
+
         if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            if (event.getClickedBlock() != null && event.getClickedBlock().getType() == Material.GREEN_GLAZED_TERRACOTTA) {
+            Block clickedBlock = event.getClickedBlock();
+            if (clickedBlock != null && clickedBlock.getType() == Material.GREEN_GLAZED_TERRACOTTA) {
                 event.setCancelled(true);
-                openEnhancedEnchantmentTableGUI(event.getPlayer());
+
+                int bookshelfCount = countBookshelvesAround(clickedBlock.getLocation(), 4);
+                if (bookshelfCount >= 30) {
+                    openEnhancedEnchantmentTableGUI(event.getPlayer());
+                } else {
+                    sendMessageOnce(event.getPlayer(), ChatColor.GRAY + "۞ Necesitas al menos 30 estanterías alrededor para usar esta mesa.");
+                }
             }
         }
+    }
+
+    private int countBookshelvesAround(Location center, int radius) {
+        int count = 0;
+
+        World world = center.getWorld();
+        int cx = center.getBlockX();
+        int cy = center.getBlockY();
+        int cz = center.getBlockZ();
+
+        for (int x = cx - radius; x <= cx + radius; x++) {
+            for (int y = cy - radius; y <= cy + radius; y++) {
+                for (int z = cz - radius; z <= cz + radius; z++) {
+                    if (x == cx && y == cy && z == cz) continue;
+                    Block block = world.getBlockAt(x, y, z);
+                    if (block.getType() == Material.BOOKSHELF) {
+                        count++;
+                    }
+                }
+            }
+        }
+        return count;
     }
 
     @EventHandler
@@ -458,7 +486,7 @@ public class EnhancedEnchantmentGUI implements Listener {
                     if (!itemAlreadyInInventory) {
                         player.getInventory().addItem(item);
                     }
-                    player.sendMessage(ChatColor.RED + "No puedes colocar este bloque en el horno.");
+                    player.sendMessage(ChatColor.RED + "۞ No puedes colocar este bloque en el horno.");
                 }
             }
         }
@@ -479,15 +507,9 @@ public class EnhancedEnchantmentGUI implements Listener {
             }
 
             // Remover los bloques de luz alrededor del bloque
-            int[][] offsets = {
-                    {1, 0}, {-1, 0}, {0, 1}, {0, -1}
-            };
-
-            for (int[] offset : offsets) {
-                Block adjacentBlock = world.getBlockAt(blockLocation.clone().add(offset[0], 0, offset[1]));
-                if (adjacentBlock.getType() == Material.LIGHT) {
-                    adjacentBlock.setType(Material.AIR);
-                }
+            Block aboveBlock = world.getBlockAt(blockLocation.clone().add(0, 1, 0));
+            if (aboveBlock.getType() == Material.LIGHT) {
+                aboveBlock.setType(Material.AIR);
             }
 
             if (tool.getType() == Material.DIAMOND_PICKAXE || tool.getType() == Material.NETHERITE_PICKAXE) {
@@ -505,7 +527,7 @@ public class EnhancedEnchantmentGUI implements Listener {
 
                 if (currentTime - lastMessageTime >= 10000) {
                     player.setMetadata("lastMessageTime", new FixedMetadataValue(plugin, currentTime));
-                    player.sendMessage(ChatColor.GRAY + "Necesitas un pico de diamante o mejor para romper la Mesa de Encantamientos Mejorada.");
+                    player.sendMessage(ChatColor.GRAY + "۞ Necesitas un pico de diamante o mejor para romper la Mesa de Encantamientos Mejorada.");
                 }
             }
         }
@@ -553,21 +575,10 @@ public class EnhancedEnchantmentGUI implements Listener {
             particleTasks.put(blockLocation, particleTask);
 
             // Coloca los bloques de luz alrededor del bloque
-            int[][] offsets = {
-                    {1, 0}, {-1, 0}, {0, 1}, {0, -1}
-            };
-
-            for (int[] offset : offsets) {
-                Block adjacentBlock = world.getBlockAt(blockLocation.clone().add(offset[0], 0, offset[1]));
-                if (adjacentBlock.getType() != Material.LIGHT) {
-                    // Dropea el bloque existente si no es aire
-                    if (adjacentBlock.getType() != Material.AIR) {
-                        ItemStack droppedItem = new ItemStack(adjacentBlock.getType());
-                        adjacentBlock.getWorld().dropItemNaturally(adjacentBlock.getLocation(), droppedItem);
-                    }
-                    adjacentBlock.setType(Material.LIGHT);
-                    adjacentBlock.setBlockData(Bukkit.createBlockData("minecraft:light[level=10]"));
-                }
+            Block aboveBlock = world.getBlockAt(blockLocation.clone().add(0, 1, 0));
+            if (aboveBlock.getType() == Material.AIR) {
+                aboveBlock.setType(Material.LIGHT);
+                aboveBlock.setBlockData(Bukkit.createBlockData("minecraft:light[level=10]"));
             }
         }
     }
@@ -584,9 +595,9 @@ public class EnhancedEnchantmentGUI implements Listener {
     public void onInventoryClose(InventoryCloseEvent event) {
         Inventory inventory = event.getInventory();
         String title = "\u3201\u3201" +  ChatColor.WHITE + "\u3200";
+        Player player = (Player) event.getPlayer();
 
         if (event.getView().getTitle().equals(title)) {
-            Player player = (Player) event.getPlayer();
 
             int[] allowedSlots = {36, 37, 38};
             boolean hasItems = false;
@@ -600,7 +611,14 @@ public class EnhancedEnchantmentGUI implements Listener {
                 }
             }
             if (hasItems) {
-                player.sendMessage(ChatColor.YELLOW + "Los objetos de la mesa mejorada han sido devueltos.");
+                player.sendMessage(ChatColor.YELLOW + "۞ Los objetos de la mesa mejorada han sido devueltos.");
+            }
+        }
+
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (isIllegalEnchantedBook(item)) {
+                player.getInventory().remove(item);
+                player.sendMessage(ChatColor.GRAY + "۞ Se eliminó un libro prohibido de tu inventario.");
             }
         }
     }

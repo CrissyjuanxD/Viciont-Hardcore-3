@@ -1,5 +1,5 @@
 name: Viciont_Hardcore3_Plugin
-version: 1.5.1
+version: 1.5.2
 main: vct.hardcore3.ViciontHardcore3
 author: CrissyJuanXD
 api-version: 1.21
@@ -65,22 +65,51 @@ commands:
     usage: /<command> locate Corrupted_Village
     permission: vicionthardcore3.command.vcth
     permission-message: No tienes permiso para usar este comando.
-  estructure:
-    description: Localiza y maneja las estructuras de Vicion
-    usage: /estructure <CorruptedVillage>
+  structure:
+    description: Genera estructuras especiales en el mundo
+    usage: /structure <nombre>
     permission: vicionthardcore3.command.estructure
     permission-message: No tienes permiso para usar este comando.
   start:
     description: Start the game
-    usage: /start <evento1|skybattle|force>
+    usage: /start <evento1|skybattle|force|logros>
     aliases: []
+    permission: viciont_hardcore3.command.start
+    permission-message: No tienes permiso para usar este comando.
   end:
     description: End the game
-    usage: /end <evento1>
+    usage: /end <evento1|logros>
     aliases: []
-  magic:
+    permission: viciont_hardcore3.command.end
+    permission-message: No tienes permiso para usar este comando.
+  evento1:
+    description: Administra participantes del evento1.
+    usage: /evento participantes <list|add|remove> [jugador]
+    aliases: [ ]
+    permission: viciont_hardcore3.command.evento1
+    permission-message: No tienes permiso para usar este comando.
+  reset:
+    description: Resetea el evento.
+    usage: /reset <logros>
+    aliases: []
+    permission: viciont_hardcore3.command.reset
+    permission-message: No tienes permiso para usar este comando.
+  logros:
+    description: Comando para ver los logros.
+    usage: /logros
+  addlogro:
+    description: Añade un logro a un jugador.
+    usage: /addlogro <nombrelogro> <jugador> [item_lista|all]
+    permission: viciont_hardcore3.command.addlogro
+    permission-message: No tienes permiso para usar este comando.
+  removelogro:
+    description: Remueve un logro a un jugador.
+    usage: /removelogro <nombrelogro> <jugador> [item_lista|all]
+    permission: viciont_hardcore3.command.removelogro
+    permission-message: No tienes permiso para usar este comando.
+  magictp:
     description: Teletransporta jugadores a coordenadas especificadas con efectos especiales.
-    usage: /magic tp <jugador o @a> <x y z | spawn>
+    usage: /magictp <jugador o @a> <x y z | spawn>
     permission: viciont_hardcore3.command.magic
     permission-message: No tienes permiso para usar este comando.
   playdisco:
@@ -111,11 +140,35 @@ commands:
   addtiempo:
     description: Añade un temporizador en la bossbar.
     usage: /addtiempo [nombre opcional] <tiempo> [on/off]
+    permission: viciont_hardcore3.command.addtiempo
+    permission-message: No tienes permiso para usar este comando.
   removetiempo:
     description: Elimina un temporizador de la bossbar.
     usage: /removetiempo [nombre opcional]
+    permission: viciont_hardcore3.command.removetiempo
+    permission-message: No tienes permiso para usar este comando.
+  tiempoview:
+    description: Muestra los temporizadores activos en la bossbar.
+    usage: /tiempoview <jugador/all>
+    permission: viciont_hardcore3.command.tiempoview
+    permission-message: No tienes permiso para usar este comando.
   givevct:
     description: Da un item especial del plugin a un jugador.
     usage: /givevct <item> [cantidad] [jugador]
     permission: viciont_hardcore3.command.givevct
+    permission-message: No tienes permiso para usar este comando.
+  addnightmare:
+    description: Añade el evento Nightmare a un jugador o a todos.
+    usage: /addnightmare <player|@a>
+    permission: viciont_hardcore3.command.addnightmare
+    permission-message: No tienes permiso para usar este comando.
+  removenightmare:
+    description: Remueve el evento Nightmare a un jugador o a todos.
+    usage: /removenightmare <player|@a>
+    permission: viciont_hardcore3.command.removenightmare
+    permission-message: No tienes permiso para usar este comando.
+  resetnightmarecooldown:
+    description: Resetea el cooldown del evento Nightmare a un jugador o a todos.
+    usage: /resetnightmarecooldown <player|@a>
+    permission: viciont_hardcore3.command.resetnightmarecooldown
     permission-message: No tienes permiso para usar este comando.

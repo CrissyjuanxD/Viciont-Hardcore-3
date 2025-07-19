@@ -5,7 +5,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
-import vct.hardcore3.DeathStormHandler;
+import Handlers.DeathStormHandler;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,14 +46,11 @@ public class DeathStormCommand implements CommandExecutor, TabCompleter {
         return false;
     }
 
-    /**
-     * Convierte una cadena de tiempo en formato "hh:mm:ss" a segundos.
-     */
     private int parseTime(String time) {
         Pattern pattern = Pattern.compile("^(\\d{2}):(\\d{2}):(\\d{2})$");
         Matcher matcher = pattern.matcher(time);
         if (!matcher.matches()) {
-            return -1; // Formato inválido
+            return -1;
         }
         int hours = Integer.parseInt(matcher.group(1));
         int minutes = Integer.parseInt(matcher.group(2));
@@ -62,9 +59,6 @@ public class DeathStormCommand implements CommandExecutor, TabCompleter {
         return (hours * 3600) + (minutes * 60) + seconds;
     }
 
-    /**
-     * Convierte segundos a formato "hh:mm:ss".
-     */
     private String formatTime(int totalSeconds) {
         int hours = totalSeconds / 3600;
         int minutes = (totalSeconds % 3600) / 60;
@@ -76,10 +70,10 @@ public class DeathStormCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
             List<String> suggestions = new ArrayList<>();
-            suggestions.add("00:01:00"); // 1 minuto
-            suggestions.add("00:05:00"); // 5 minutos
-            suggestions.add("00:30:00"); // 30 minutos
-            suggestions.add("01:00:00"); // 1 hora
+            suggestions.add("00:01:00");
+            suggestions.add("00:05:00");
+            suggestions.add("00:30:00");
+            suggestions.add("01:00:00");
             return suggestions;
         }
         return null;

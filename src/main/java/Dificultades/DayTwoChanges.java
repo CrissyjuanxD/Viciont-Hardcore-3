@@ -85,7 +85,6 @@
                 }
             }
 
-    // Spawnear Iceologers desde la segunda oleada después de 3 segundos
             if (currentWave >= 2) {
                 int iceologerCount = random.nextInt(2) + 1;
 
@@ -122,7 +121,6 @@
                     continue;
                 }
 
-                // Selección dinámica del objetivo
                 LivingEntity target = findTarget(mob);
                 if (target != null && mob instanceof Mob) {
                     ((Mob) mob).setTarget(target);

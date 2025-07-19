@@ -2,11 +2,13 @@ package Events.Skybattle;
 
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -35,6 +37,8 @@ public class EventoHandler implements Listener {
     private List<Location> ubicacionesShroomlightOriginales = new ArrayList<>();
     private final List<BukkitTask> tareasActivas = new ArrayList<>();
     private boolean eventoActivo = false;
+    private boolean eventoEnCurso = false;
+    private boolean preparacion = false;
     private final int MAX_PARTICIPANTES = 20;
     private final JavaPlugin plugin;
     private final CofresHandler cofresHandler;
@@ -53,7 +57,8 @@ public class EventoHandler implements Listener {
     private BukkitRunnable taskReduccionBorde;
     private BukkitRunnable taskReduccionBordeContinuo;
 
-
+    private Material bloqueActual;
+    private String nombreBloqueActual;
 
     public EventoHandler(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -64,7 +69,27 @@ public class EventoHandler implements Listener {
 
     public void iniciarEvento() {
         eventoActivo = true;
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ruletavct [\"\",{\"text\":\"\\n\"},{\"text\":\"\\u06de Evento\",\"bold\":true,\"color\":\"#F977F9\"},{\"text\":\" \\u27a4\",\"bold\":true,\"color\":\"gray\"},{\"text\":\"\\n\\n\"},{\"text\":\"¡Ha comenzado el evento \",\"color\":\"#c55cf3\"},{\"text\":\"LAVACLASH\",\"bold\":true,\"color\":\"#D98836\"},{\"text\":\"!\\nLos primeros \",\"color\":\"#c55cf3\"},{\"text\":\"20\",\"bold\":true,\"color\":\"#c55cf3\"},{\"text\":\" jugadores en obtener\\nun \",\"color\":\"#c55cf3\"},{\"text\":\"Viciont Ticket\",\"bold\":true,\"color\":\"#E9BF66\"},{\"text\":\" participarán\\n\\nPara obtener el ticket deberan romper un \",\"color\":\"#c55cf3\"},{\"text\":\"\\n\"},{\"text\":\"Bloque de Diamante!\",\"bold\":true,\"color\":\"#57A9CB\"},{\"text\":\"\\n \"}]");
+        List<Material> bloquesPosibles = List.of(
+                Material.POPPY,
+                Material.STRIPPED_OAK_LOG,
+                Material.GLASS,
+                Material.IRON_ORE,
+                Material.DIAMOND_BLOCK
+        );
+
+        Map<Material, String> nombresBloques = Map.of(
+                Material.POPPY, "Flor Roja (Amapola)",
+                Material.STRIPPED_OAK_LOG, "Tronco de Roble sin corteza",
+                Material.GLASS, "Cristal",
+                Material.IRON_ORE, "Mineral de hierro",
+                Material.DIAMOND_BLOCK, "Bloque de diamante"
+        );
+
+        bloqueActual = bloquesPosibles.get(new Random().nextInt(bloquesPosibles.size()));
+        nombreBloqueActual = nombresBloques.get(bloqueActual);
+
+        String jsonMessage = "[\"\",{\"text\":\"\\n\"},{\"text\":\"\\u06de Evento\",\"bold\":true,\"color\":\"#F977F9\"},{\"text\":\" \\u27a4\",\"bold\":true,\"color\":\"gray\"},{\"text\":\"\\n\\n\"},{\"text\":\"¡Ha comenzado el evento \",\"color\":\"#c55cf3\"},{\"text\":\"LAVACLASH\",\"bold\":true,\"color\":\"#D98836\"},{\"text\":\"!\\nLos primeros \",\"color\":\"#c55cf3\"},{\"text\":\"20\",\"bold\":true,\"color\":\"#c55cf3\"},{\"text\":\" jugadores en obtener\\nun \",\"color\":\"#c55cf3\"},{\"text\":\"Manu Ticket\",\"bold\":true,\"color\":\"#E9BF66\"},{\"text\":\" participarán\\n\\nPara obtener el ticket deberan romper un \",\"color\":\"#c55cf3\"},{\"text\":\"\\n\"},{\"text\":\"" + nombreBloqueActual + "\",\"bold\":true,\"color\":\"#57A9CB\"},{\"text\":\"\\n \"}]";
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ruletavct " + jsonMessage);
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule sendCommandFeedback false");
         //test
         guardarEstadoEvento();
@@ -80,11 +105,14 @@ public class EventoHandler implements Listener {
         guardarDatosFinales();
 
         eventoActivo = false;
+        eventoEnCurso = false;
+        preparacion = false;
         participantes.clear();
         ordenEliminados.clear();
         kills.clear();
 
         Bukkit.broadcastMessage(" ");
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound @a");
         Bukkit.broadcastMessage("§c۞ El evento ha terminado.");
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule sendCommandFeedback true");
 
@@ -94,25 +122,19 @@ public class EventoHandler implements Listener {
             if (board != null) {
                 Objective objective = board.getObjective("skybattle");
                 if (objective != null) {
-                    objective.unregister(); // Eliminar el objetivo del evento
+                    objective.unregister();
                 }
             }
         }
 
-        // Restaurar los shroomlights
         restaurarShroomlights();
-        // Eliminar bloques de purple_concrete
         eliminarPurpleConcrete();
-        // Restaurar contenido de los cofres al finalizar el evento
         restaurarContenidoCofres();
-        // Guardar estado del evento
         guardarEstadoEvento();
-        // Cargar y restaurar cofres desde archivo (si existen)
         cargarCofresDesdeArchivo();
         restaurarContenidoCofres();
         cancelarTareasActivas();
 
-        // Programar la eliminación del archivo después de 5 segundos (100 ticks)
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             File archivo = new File(plugin.getDataFolder(), "contenido_cofres.yml");
             if (archivo.exists()) {
@@ -142,14 +164,14 @@ public class EventoHandler implements Listener {
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
-        if (!eventoActivo || participantes.size() >= MAX_PARTICIPANTES) return;
+        if (!eventoActivo || preparacion || participantes.size() >= MAX_PARTICIPANTES) return;
 
         Player jugador = event.getPlayer();
         if (participantes.contains(jugador.getName())) {
             return;
         }
 
-        if (event.getBlock().getType() == Material.DIAMOND_BLOCK) {
+        if (event.getBlock().getType() == bloqueActual) {
             ItemStack ticket = new ItemStack(Material.ECHO_SHARD);
             ItemMeta meta = ticket.getItemMeta();
             meta.setDisplayName("§e§lViciont Ticket");
@@ -192,17 +214,16 @@ public class EventoHandler implements Listener {
             return;
         }
 
-        // Mostrar el mensaje /tellraw en el chat
         String tellrawCommand2 = "[\"\",{\"text\":\"\\n\"},{\"text\":\"\\u06de Evento \",\"bold\":true,\"color\":\"#F977F9\"},{\"text\":\"\\u27a4\",\"color\":\"gray\"},{\"text\":\"\\n\\n\"},{\"text\":\"El evento empezará en\",\"color\":\"#C55CF3\"},{\"text\":\" 4 minutos.\",\"bold\":true,\"color\":\"gold\"},{\"text\":\"\\n\"},{\"text\":\"Se recomienda a los\",\"color\":\"#C55CF3\"},{\"text\":\" jugadores\",\"bold\":true,\"color\":\"gold\"},{\"text\":\" que entraron en el evento\",\"color\":\"#C55CF3\"},{\"text\":\"\\n\"},{\"text\":\"que\",\"color\":\"#C55CF3\"},{\"text\":\" guarden\",\"bold\":true,\"color\":\"gold\"},{\"text\":\" sus cosas en\",\"color\":\"#C55CF3\"},{\"text\":\" cofres por seguridad.\",\"bold\":true,\"color\":\"gold\"},{\"text\":\"\\n\\n\"},{\"text\":\"IMPORTANTE\",\"bold\":true,\"color\":\"#F12C51\"},{\"text\":\":\",\"bold\":true,\"color\":\"gray\"},{\"text\":\" Guardar spawn en una cama antes del tp.\",\"bold\":true,\"color\":\"#C55CF3\"},{\"text\":\"\\n \"}]";
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a " + tellrawCommand2);
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.noti ambient @a ~ ~ ~ 1 1.3 1");
 
-        // Crear el cronómetro de 4 minutos
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "addtiempo 00:04:00 on");
 
         Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, () -> {
             guardarContenidoCofres();
             eliminarMobsExistentes();
+            this.preparacion = true;
 
             Collections.shuffle(shroomlightLocations);
 
@@ -220,8 +241,6 @@ public class EventoHandler implements Listener {
                     i++;
                 }
             }
-            // Llamar a la función espera1()
-            Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, this::espera1, 130L);
         }, 4850L);
     }
 
@@ -242,20 +261,38 @@ public class EventoHandler implements Listener {
     }
 
     public void iniciarSecuenciaInicioSkyBattle() {
+        List<String> offlinePlayers = new ArrayList<>();
+        for (String nombre : participantes) {
+            Player p = Bukkit.getPlayer(nombre);
+            if (p == null || !p.isOnline()) {
+                offlinePlayers.add(nombre);
+            }
+        }
+
+        if (!offlinePlayers.isEmpty()) {
+            StringBuilder mensaje = new StringBuilder();
+            mensaje.append(ChatColor.RED).append("No se puede iniciar el evento. Los siguientes jugadores están offline:\n");
+            for (String nombre : offlinePlayers) {
+                mensaje.append(ChatColor.YELLOW).append("- ").append(nombre).append("\n");
+            }
+            Bukkit.broadcastMessage(mensaje.toString());
+            return;
+        }
+
         cancelarTareasActivas();
         int duracionPrimerSonido = 390 * 20;
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound @a record minecraft:custom.espera1");
         BukkitTask tarea1 = Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!eventoActivo) return; // Verifica si el evento sigue activo
+            if (!eventoActivo) return;
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.music1_skybattle record @a ~ ~ ~ 1 1 1");
 
             BukkitTask tarea2 = Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (!eventoActivo) return; // Verifica si el evento sigue activo
+                if (!eventoActivo) return;
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound @a * minecraft:custom.music1_skybattle");
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.music2_skybattle record @a ~ ~ ~ 1 1 1");
 
                 BukkitTask tarea3 = Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    if (!eventoActivo) return; // Verifica si el evento sigue activo
+                    if (!eventoActivo) return;
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tick rate 25");
                     for (Player player : Bukkit.getOnlinePlayers()) {
                         player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 2, true, false, false));
@@ -330,7 +367,7 @@ public class EventoHandler implements Listener {
 
 
     public void iniciarSkyBattle() {
-
+        this.eventoEnCurso = true;
         // Código existente para iniciar SkyBattle
         for (String jugador : participantes) {
             Player p = Bukkit.getPlayer(jugador);
@@ -376,23 +413,19 @@ public class EventoHandler implements Listener {
 
     private void inicializarScoreboard() {
         for (Player player : Bukkit.getOnlinePlayers()) {
-            // Obtener la scoreboard actual del jugador (no crear una nueva)
             Scoreboard board = player.getScoreboard();
 
             // Verificar si el objetivo "skybattle" ya existe
             Objective objective = board.getObjective("skybattle");
             if (objective == null) {
-                // Si no existe, crear el objetivo
                 objective = board.registerNewObjective("skybattle", "dummy", "\u3201\uE080\u3201\u3201 ");
                 objective.setDisplaySlot(DisplaySlot.SIDEBAR);
             }
 
-            // Limpiar las líneas existentes del objetivo (si las hay)
             for (String entry : board.getEntries()) {
                 board.resetScores(entry);
             }
 
-            // Agregar las líneas al objetivo
             addLine(objective, "§r  ", 9);
             addLine(objective, "        \uE078", 8);
             addLine(objective, "§r   ", 7);
@@ -607,12 +640,12 @@ public class EventoHandler implements Listener {
         });
         jugador.getInventory().clear();
 
-        // Agregar al orden de eliminados
+        // Agrega al orden de eliminados
         if (!ordenEliminados.contains(eliminado)) {
             ordenEliminados.add(eliminado);
         }
 
-        // Sumar kills al asesino
+        // Suma kills al asesino
         if (asesino != null && !asesino.isEmpty()) {
             kills.put(asesino, kills.getOrDefault(asesino, 0) + 1);
         }
@@ -642,11 +675,11 @@ public class EventoHandler implements Listener {
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 2.0f, 0.1f);
         });
 
-        // Teletransportar al jugador fuera del evento
+        // Teletransporta al jugador fuera del evento
         Location ubiEspec = new Location(jugador.getWorld(), 20015.00, 106.00, 20000.27, -1979.64f, 0.46f);
         jugador.teleport(ubiEspec);
 
-        // Eliminar al jugador de la lista de participantes
+        // Elimina al jugador de la lista de participantes
         participantes.remove(eliminado);
         actualizarScoreboard();
 
@@ -656,21 +689,37 @@ public class EventoHandler implements Listener {
     }
 
     @EventHandler
-    public void onEntityDamage(EntityDamageEvent event) {
-        if (eventoActivo && event.getEntity() instanceof Player) {
-            Player jugador = (Player) event.getEntity();
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        if (!eventoActivo) return;
 
-            if (participantes.contains(jugador.getName())) {
+        Player jugador = event.getPlayer();
+        String nombreJugador = jugador.getName();
+
+        if (participantes.contains(nombreJugador)) {
+            // Solo procesar como eliminación si el evento ya comenzó (iniciarSkyBattle fue llamado)
+            if (this.eventoEnCurso) { // Necesitarás añadir este campo booleano a tu clase
+                procesarEliminacionJugador(jugador, null, nombreJugador, "");
+                Bukkit.broadcastMessage("§8§l[§c§l☠§8§l]§6§l " + nombreJugador +
+                        " §r§7ha abandonado el evento");
+            }
+        }
+    }
+
+    @EventHandler
+    public void onEntityDamage(EntityDamageEvent event) {
+        if (!eventoActivo || !(event.getEntity() instanceof Player)) return;
+
+        Player jugador = (Player) event.getEntity();
+
+        // Solo procesar eliminaciones si el jugador es participante Y el evento está en curso
+        if (participantes.contains(jugador.getName())) {
+            if (eventoEnCurso) {
                 double nuevaVida = jugador.getHealth() - event.getFinalDamage();
                 if (nuevaVida <= 0.3) {
                     event.setCancelled(true);
-
                     Player atacante = getAtacante(jugador);
-
-                    String eliminado = jugador.getName();
-                    String asesino = (atacante != null) ? atacante.getName() : "";
-
-                    procesarEliminacionJugador(jugador, atacante, eliminado, asesino);
+                    procesarEliminacionJugador(jugador, atacante, jugador.getName(),
+                            atacante != null ? atacante.getName() : "");
                 }
             }
         }
@@ -724,27 +773,19 @@ public class EventoHandler implements Listener {
 
     public void mostrarTopJugadores() {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            // Construir la lista de top jugadores
             StringBuilder mensaje = new StringBuilder();
 
-            // Línea decorativa superior (usando STRIKETHROUGH)
             mensaje.append("\n" + ChatColor.DARK_PURPLE + "" + ChatColor.STRIKETHROUGH + "                                             " + ChatColor.RESET + "\n");
-
-            // Título del Top Jugadores (con colores y bold)
             mensaje.append("         " + ChatColor.GOLD + ChatColor.BOLD + "Top Jugadores\n\n");
-
-            // Lista de supervivientes (invertir el orden de eliminación)
             List<String> topJugadores = new ArrayList<>(ordenEliminados);
             Collections.reverse(topJugadores);
 
-            // Agregar a la lista los que siguen vivos
             for (String superviviente : participantes) {
                 if (!topJugadores.contains(superviviente)) {
                     topJugadores.add(0, superviviente);
                 }
             }
 
-            // Colores en formato HEX según posición
             String[] colores = {
                     ChatColor.of("#ffbf00").toString(), // 1° - Oro
                     ChatColor.of("#e3e4e5").toString(), // 2° - Plata
@@ -758,30 +799,26 @@ public class EventoHandler implements Listener {
                 int killsJugador = kills.getOrDefault(jugador, 0);
                 String colorNombre = colores[Math.min(i, colores.length - 1)];
 
-                // Agregar un salto de línea después del Top 3
                 if (i == 3) {
                     mensaje.append("\n");
                 }
 
-                // Formato del mensaje: "1. Jugador (1)"
                 mensaje.append(String.format(
-                        ChatColor.GRAY + "" + ChatColor.BOLD + "%d. " + // Número en gris y negrita
-                                colorNombre + "%s " + // Nombre con color según posición
-                                ChatColor.DARK_GRAY + ChatColor.BOLD + "(" + // Paréntesis en gris oscuro y negrita
-                                ChatColor.RED + "" + ChatColor.BOLD + "%d" + // Kills en rojo y negrita
-                                ChatColor.DARK_GRAY + ChatColor.BOLD + ")\n", // Cierre de paréntesis en gris oscuro y negrita
+                        ChatColor.GRAY + "" + ChatColor.BOLD + "%d. " +
+                                colorNombre + "%s " +
+                                ChatColor.DARK_GRAY + ChatColor.BOLD + "(" +
+                                ChatColor.RED + "" + ChatColor.BOLD + "%d" +
+                                ChatColor.DARK_GRAY + ChatColor.BOLD + ")\n",
                         i + 1, jugador, killsJugador
                 ));
             }
 
-            // Línea decorativa final (usando STRIKETHROUGH)
             mensaje.append(ChatColor.DARK_PURPLE + "" + ChatColor.STRIKETHROUGH + "                                             " + ChatColor.RESET + "\n");
 
-            // Mostrar mensaje en el chat
             for (Player player : Bukkit.getOnlinePlayers()) {
                 player.sendMessage(mensaje.toString());
             }
-        }, 100L); // 5 segundos después de terminar el evento (100 ticks)
+        }, 100L);
     }
 
     private void declararGanador() {
@@ -797,7 +834,7 @@ public class EventoHandler implements Listener {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tick rate 20");
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect clear @a minecraft:speed");
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect clear @a minecraft:night_vision");
-                // Teletransportar al ganador a la ubicación de espectadores
+                // Teletransporta al ganador a la ubicación de espectadores
                 Location ubiEspec = new Location(ganador.getWorld(), 20015.00, 106.00, 20000.27, -1979.64f, 0.46f);
                 ganador.teleport(ubiEspec);
                 ganador.getInventory().clear();
@@ -827,7 +864,7 @@ public class EventoHandler implements Listener {
         }
     }
 
-    private void eliminarPurpleConcrete() {
+    public void eliminarPurpleConcrete() {
         for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {
                 for (int z = minZ; z <= maxZ; z++) {
@@ -844,7 +881,7 @@ public class EventoHandler implements Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
-                if (!eventoActivo) {
+                if (!eventoActivo || !eventoEnCurso) {
                     this.cancel();
                     return;
                 }
@@ -864,7 +901,7 @@ public class EventoHandler implements Listener {
                     }
                 }
             }
-        }.runTaskTimer(plugin, 0L, 20L); // Ejecutar cada segundo
+        }.runTaskTimer(plugin, 0L, 20L);
     }
 
 
@@ -896,17 +933,14 @@ public class EventoHandler implements Listener {
         Block block = event.getBlock();
         Player player = event.getPlayer();
 
-        // Si el jugador está en modo creativo, permitir romper cualquier bloque
         if (player.getGameMode() == GameMode.CREATIVE) {
-            return; // Permite romper cualquier bloque sin restricciones
+            return;
         }
 
         if (isInsideZone(block.getLocation())) {
             if (block.getType() == Material.PURPLE_CONCRETE || block.getType() == Material.COBWEB || block.getType() == Material.SCAFFOLDING) {
-                // Permitir romper pero no dropear el bloque
                 event.setDropItems(false);
             } else {
-                // Cancelar si no es PURPLE_CONCRETE
                 event.setCancelled(true);
                 player.sendMessage(ChatColor.RED + "No puedes romper este bloque aquí.");
             }
@@ -922,7 +956,6 @@ public class EventoHandler implements Listener {
             return;
         }
 
-        // Si el evento no está activo, no permitir colocar ningún bloque, ni PURPLE_CONCRETE, siempre y cuando esté en las coordenadas correctas
         if (!eventoActivo) {
             if (isInsideZone(block.getLocation())) {
                 event.setCancelled(true);
@@ -931,35 +964,27 @@ public class EventoHandler implements Listener {
             return;
         }
 
-        // Si el evento está activo, solo permitir colocar PURPLE_CONCRETE
         if (isInsideZone(block.getLocation())) {
             if (block.getType() == Material.PURPLE_CONCRETE || block.getType() == Material.COBWEB || block.getType() == Material.SCAFFOLDING) {
-                // Devolver el bloque al inventario dependiendo de la mano que lo colocó
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    EquipmentSlot hand = event.getHand(); // Determinar qué mano usó
+                    EquipmentSlot hand = event.getHand();
                     if (hand == EquipmentSlot.HAND) {
-                        // Si se colocó desde la mano principal
                         player.getInventory().addItem(new ItemStack(Material.PURPLE_CONCRETE, 1));
                     } else if (hand == EquipmentSlot.OFF_HAND) {
-                        // Si se colocó desde la mano secundaria, incrementar la cantidad existente
                         ItemStack offHandItem = player.getInventory().getItemInOffHand();
                         if (offHandItem.getType() == Material.PURPLE_CONCRETE) {
-                            // Incrementar la cantidad en la offhand
                             offHandItem.setAmount(offHandItem.getAmount() + 1);
                             player.getInventory().setItemInOffHand(offHandItem);
                         } else {
-                            // Si no hay PURPLE_CONCRETE en la offhand, agregarlo
                             player.getInventory().setItemInOffHand(new ItemStack(Material.PURPLE_CONCRETE, 1));
                         }
                     }
                 });
             } else if (block.getType() == Material.TNT) {
-                // Si el bloque colocado es TNT, activarla al instante (comienza el temporizador)
                 TNTPrimed tnt = (TNTPrimed) block.getWorld().spawn(block.getLocation(), TNTPrimed.class);
-                tnt.setFuseTicks(80); // Tiempo predeterminado de fusión (4 segundos)
-                block.setType(Material.AIR); // Eliminar el bloque de TNT colocado
+                tnt.setFuseTicks(80);
+                block.setType(Material.AIR);
             } else {
-                // Cancelar la colocación de cualquier otro bloque
                 event.setCancelled(true);
                 player.sendMessage(ChatColor.RED + "No puedes colocar este bloque aquí.");
             }
@@ -976,14 +1001,11 @@ public class EventoHandler implements Listener {
 
     @EventHandler
     public void onEntitySpawn(EntitySpawnEvent event) {
-        // Si el evento está activo y la entidad está dentro de la zona
         if (eventoActivo && isInsideZone(event.getLocation())) {
             if (event.getEntity() instanceof Monster) {
-                // Verificar si es un spawn con Spawner Egg
                 if (event instanceof CreatureSpawnEvent creatureEvent) {
 
                     if (creatureEvent.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG) {
-                        // Asignar el mob al jugador cercano
                         Player player = creatureEvent.getEntity().getWorld().getNearbyEntities(event.getLocation(), 1, 1, 1).stream()
                                 .filter(e -> e instanceof Player)
                                 .map(e -> (Player) e)
@@ -992,19 +1014,15 @@ public class EventoHandler implements Listener {
 
                         if (player != null) {
                             Monster mob = (Monster) event.getEntity();
-                            mob.setPersistent(true); // Para evitar que desaparezca
-
-                            // Configurar que no ataque al jugador que lo generó
+                            mob.setPersistent(true);
                             mob.setTarget(null);
-                            mob.setAware(true); // Asegura que los mobs sean conscientes de otros jugadores
-                            mob.addScoreboardTag("owner:" + player.getUniqueId()); // Guardar la referencia del jugador como propietario
+                            mob.setAware(true);
+                            mob.addScoreboardTag("owner:" + player.getUniqueId());
                         }
                     } else {
-                        // Cancelar spawns no permitidos
                         event.setCancelled(true);
                     }
                 } else {
-                    // Cancelar cualquier otro spawn que no sea manejado
                     event.setCancelled(true);
                 }
             }
@@ -1015,10 +1033,8 @@ public class EventoHandler implements Listener {
     public void onChunkLoad(ChunkLoadEvent event) {
         if (eventoActivo) {
             for (Entity entity : event.getChunk().getEntities()) {
-                // Si es un mob hostil y está dentro de la zona
                 if (entity instanceof Monster mob && isInsideZone(entity.getLocation())) {
 
-                    // Si no tiene un propietario, eliminarlo
                     if (!mob.getScoreboardTags().stream().anyMatch(tag -> tag.startsWith("owner:"))) {
                         mob.remove();
                     }
@@ -1027,12 +1043,10 @@ public class EventoHandler implements Listener {
         }
     }
 
-    // Método para evitar que los mobs con Spawner Egg ataquen al propietario
     @EventHandler
     public void onEntityTarget(EntityTargetLivingEntityEvent event) {
         if (eventoActivo && event.getEntity() instanceof Monster mob && event.getTarget() instanceof Player player) {
 
-            // Si el mob tiene un propietario y el objetivo es ese propietario, cancelar el ataque
             if (mob.getScoreboardTags().contains("owner:" + player.getUniqueId())) {
                 event.setCancelled(true);
             }
@@ -1043,10 +1057,8 @@ public class EventoHandler implements Listener {
         if (eventoActivo) {
             for (World world : Bukkit.getWorlds()) {
                 for (Entity entity : world.getEntities()) {
-                    // Si es un mob hostil y está dentro de la zona
                     if (entity instanceof Monster mob && isInsideZone(entity.getLocation())) {
 
-                        // Si no tiene un propietario, eliminarlo
                         if (!mob.getScoreboardTags().stream().anyMatch(tag -> tag.startsWith("owner:"))) {
                             mob.remove();
                         }
@@ -1057,80 +1069,60 @@ public class EventoHandler implements Listener {
     }
 
     public void espera1() {
-        // Esperar 4 segundos antes de comenzar
         new BukkitRunnable() {
             @Override
             public void run() {
-                // Reproducir el sonido "custom.espera1"
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.espera1 record @a ~ ~ ~ 0.2 1 1");
 
-                // Esperar 5 segundos antes de mostrar el primer mensaje
                 new BukkitRunnable() {
                     @Override
                     public void run() {
-                        // Mostrar el primer mensaje
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a [\"\",{\"text\":\"\\n\\n\\n\\n\\n\"},{\"text\":\"\\u06de instrucciones \",\"bold\":true,\"color\":\"#F977F9\"},{\"text\":\"\\u27a4\",\"color\":\"gray\"},{\"text\":\"\\n\\n\"},{\"text\":\"Bienvenidos todos al primer evento \",\"color\":\"#C55CF3\"},{\"text\":\"\\\"Lavaclash\\\"\",\"bold\":true,\"color\":\"gold\"},{\"text\":\".\\nAquí unas pequeñas instrucciones para que sepan\\nde qué trata:\",\"color\":\"#C55CF3\"},{\"text\":\"\\n\\n\"}]");
-                        // Reproducir el sonido "custom.noti"
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.noti ambient @a ~ ~ ~ 1 1.3 1");
 
-                        // Esperar 10 segundos antes de mostrar el segundo mensaje
                         new BukkitRunnable() {
                             @Override
                             public void run() {
-                                // Mostrar el segundo mensaje
                                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a [\"\",{\"text\":\"\\n\\n\\n\\n\\n\"},{\"text\":\"El \",\"color\":\"#C55CF3\"},{\"text\":\"LavaClash\",\"bold\":true,\"color\":\"gold\"},{\"text\":\" básicamente consiste en una\\ncombinación de \",\"color\":\"#C55CF3\"},{\"text\":\"\\\"skywars\\\"\",\"bold\":true,\"color\":\"#518BEC\"},{\"text\":\" y \",\"color\":\"#C55CF3\"},{\"text\":\"\\\"skybattle\\\"\",\"bold\":true,\"color\":\"#518BEC\"},{\"text\":\". Básicamente,\\ndeberán \",\"color\":\"#C55CF3\"},{\"text\":\"lootear\",\"bold\":true,\"color\":\"#C55CF3\"},{\"text\":\" y \",\"color\":\"#C55CF3\"},{\"text\":\"matar\",\"bold\":true,\"color\":\"#C55CF3\"},{\"text\":\" a los jugadores.\",\"color\":\"#C55CF3\"},{\"text\":\"\\n\\n\\n\"}]");
-                                // Reproducir el sonido "custom.noti"
                                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.noti ambient @a ~ ~ ~ 1 1.3 1");
 
-                                // Esperar otros 10 segundos antes de mostrar el tercer mensaje
                                 new BukkitRunnable() {
                                     @Override
                                     public void run() {
-                                        // Mostrar el tercer mensaje
                                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a [\"\",{\"text\":\"\\n\\n\\n\\n\\n\"},{\"text\":\"En el mapa habran \",\"color\":\"#C55CF3\"},{\"text\":\"items especiales\",\"bold\":true,\"color\":\"light_purple\"},{\"text\":\" que les ayudara\\na tener ventajas de otros, como las \",\"color\":\"#C55CF3\"},{\"text\":\"\\\"WindCharge\\\"\",\"bold\":true,\"color\":\"gray\"},{\"text\":\"\\n\"},{\"text\":\"\\\"Manzana de vida\\\"\",\"bold\":true,\"color\":\"#EC6451\"},{\"text\":\" o la \",\"color\":\"#C55CF3\"},{\"text\":\"\\\"Pluma de Levitación\\\"\",\"bold\":true,\"color\":\"#518BEC\"},{\"text\":\"\\n\\n\\n\"}]");
-                                        // Reproducir el sonido "custom.noti"
                                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.noti ambient @a ~ ~ ~ 1 1.3 1");
 
-                                        // Esperar otros 10 segundos antes de mostrar el cuarto mensaje
                                         new BukkitRunnable() {
                                             @Override
                                             public void run() {
-                                                // Mostrar el cuarto mensaje
                                                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a [\"\",{\"text\":\"\\n\\n\\n\\n\\n\"},{\"text\":\"Cada \",\"color\":\"#C55CF3\"},{\"text\":\"2 minutos\",\"bold\":true,\"color\":\"red\"},{\"text\":\" habrá un borde que se \",\"color\":\"#C55CF3\"},{\"text\":\"reducirá\",\"bold\":true,\"color\":\"#C55CF3\"},{\"text\":\"\\nhasta llegar al \",\"color\":\"#C55CF3\"},{\"text\":\"centro del mapa\",\"bold\":true,\"color\":\"light_purple\"},{\"text\":\".\",\"color\":\"#C55CF3\"},{\"text\":\"\\n\\n\\n\"}]");
-                                                // Reproducir el sonido "custom.noti"
                                                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.noti ambient @a ~ ~ ~ 1 1.3 1");
 
-                                                // Esperar otros 5 segundos antes de mostrar el quinto mensaje
                                                 new BukkitRunnable() {
                                                     @Override
                                                     public void run() {
-                                                        // Mostrar el quinto mensaje
                                                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a [\"\",{\"text\":\"\\n\\n\\n\\n\\n\"},{\"text\":\"El \",\"color\":\"#C55CF3\"},{\"text\":\"último\",\"bold\":true,\"color\":\"#C55CF3\"},{\"text\":\" que quede vivo \",\"color\":\"#C55CF3\"},{\"text\":\"ganará\",\"bold\":true,\"color\":\"gold\"},{\"text\":\", y habrá un\",\"color\":\"#C55CF3\"},{\"text\":\"\\n\"},{\"text\":\"top 5\",\"bold\":true,\"color\":\"red\"},{\"text\":\" de los últimos supervivientes con un contador\\nde kills.\",\"color\":\"#C55CF3\"},{\"text\":\"\\n\\n\\n\"}]");
-                                                        // Reproducir el sonido "custom.noti"
                                                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.noti ambient @a ~ ~ ~ 1 1.3 1");
 
-                                                        // Esperar otros 6 segundos antes de mostrar el último mensaje
                                                         new BukkitRunnable() {
                                                             @Override
                                                             public void run() {
-                                                                // Mostrar el último mensaje
                                                                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a [\"\",{\"text\":\"\\n\\n\\n\\n\\n\"},{\"text\":\"Los últimos 3\",\"bold\":true,\"color\":\"#C55CF3\"},{\"text\":\" que sobrevivan al \",\"color\":\"#C55CF3\"},{\"text\":\"LavaClash\",\"bold\":true,\"color\":\"gold\"},{\"text\":\" recibirán\\nuna \",\"color\":\"#C55CF3\"},{\"text\":\"recompensa\",\"bold\":true,\"color\":\"#B8F794\"},{\"text\":\".\",\"color\":\"#C55CF3\"},{\"text\":\"\\n\\n\"},{\"text\":\"¡Buena suerte a los participantes!\",\"bold\":true,\"color\":\"light_purple\"},{\"text\":\"\\n\\n\\n\"}]");
-                                                                // Reproducir el sonido "custom.noti"
                                                                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.noti ambient @a ~ ~ ~ 1 1.3 1");
                                                             }
-                                                        }.runTaskLater(plugin, 20 * 6); // 6 segundos
+                                                        }.runTaskLater(plugin, 20 * 6);
                                                     }
-                                                }.runTaskLater(plugin, 20 * 5); // 5 segundos
+                                                }.runTaskLater(plugin, 20 * 5);
                                             }
-                                        }.runTaskLater(plugin, 20 * 10); // 10 segundos
+                                        }.runTaskLater(plugin, 20 * 10);
                                     }
-                                }.runTaskLater(plugin, 20 * 10); // 10 segundos
+                                }.runTaskLater(plugin, 20 * 10);
                             }
-                        }.runTaskLater(plugin, 20 * 10); // 5 segundos
+                        }.runTaskLater(plugin, 20 * 10);
                     }
-                }.runTaskLater(plugin, 20 * 5); // 4 segundos
+                }.runTaskLater(plugin, 20 * 5);
             }
-        }.runTaskLater(plugin, 20 * 4); // 4 segundos
+        }.runTaskLater(plugin, 20 * 4);
     }
 
     public void guardarContenidoCofres() {
@@ -1193,5 +1185,96 @@ public class EventoHandler implements Listener {
         }
     }
 
+    //COMANDO
+    // Añade este método a la clase EventoHandler
+    public void gestionarParticipantes(CommandSender sender, String[] args) {
+        if (args.length < 1) {
+            sender.sendMessage(ChatColor.RED + "Uso: /evento1 participantes <list|add|remove> [jugador]");
+            return;
+        }
+
+        switch (args[0].toLowerCase()) {
+            case "list":
+                listarParticipantes(sender);
+                break;
+            case "add":
+                if (args.length < 2) {
+                    sender.sendMessage(ChatColor.RED + "Uso: /evento1 participantes add <jugador>");
+                    return;
+                }
+                agregarParticipante(sender, args[1]);
+                break;
+            case "remove":
+                if (args.length < 2) {
+                    sender.sendMessage(ChatColor.RED + "Uso: /evento1 participantes remove <jugador>");
+                    return;
+                }
+                removerParticipante(sender, args[1]);
+                break;
+            default:
+                sender.sendMessage(ChatColor.RED + "Subcomando no válido. Usa list, add o remove");
+        }
+    }
+
+    private void listarParticipantes(CommandSender sender) {
+        StringBuilder mensaje = new StringBuilder();
+        mensaje.append(ChatColor.GOLD).append("=== Participantes (").append(participantes.size()).append("/").append(MAX_PARTICIPANTES).append(") ===\n");
+
+        for (String nombre : participantes) {
+            Player p = Bukkit.getPlayer(nombre);
+            String estado = (p != null && p.isOnline()) ? ChatColor.GREEN + "Online" : ChatColor.RED + "Offline";
+            mensaje.append(ChatColor.YELLOW).append("- ").append(nombre).append(": ").append(estado).append("\n");
+        }
+
+        sender.sendMessage(mensaje.toString());
+    }
+
+    private void agregarParticipante(CommandSender sender, String nombreJugador) {
+        if (participantes.contains(nombreJugador)) {
+            sender.sendMessage(ChatColor.RED + "El jugador ya está en la lista de participantes");
+            return;
+        }
+
+        if (participantes.size() >= MAX_PARTICIPANTES) {
+            sender.sendMessage(ChatColor.RED + "No hay espacio para más participantes");
+            return;
+        }
+
+        participantes.add(nombreJugador);
+        sender.sendMessage(ChatColor.GREEN + "Jugador " + nombreJugador + " agregado al evento");
+
+        // Mensaje como en onBlockBreak
+        String jsonMessage = "[\"\","
+                + "{\"text\":\"\u06de\",\"color\":\"#BA7FD0\"},"
+                + "{\"text\":\" " + nombreJugador + "\",\"bold\":true,\"color\":\"#863ECF\"},"
+                + "{\"text\":\" ha obtenido el \",\"color\":\"#BA7FD0\"},"
+                + "{\"text\":\"Manu ticket\",\"bold\":true,\"color\":\"#E9BF66\"},"
+                + "{\"text\":\" - Ticket:\",\"color\":\"#BA7FD0\"},"
+                + "{\"text\":\" " + participantes.size() + "\",\"bold\":true,\"color\":\"#863ECF\"},"
+                + "{\"text\":\"/\",\"bold\":true,\"color\":\"#BA7FD0\"},"
+                + "{\"text\":\"" + MAX_PARTICIPANTES + "\",\"bold\":true,\"color\":\"#863ECF\"},"
+                + "{\"text\":\"\\n \"}"
+                + "]";
+
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a " + jsonMessage);
+    }
+
+    private void removerParticipante(CommandSender sender, String nombreJugador) {
+        if (!participantes.contains(nombreJugador)) {
+            sender.sendMessage(ChatColor.RED + "El jugador no está en la lista de participantes");
+            return;
+        }
+
+        participantes.remove(nombreJugador);
+        sender.sendMessage(ChatColor.GREEN + "Jugador " + nombreJugador + " eliminado del evento");
+
+/*        // Si el evento no ha empezado, teletransportar al spawn
+        if (!eventoActivo) {
+            Player jugador = Bukkit.getPlayer(nombreJugador);
+            if (jugador != null) {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "magictp " + nombreJugador + " spawn");
+            }
+        }*/
+    }
 
 }

@@ -1,5 +1,10 @@
 package Events;
 
+import Handlers.DeathStormHandler;
+import TitleListener.MuerteHandler;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.GameMode;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -10,28 +15,31 @@ import org.bukkit.event.server.ServerLoadEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.entity.Player;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarStyle;
-import org.bukkit.boss.BossBar;
+import net.md_5.bungee.api.ChatColor;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import vct.hardcore3.ViciontHardcore3;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 public class DamageLogListener implements Listener {
 
     private final HashMap<UUID, Long> damageLogPlayers = new HashMap<>();
-    private final HashMap<UUID, BossBar> playerBossBars = new HashMap<>();
+    private final HashMap<UUID, BukkitTask> damageLogTasks = new HashMap<>();
+    private final Set<UUID> pausedActionBars = new HashSet<>();
     private final int delaySeconds = 15;
     private final JavaPlugin plugin;
+    private final DeathStormHandler deathStormHandler;
     private final File dataFile;
 
-    public DamageLogListener(JavaPlugin plugin) {
+    public DamageLogListener(JavaPlugin plugin, DeathStormHandler deathStormHandler) {
         this.plugin = plugin;
+        this.deathStormHandler = deathStormHandler;
         this.dataFile = new File(plugin.getDataFolder(), "damagelog.yml");
         if (!dataFile.exists()) {
             try {
@@ -43,9 +51,25 @@ public class DamageLogListener implements Listener {
         }
     }
 
+    public boolean isPlayerInDamageLog(UUID playerId) {
+        return damageLogPlayers.containsKey(playerId);
+    }
+
+    // Métodos para controlar la visibilidad del ActionBar
+    public void pauseActionBarForPlayer(UUID playerId) {
+        pausedActionBars.add(playerId);
+    }
+
+    public void resumeActionBarForPlayer(UUID playerId) {
+        pausedActionBars.remove(playerId);
+    }
+
+    public boolean isActionBarPausedForPlayer(UUID playerId) {
+        return pausedActionBars.contains(playerId);
+    }
+
     @EventHandler
     public void onServerLoad(ServerLoadEvent event) {
-        // Cargar el estado del Damage Log al iniciar el servidor
         YamlConfiguration config = YamlConfiguration.loadConfiguration(dataFile);
         for (String key : config.getKeys(false)) {
             UUID playerId = UUID.fromString(key);
@@ -55,12 +79,12 @@ public class DamageLogListener implements Listener {
             if (endTime > System.currentTimeMillis()) {
                 damageLogPlayers.put(playerId, endTime - (delaySeconds * 1000L));
                 plugin.getLogger().info("Damage Log cargado para " + playerName + " (UUID: " + playerId + ")");
+                startDamageLogTimer(playerId);
             }
         }
     }
 
     public void saveDamageLogState() {
-        // Guardar el estado del Damage Log antes de reiniciar el servidor
         YamlConfiguration config = new YamlConfiguration();
         for (UUID playerId : damageLogPlayers.keySet()) {
             Player player = Bukkit.getPlayer(playerId);
@@ -82,7 +106,10 @@ public class DamageLogListener implements Listener {
         if (event.getEntity() instanceof Player) {
             Player player = (Player) event.getEntity();
 
-            // Ignorar ciertos tipos de daño
+            if (MuerteHandler.isDeathMessageActive()) {
+                return;
+            }
+
             if (event.getCause() == EntityDamageEvent.DamageCause.FALL ||
                     event.getCause() == EntityDamageEvent.DamageCause.VOID ||
                     event.getCause() == EntityDamageEvent.DamageCause.POISON ||
@@ -93,69 +120,81 @@ public class DamageLogListener implements Listener {
 
             long currentTime = System.currentTimeMillis();
             damageLogPlayers.put(player.getUniqueId(), currentTime);
-
-            // Obtener o crear la BossBar
-            BossBar bossBar = playerBossBars.get(player.getUniqueId());
-            if (bossBar == null) {
-                bossBar = Bukkit.createBossBar(
-                        ChatColor.RED + "۞ Damage Log" + ChatColor.WHITE + ": 00:15",
-                        BarColor.WHITE,
-                        BarStyle.SOLID
-                );
-                bossBar.addPlayer(player);
-                playerBossBars.put(player.getUniqueId(), bossBar);
-            } else {
-                // Reiniciar la BossBar existente
-                bossBar.setTitle(ChatColor.RED + "۞ Damage Log" + ChatColor.WHITE + ": 00:15");
-                bossBar.setProgress(1.0);
-            }
-
-            // Crear una copia efectivamente final de la BossBar
-            final BossBar finalBossBar = bossBar;
-
-            // Actualizar BossBar
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    if (!damageLogPlayers.containsKey(player.getUniqueId())) {
-                        cancel();
-                        return;
-                    }
-
-                    long startTime = damageLogPlayers.get(player.getUniqueId());
-                    int elapsedTime = (int) ((System.currentTimeMillis() - startTime) / 1000);
-                    int remainingTime = delaySeconds - elapsedTime;
-
-                    if (remainingTime > 0) {
-                        finalBossBar.setTitle(ChatColor.RED + "۞ Damage Log" + ChatColor.WHITE + String.format(": %02d:%02d", remainingTime / 60, remainingTime % 60));
-                        finalBossBar.setProgress((double) remainingTime / delaySeconds);
-                    } else {
-                        finalBossBar.setTitle(ChatColor.GREEN + "۞ Damage Log" + ChatColor.WHITE + ": 00:00");
-                        finalBossBar.setProgress(0.0);
-                        damageLogPlayers.remove(player.getUniqueId());
-
-                        // Eliminar BossBar después de 1 segundo
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                finalBossBar.removePlayer(player);
-                                playerBossBars.remove(player.getUniqueId());
-                            }
-                        }.runTaskLater(plugin, 20L);
-                        cancel();
-                    }
-                }
-            }.runTaskTimer(plugin, 0L, 20L);
+            startDamageLogTimer(player.getUniqueId());
         }
+    }
+
+    private void startDamageLogTimer(UUID playerId) {
+        Player player = Bukkit.getPlayer(playerId);
+        if (player == null) return;
+
+        // Cancelar tarea existente para este jugador
+        BukkitTask existingTask = damageLogTasks.get(playerId);
+        if (existingTask != null) {
+            existingTask.cancel();
+        }
+
+        if (deathStormHandler != null) {
+            deathStormHandler.pauseActionBarForPlayer(playerId);
+        }
+
+        BukkitTask task = new BukkitRunnable() {
+            @Override
+            public void run() {
+                Player currentPlayer = Bukkit.getPlayer(playerId);
+                if (currentPlayer == null || !damageLogPlayers.containsKey(playerId)) {
+                    if (deathStormHandler != null) {
+                        deathStormHandler.resumeActionBarForPlayer(playerId);
+                    }
+                    cancel();
+                    damageLogTasks.remove(playerId);
+                    return;
+                }
+
+                // No mostrar si hay mensaje de muerte activo
+                if (MuerteHandler.isDeathMessageActive()) {
+                    return;
+                }
+
+                long startTime = damageLogPlayers.get(playerId);
+                int elapsedTime = (int) ((System.currentTimeMillis() - startTime) / 1000);
+                int remainingTime = delaySeconds - elapsedTime;
+
+                if (remainingTime > 0) {
+                    if (!isActionBarPausedForPlayer(playerId)) {
+                        if (deathStormHandler != null) {
+                            deathStormHandler.pauseActionBarForPlayer(playerId);
+                        }
+
+                        String message = ChatColor.of("#D24346") + "" + ChatColor.BOLD + "۞ " + ChatColor.RESET + ChatColor.of("#9179D4") + "Damage Log: " + ChatColor.RESET + ChatColor.of("#CE2E69") + ChatColor.BOLD + ChatColor.UNDERLINE +
+                                String.format("%02d:%02d", remainingTime / 60, remainingTime % 60);
+                        currentPlayer.spigot().sendMessage(ChatMessageType.ACTION_BAR,
+                                TextComponent.fromLegacyText(message));
+                    }
+                } else {
+                    if (!isActionBarPausedForPlayer(playerId)) {
+                        currentPlayer.spigot().sendMessage(ChatMessageType.ACTION_BAR,
+                                TextComponent.fromLegacyText(ChatColor.of("#D24346") + "" + ChatColor.BOLD + "۞ " + ChatColor.RESET + ChatColor.of("#9179D4") + "Damage Log: " + ChatColor.RESET + ChatColor.of("#CE2E69") + ChatColor.BOLD + ChatColor.UNDERLINE + "00:00"));
+                    }
+                    damageLogPlayers.remove(playerId);
+                    damageLogTasks.remove(playerId);
+                    if (deathStormHandler != null) {
+                        deathStormHandler.resumeActionBarForPlayer(playerId);
+                    }
+                    cancel();
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
+
+        damageLogTasks.put(playerId, task);
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        if (damageLogPlayers.containsKey(player.getUniqueId())) {
-            // Verificar si el servidor se está reiniciando
-            if (!ViciontHardcore3.shuttingDown){
-                // Penalización: daño de 8 corazones
+        UUID playerId = player.getUniqueId();
+        if (damageLogPlayers.containsKey(playerId)) {
+            if (!ViciontHardcore3.shuttingDown) {
                 double damage = 16;
                 double newHealth = player.getHealth() - damage;
 
@@ -165,31 +204,31 @@ public class DamageLogListener implements Listener {
                     player.setHealth(0);
                 }
 
-                // Mensaje de penalización
-                Bukkit.broadcastMessage(ChatColor.DARK_RED + "۞ " + player.getName() + " intentó desconectarse mientras estaba en 'Damage Log'. ¡Recibió daño como penalización!");
+                Bukkit.broadcastMessage(ChatColor.DARK_RED + "۞ " + player.getName() +
+                        " intentó desconectarse mientras estaba en 'Damage Log'. ¡Recibió daño como penalización!");
             }
 
-            // Eliminar BossBar
-            BossBar bossBar = playerBossBars.remove(player.getUniqueId());
-            if (bossBar != null) {
-                bossBar.removePlayer(player);
-            }
-
-            // Eliminar del Damage Log
             damageLogPlayers.remove(player.getUniqueId());
+            pausedActionBars.remove(player.getUniqueId());
+
+            BukkitTask task = damageLogTasks.remove(playerId);
+            if (task != null) {
+                task.cancel();
+            }
         }
     }
 
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
+        UUID playerId = player.getUniqueId();
 
-        // Eliminar BossBar y Damage Log si el jugador muere
-        BossBar bossBar = playerBossBars.remove(player.getUniqueId());
-        if (bossBar != null) {
-            bossBar.removePlayer(player);
+        pausedActionBars.remove(playerId);
+
+        // Cancelar tarea específica
+        BukkitTask task = damageLogTasks.remove(playerId);
+        if (task != null) {
+            task.cancel();
         }
-
-        damageLogPlayers.remove(player.getUniqueId());
     }
 }

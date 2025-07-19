@@ -1,6 +1,7 @@
 package Enchants;
 
 import org.bukkit.Material;
+import org.bukkit.inventory.ItemRarity;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.NamespacedKey;
@@ -10,6 +11,7 @@ import org.bukkit.ChatColor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class EssenceFactory {
 
@@ -19,10 +21,6 @@ public class EssenceFactory {
 
     public static ItemStack createUnbreakingEssence() {
         return createEssence("Esencia de Irrompibilidad", 3);
-    }
-
-    public static ItemStack createMendingEssence() {
-        return createEssence("Esencia de Reparación", 4);
     }
 
     public static ItemStack createEfficiencyEssence() {
@@ -57,10 +55,6 @@ public class EssenceFactory {
         return createEssence("Esencia de Agilidad Acuática", 12);
     }
 
-    public static ItemStack createSilkTouchEssence() {
-        return createEssence("Esencia de Toque de Seda", 13);
-    }
-
     public static ItemStack createPowerEssence() {
         return createEssence("Esencia de Poder", 14);
     }
@@ -71,18 +65,42 @@ public class EssenceFactory {
         name = ChatColor.BLUE + name;
         meta.setDisplayName(name);
         meta.setCustomModelData(customModelData);
+        int usos = new Random().nextInt(3) + 1;
 
         // lore con usos restantes
         List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.DARK_PURPLE + "Con esta Esencia podrás encantar");
-        lore.add(ChatColor.DARK_PURPLE + "cualquier ítem en la " + ChatColor.GOLD + "Mesa de Encantamientos Mejorada");
         lore.add(" ");
-        lore.add(ChatColor.GRAY + "Usos restantes: 4");
+        lore.add(ChatColor.DARK_PURPLE + "Con esta Esencia podrás desbloquear");
+        lore.add(ChatColor.DARK_PURPLE + "el encantamiento correspondiente");
+        lore.add(ChatColor.DARK_PURPLE + "en la " + ChatColor.GOLD + "Mesa de Encantamientos Mejorada");
+        lore.add(" ");
+        lore.add(ChatColor.GRAY + "Usos restantes: " + usos);
         meta.setLore(lore);
+        meta.setRarity(ItemRarity.RARE);
 
-        //contador de usos en 4
+        //contador de usos entre el 1 y el 3
         PersistentDataContainer data = meta.getPersistentDataContainer();
-        data.set(new NamespacedKey("vicionthardcore3", "uses"), PersistentDataType.INTEGER, 4);
+        data.set(new NamespacedKey("vicionthardcore3", "uses"), PersistentDataType.INTEGER, usos);
+
+        essence.setItemMeta(meta);
+        return essence;
+    }
+
+    public static ItemStack createVoidEssence() {
+        ItemStack essence = new ItemStack(Material.IRON_NUGGET);
+        ItemMeta meta = essence.getItemMeta();
+        meta.setDisplayName(ChatColor.DARK_GRAY + "Esencia Vacía");
+        meta.setCustomModelData(20);
+
+        // lore vacía
+        List<String> lore = new ArrayList<>();
+        lore.add(" ");
+        lore.add(ChatColor.DARK_PURPLE + "Esta esencia vacía que puede");
+        lore.add(ChatColor.DARK_PURPLE + "que puede llegar a alcanzar");
+        lore.add(ChatColor.DARK_PURPLE + "poderes inimaginables");
+        lore.add(" ");
+        meta.setLore(lore);
+        meta.setRarity(ItemRarity.RARE);
 
         essence.setItemMeta(meta);
         return essence;

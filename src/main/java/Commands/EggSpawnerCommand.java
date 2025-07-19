@@ -43,7 +43,6 @@ public class EggSpawnerCommand implements CommandExecutor, TabCompleter, Listene
         this.queenBeeHandler = new QueenBeeHandler(plugin);
         this.guardianBlaze = new GuardianBlaze(plugin);
 
-        // Registrar comando y eventos
         plugin.getCommand("eggvct").setExecutor(this);
         plugin.getCommand("eggvct").setTabCompleter(this);
         Bukkit.getPluginManager().registerEvents(this, plugin);
@@ -93,14 +92,14 @@ public class EggSpawnerCommand implements CommandExecutor, TabCompleter, Listene
     }
 
     private ItemStack createCustomEgg(String mobName) {
-        ItemStack egg = new ItemStack(Material.ORANGE_DYE); // Usamos tinte naranja como huevo
+        ItemStack egg = new ItemStack(Material.ORANGE_DYE);
         ItemMeta meta = egg.getItemMeta();
         if (meta != null) {
             meta.setDisplayName("Huevo de " + mobName);
             PersistentDataContainer container = meta.getPersistentDataContainer();
             container.set(new NamespacedKey(plugin, "mobName"), PersistentDataType.STRING, mobName);
             container.set(new NamespacedKey(plugin, "isCustomSpawnEgg"), PersistentDataType.BYTE, (byte) 1);
-            meta.setCustomModelData(50); // CustomModelData para identificar visualmente
+            meta.setCustomModelData(50);
             egg.setItemMeta(meta);
         }
         return egg;
@@ -117,21 +116,16 @@ public class EggSpawnerCommand implements CommandExecutor, TabCompleter, Listene
                     if (container.has(new NamespacedKey(plugin, "mobName"), PersistentDataType.STRING)) {
                         String mobName = container.get(new NamespacedKey(plugin, "mobName"), PersistentDataType.STRING);
 
-                        // Verificar si hizo clic en un SPAWNER
                         if (event.getClickedBlock() != null && event.getClickedBlock().getType() == Material.SPAWNER) {
-                            // Configurar el spawner
                             CreatureSpawner spawner = (CreatureSpawner) event.getClickedBlock().getState();
                             spawner.getPersistentDataContainer().set(new NamespacedKey(plugin, "mobName"), PersistentDataType.STRING, mobName);
                             spawner.update();
 
-                            // Notificar al jugador
                             event.getPlayer().sendMessage("¡Spawner configurado para generar " + mobName + "!");
 
-                            // Reducir el huevo en el inventario del jugador
                             item.setAmount(item.getAmount() - 1);
                             event.setCancelled(true);
                         } else {
-                            // Lógica normal para spawnear mobs directamente
                             Location location = event.getClickedBlock().getLocation().add(0.5, 1, 0.5);
 
                             switch (mobName) {
@@ -174,7 +168,6 @@ public class EggSpawnerCommand implements CommandExecutor, TabCompleter, Listene
             String mobName = container.get(new NamespacedKey(plugin, "mobName"), PersistentDataType.STRING);
             Location location = event.getLocation();
 
-            // Generar el mob personalizado y cancelar el spawn predeterminado
             switch (mobName) {
                 case "Bombita":
                     bombitaSpawner.spawnBombita(location);
@@ -196,7 +189,7 @@ public class EggSpawnerCommand implements CommandExecutor, TabCompleter, Listene
                     break;
             }
 
-            event.setCancelled(true); // Evitar que el spawner genere el mob predeterminado
+            event.setCancelled(true);
         }
     }
 

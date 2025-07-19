@@ -1,12 +1,14 @@
 package Dificultades.CustomMobs;
 
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -24,9 +26,11 @@ public class Iceologer implements Listener {
     private final Set<Player> frozenPlayers = new HashSet<>();
     private boolean eventsRegistered = false;
     private final Random random = new Random();
+    private final NamespacedKey iceologerKey;
 
     public Iceologer(JavaPlugin plugin) {
         this.plugin = plugin;
+        this.iceologerKey = new NamespacedKey(plugin, "iceologer");
     }
 
     public void apply() {
@@ -53,6 +57,8 @@ public class Iceologer implements Listener {
         Illusioner iceologer = (Illusioner) location.getWorld().spawnEntity(location, EntityType.ILLUSIONER);
         iceologer.setCustomName(ChatColor.AQUA + "" + ChatColor.BOLD + "Iceologer");
         iceologer.setCustomNameVisible(true);
+        iceologer.getAttribute(Attribute.GENERIC_FOLLOW_RANGE).setBaseValue(32);
+        iceologer.getPersistentDataContainer().set(iceologerKey, PersistentDataType.BYTE, (byte) 1);
 
         activeIceologers.add(iceologer);
         monitorIceologer(iceologer);
@@ -72,8 +78,9 @@ public class Iceologer implements Listener {
 
                 // Comprobar si tiene un objetivo
                 if (iceologer.getTarget() instanceof Player player) {
-                    if (iceologer.hasLineOfSight(player) && iceologer.getLocation().distance(player.getLocation()) < 15) {
-                        // Ataque especial cada 3 segundos
+                    if ((player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE) &&
+                            iceologer.hasLineOfSight(player) &&
+                            iceologer.getLocation().distance(player.getLocation()) < 15) {
                         if (iceologer.getTicksLived() % 120 == 0) {
                             performSpecialAttack(iceologer, player);
                         }
@@ -103,7 +110,7 @@ public class Iceologer implements Listener {
         blockDisplay.setTransformation(new Transformation(
                 new Vector3f(0, 0, 0),
                 new Quaternionf(),
-                new Vector3f(0.8f, 0.8f, 0.8f), // Tamaño ajustado
+                new Vector3f(0.8f, 0.8f, 0.8f),
                 new Quaternionf()
         ));
 
@@ -111,7 +118,6 @@ public class Iceologer implements Listener {
         blockDisplay.setGlowing(true);
         blockDisplay.setGlowColorOverride(Color.AQUA);
 
-        // Animación rápida y suave
         new BukkitRunnable() {
             private float rotationAngle = 0.0f;
 
@@ -130,7 +136,6 @@ public class Iceologer implements Listener {
                 if (currentLocation.distance(player.getLocation()) <= 1.0) {
                     hit = true;
                 } else {
-                    // Movimiento rápido pero suave
                     Vector direction = player.getLocation().toVector().subtract(currentLocation.toVector()).normalize();
                     blockDisplay.teleport(currentLocation.add(direction.multiply(0.3))); // Movimiento rápido
 
@@ -140,7 +145,7 @@ public class Iceologer implements Listener {
                     blockDisplay.setTransformation(new Transformation(
                             new Vector3f(0, 0, 0),
                             rotation,
-                            new Vector3f(0.8f, 0.8f, 0.8f), // Mantener tamaño pequeño
+                            new Vector3f(0.8f, 0.8f, 0.8f),
                             rotation
                     ));
                 }
@@ -150,7 +155,7 @@ public class Iceologer implements Listener {
                         player.getWorld().playSound(player.getLocation(), Sound.ITEM_SHIELD_BLOCK, 1f, 0.8f);
                     } else {
                         // Daño y congelación
-                        player.damage(2);
+                        player.damage(4);
                         applyFreezeEffect(player);
                         player.getWorld().playSound(player.getLocation(), Sound.BLOCK_GLASS_BREAK, 1f, 0.5f);
                         player.getWorld().spawnParticle(Particle.EXPLOSION, player.getLocation(), 30, 0.5, 0.5, 0.5);
@@ -159,11 +164,11 @@ public class Iceologer implements Listener {
                     cancel();
                 }
             }
-        }.runTaskTimer(plugin, 0L, 1L); // Animación más suave (1 tick)
+        }.runTaskTimer(plugin, 0L, 1L);
     }
 
     private void applyFreezeEffect(Player player) {
-        player.setFreezeTicks(200);
+        player.setFreezeTicks(300);
         frozenPlayers.add(player);
         player.getWorld().spawnParticle(Particle.SNOWFLAKE, player.getLocation().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.1);
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_HURT_FREEZE, 1f, 0.1f);
@@ -173,8 +178,9 @@ public class Iceologer implements Listener {
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         if (event.getDamager() instanceof Arrow arrow && arrow.getShooter() instanceof Illusioner) {
-            if (event.getEntity() instanceof Player player) {
-                player.setFreezeTicks(200); // Congelar por 5 segundos
+            if (event.getEntity() instanceof Player player &&
+                    (player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE)) {
+                player.setFreezeTicks(300);
                 player.getWorld().spawnParticle(Particle.SNOWFLAKE, player.getLocation().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.1);
                 player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_HURT_FREEZE, 1f, 0.1f);
             }
@@ -194,52 +200,46 @@ public class Iceologer implements Listener {
     }
 
     //ataque de hielo en area
-
     private void performIceBlockAttack(Illusioner iceologer) {
-        // Asegurar que el ataque no sea demasiado frecuente (25% de probabilidad)
         if (random.nextInt(4) != 0) return;
 
         World world = iceologer.getWorld();
 
-        // Buscar jugadores en un radio de 10 bloques
         List<Player> nearbyPlayers = new ArrayList<>();
 
         // Obtener entidades cercanas al Iceologer
-        for (Entity entity : iceologer.getNearbyEntities(10, 10, 10)) { // Obtener entidades dentro del rango
-            if (entity instanceof Player) { // Filtrar solo jugadores
-                nearbyPlayers.add((Player) entity); // Añadir a la lista
+        for (Entity entity : iceologer.getNearbyEntities(10, 10, 10)) {
+            if (entity instanceof Player player &&
+                    (player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE)) {
+                nearbyPlayers.add(player);
             }
         }
 
-        // Cancelar si no hay jugadores cercanos
         if (nearbyPlayers.isEmpty()) return;
 
         // Seleccionar jugador objetivo (aleatorio o más cercano)
         Player target = nearbyPlayers.size() > 1
                 ? nearbyPlayers.get(new Random().nextInt(nearbyPlayers.size()))
-                : nearbyPlayers.get(0); // Único jugador más cercano
+                : nearbyPlayers.get(0);
 
         // Posición objetivo sobre el jugador seleccionado
-        Location origin = target.getLocation().add(0, 10, 0); // Bloques caen desde arriba
+        Location origin = target.getLocation().add(0, 10, 0);
 
-        // Sonido de preparación
         world.playSound(target.getLocation(), Sound.ENTITY_ILLUSIONER_PREPARE_MIRROR, 1f, 0.5f);
 
         // Crear los 8 bloques alrededor del jugador objetivo
         for (int i = 0; i < 8; i++) {
             double angle = Math.toRadians(45 * i); // Dividir círculo en 8 partes
-            double x = Math.cos(angle) * 3; // Radio de 3 bloques
+            double x = Math.cos(angle) * 3;
             double z = Math.sin(angle) * 3;
             Location spawnLocation = origin.clone().add(x, 0, z);
 
-            // Crear bloque flotante (usando BlockDisplay)
             BlockData blockData = Material.PACKED_ICE.createBlockData();
             BlockDisplay blockDisplay = (BlockDisplay) world.spawnEntity(spawnLocation, EntityType.BLOCK_DISPLAY);
             blockDisplay.setBlock(blockData);
             blockDisplay.setGlowing(true);
             blockDisplay.setGlowColorOverride(Color.BLUE);
 
-            // Animar caída
             animateFallingBlock(blockDisplay, target.getLocation());
         }
     }
@@ -247,8 +247,8 @@ public class Iceologer implements Listener {
 
     private void animateFallingBlock(BlockDisplay blockDisplay, Location center) {
         new BukkitRunnable() {
-            private double height = 10; // Altura inicial
-            private double velocity = 0.2; // Velocidad de caída
+            private double height = 10;
+            private double velocity = 0.2;
 
             @Override
             public void run() {
@@ -267,7 +267,7 @@ public class Iceologer implements Listener {
                     cancel();
                 }
             }
-        }.runTaskTimer(plugin, 0L, 1L); // Actualizar cada tick (rápido)
+        }.runTaskTimer(plugin, 0L, 1L);
     }
 
     private void applyExplosionEffect(Location location, Location center) {
@@ -278,15 +278,25 @@ public class Iceologer implements Listener {
         world.playSound(location, Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 2f, 2f);
 
         // Aplicar daño y efectos a jugadores en el radio
-        double radius = 3.0; // Radio de explosión
+        double radius = 3.0;
         for (Entity entity : world.getNearbyEntities(location, radius, radius, radius)) {
-            if (entity instanceof Player player) {
-                if (player.getLocation().distance(center) <= radius) { // Solo dentro del círculo
-                    player.damage(2); // 1 corazón
+            if (entity instanceof Player player &&
+                    (player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE)) {
+
+                if (player.getLocation().distance(center) <= radius) {
+                    player.damage(4);
                     player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 100, 1)); // Lentitud 2 por 3 segundos
                 }
             }
         }
+    }
+
+    public NamespacedKey getIceologerKey() {
+        return iceologerKey;
+    }
+
+    private boolean isIceologer(Entity entity) {
+        return entity instanceof Creeper && entity.getPersistentDataContainer().has(iceologerKey, PersistentDataType.BYTE);
     }
 
 }

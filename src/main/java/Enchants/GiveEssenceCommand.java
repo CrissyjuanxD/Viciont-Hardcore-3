@@ -22,7 +22,7 @@ public class GiveEssenceCommand implements CommandExecutor, TabCompleter {
         Player player = (Player) sender;
 
         if (args.length == 0) {
-            player.sendMessage("Por favor, especifica una esencia: proteccion, irrompibilidad, mending, eficiencia, fortuna, filo, castigo, artrópodos, caida, saqueo, agilidad, toque, poder.");
+            player.sendMessage("Por favor, especifica una esencia: proteccion, irrompibilidad, eficiencia, fortuna, filo, castigo, artrópodos, caida, saqueo, agilidad, poder, vacia.");
             return true;
         }
 
@@ -33,9 +33,6 @@ public class GiveEssenceCommand implements CommandExecutor, TabCompleter {
                 break;
             case "irrompibilidad":
                 essence = EssenceFactory.createUnbreakingEssence();
-                break;
-            case "mending":
-                essence = EssenceFactory.createMendingEssence();
                 break;
             case "eficiencia":
                 essence = EssenceFactory.createEfficiencyEssence();
@@ -61,14 +58,14 @@ public class GiveEssenceCommand implements CommandExecutor, TabCompleter {
             case "agilidad":
                 essence = EssenceFactory.createDepthStriderEssence();
                 break;
-            case "toque":
-                essence = EssenceFactory.createSilkTouchEssence();
-                break;
             case "poder":
                 essence = EssenceFactory.createPowerEssence();
                 break;
+            case "vacia":
+                essence = EssenceFactory.createVoidEssence();
+                break;
             default:
-                player.sendMessage("Esencia desconocida. Usa: proteccion, irrompibilidad, mending, eficiencia, fortuna, filo, castigo, artrópodos, caida, saqueo, agilidad, toque, poder.");
+                player.sendMessage("Esencia desconocida. Usa: proteccion, irrompibilidad, eficiencia, fortuna, filo, castigo, artrópodos, caida, saqueo, agilidad, poder, vacia.");
                 return true;
         }
 
@@ -83,8 +80,8 @@ public class GiveEssenceCommand implements CommandExecutor, TabCompleter {
 
         if (args.length == 1) {
             List<String> essences = List.of(
-                    "proteccion", "irrompibilidad", "mending", "eficiencia", "fortuna",
-                    "filo", "castigo", "artrópodos", "caida", "saqueo", "agilidad", "toque", "poder"
+                    "proteccion", "irrompibilidad", "eficiencia", "fortuna",
+                    "filo", "castigo", "artrópodos", "caida", "saqueo", "agilidad", "poder", "vacia"
             );
 
             for (String essence : essences) {

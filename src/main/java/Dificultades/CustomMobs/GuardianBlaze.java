@@ -1,11 +1,13 @@
 package Dificultades.CustomMobs;
 
+import items.BlazeItems;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.*;
+import org.bukkit.inventory.ItemRarity;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -15,21 +17,18 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Random;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class GuardianBlaze implements Listener {
     private final JavaPlugin plugin;
-    private final NamespacedKey blazeRootKey;
-    private final NamespacedKey attackActiveKey;
+    private final NamespacedKey guardianblazeKey;
     private final Random random = new Random();
     private boolean eventsRegistered = false;
 
     public GuardianBlaze(JavaPlugin plugin) {
         this.plugin = plugin;
-        this.blazeRootKey = new NamespacedKey(plugin, "blaze_root");
-        this.attackActiveKey = new NamespacedKey(plugin, "attack_active");
+        this.guardianblazeKey = new NamespacedKey(plugin, "guardian_blaze");
     }
 
     public void apply() {
@@ -52,7 +51,6 @@ public class GuardianBlaze implements Listener {
         }
     }
 
-
     public void spawnGuardianBlaze(Location location) {
         World world = location.getWorld();
         if (world == null) return;
@@ -61,195 +59,219 @@ public class GuardianBlaze implements Listener {
 
         blaze.setCustomName(ChatColor.GOLD + "" + ChatColor.BOLD + "Guardian Blaze");
         blaze.setCustomNameVisible(true);
-        Objects.requireNonNull(blaze.getAttribute(Attribute.GENERIC_MAX_HEALTH)).setBaseValue(35.0);
-        blaze.setHealth(35.0);
-        Objects.requireNonNull(blaze.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE)).setBaseValue(18.0);
+        Objects.requireNonNull(blaze.getAttribute(Attribute.GENERIC_MAX_HEALTH)).setBaseValue(40.0);
+        blaze.setHealth(40.0);
+        Objects.requireNonNull(blaze.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE)).setBaseValue(12.0);
         Objects.requireNonNull(blaze.getAttribute(Attribute.GENERIC_SCALE)).setBaseValue(1.9);
         blaze.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, 1));
+        blaze.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, Integer.MAX_VALUE, 1));
 
-        blaze.getPersistentDataContainer().set(blazeRootKey, PersistentDataType.BYTE, (byte) 1);
+        blaze.getPersistentDataContainer().set(guardianblazeKey, PersistentDataType.BYTE, (byte) 1);
 
-        startAttackPattern(blaze);
+        startBehavior(blaze);
     }
 
-    @EventHandler
-    public void onEntityTarget(EntityTargetEvent event) {
-        if (event.getEntity() instanceof Blaze blaze && isGuardianBlaze(blaze)) {
-            if (event.getTarget() instanceof Player player &&
-                    (player.getGameMode() == GameMode.CREATIVE || player.getGameMode() == GameMode.SPECTATOR)) {
-                event.setCancelled(true);
-                return;
-            }
-
-            event.setCancelled(true);
-
-            if (!blaze.getPersistentDataContainer().has(attackActiveKey, PersistentDataType.BYTE)) {
-                blaze.getPersistentDataContainer().set(attackActiveKey, PersistentDataType.BYTE, (byte) 1);
-                startAttackPattern(blaze);
-            }
-        }
-    }
-
-    @EventHandler
-    public void onEntityDeath(EntityDeathEvent event) {
-        if (event.getEntity() instanceof Blaze blaze && isGuardianBlaze(blaze)) {
-            Bukkit.getLogger().info("Guardian Blaze murió. Procesando drops...");
-
-            event.getDrops().clear();
-
-            if (random.nextInt(100) < 95) {
-                int amount = getRandomNetheriteScrapAmount();
-                Bukkit.getLogger().info("Drop Netherite Scrap añadido: " + amount);
-                event.getDrops().add(new ItemStack(Material.NETHERITE_SCRAP, amount));
-            }
-
-            // Probabilidad de dropear Guardian Blaze Root (50%)
-            if (random.nextInt(2) == 0) {
-                ItemStack blazeRoot = createBlazeRoot();
-                Bukkit.getLogger().info("Drop Guardian Blaze Root añadido.");
-                event.getDrops().add(blazeRoot);
-            }
-        }
-    }
-
-    private int getRandomNetheriteScrapAmount() {
-        int randomValue = random.nextInt(100); // Número aleatorio entre 0 y 99
-
-        if (randomValue < 50) { // 50% de probabilidad
-            return 1; // Más común
-        } else if (randomValue < 80) { // 30% de probabilidad
-            return 2; // Intermedio
-        } else { // 20% de probabilidad
-            return 3; // Más raro
-        }
-    }
-
-    private ItemStack createBlazeRoot() {
-        ItemStack blazeRoot = new ItemStack(Material.BLAZE_ROD, 1);
-        ItemMeta meta = blazeRoot.getItemMeta();
-        if (meta != null) {
-            meta.getPersistentDataContainer().set(blazeRootKey, PersistentDataType.INTEGER, 1);
-            meta.setDisplayName(ChatColor.GOLD + "Guardian Blaze Root");
-            meta.setUnbreakable(true);
-            blazeRoot.setItemMeta(meta);
-        }
-        return blazeRoot;
-    }
-
-    private void startAttackPattern(Blaze blaze) {
-        trackPlayers(blaze); // Comenzar a seguir a los jugadores
-
+    private void startBehavior(Blaze blaze) {
+        // Movimiento y ataque cuerpo a cuerpo
         new BukkitRunnable() {
-            int attackCounter = 0;
-
             @Override
             public void run() {
                 if (!blaze.isValid()) {
-                    blaze.getPersistentDataContainer().remove(attackActiveKey);
                     cancel();
                     return;
                 }
 
-                if (attackCounter % 3 == 0) {
-                    launchFireballAttack(blaze);
-                }
+                Player target = getClosestPlayer(blaze, 25);
+                if (target != null) {
+                    // Movimiento suave hacia el jugador
+                    Vector direction = target.getLocation().toVector().subtract(blaze.getLocation().toVector()).normalize();
+                    blaze.setVelocity(direction.multiply(0.35));
 
-                if (attackCounter % 5 == 0) {
-                    spawnCircleParticles(blaze);
+                    // Ataque cuerpo a cuerpo si está cerca
+                    if (blaze.getLocation().distance(target.getLocation()) <= 3) {
+                        blaze.attack(target);
+                    }
                 }
-
-                attackCounter++;
             }
-        }.runTaskTimer(plugin, 0L, 100L);
+        }.runTaskTimer(plugin, 0L, 10L);
+
+        // Patrón de ataques
+        new BukkitRunnable() {
+            int attackCycle = 0;
+
+            @Override
+            public void run() {
+                if (!blaze.isValid()) {
+                    cancel();
+                    return;
+                }
+
+                attackCycle++;
+
+                // Ataque especial cada 8 ciclos (8 segundos)
+                if (attackCycle % 8 == 0) {
+                    if (random.nextBoolean()) {
+                        launchTripleFireballAttack(blaze);
+                    } else {
+                        spawnCircleParticles(blaze);
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
+    }
+
+    private void launchTripleFireballAttack(Blaze blaze) {
+        List<Player> targets = getRandomPlayers(blaze, 25, 3);
+        if (targets.isEmpty()) return;
+
+        blaze.getWorld().playSound(blaze.getLocation(), Sound.ENTITY_BLAZE_SHOOT, 2.0f, 0.5f);
+
+        // Realizar 3 rondas de disparos
+        new BukkitRunnable() {
+            int rounds = 0;
+
+            @Override
+            public void run() {
+                if (rounds >= 3 || !blaze.isValid()) {
+                    cancel();
+                    return;
+                }
+
+                // Disparar 3 fireballs en triangulación a cada objetivo
+                for (Player target : targets) {
+                    if (target.isValid()) {
+                        launchTriangulatedFireballs(blaze, target);
+                    }
+                }
+
+                rounds++;
+            }
+        }.runTaskTimer(plugin, 0L, 40L); // 2 segundos entre rondas
+    }
+
+    private void launchTriangulatedFireballs(Blaze blaze, Player target) {
+        Location adjustedLoc = blaze.getLocation().clone().add(0, 2.5, 0);
+        Vector baseDirection = target.getLocation().toVector().subtract(adjustedLoc.toVector()).normalize();
+
+        // Disparar 3 fireballs en patrón triangular
+        for (int i = 0; i < 3; i++) {
+            Vector direction = baseDirection.clone();
+            Location spawnLoc = adjustedLoc.clone();
+
+            // Aplicar desviación triangular y ajustar posición de spawn
+            switch (i) {
+                case 0: // Centro
+                    break;
+                case 1: // Izquierda
+                    direction.add(new Vector(-0.3, 0, 0.3));
+                    spawnLoc.add(-0.5, 0, 0.5);
+                    break;
+                case 2: // Derecha
+                    direction.add(new Vector(0.3, 0, -0.3));
+                    spawnLoc.add(0.5, 0, -0.5);
+                    break;
+            }
+
+            // Crear fireball manualmente para evitar colisión con el blaze
+            Fireball fireball = blaze.getWorld().spawn(spawnLoc, Fireball.class);
+            fireball.setDirection(direction.normalize());
+            fireball.setVelocity(direction.multiply(1.5));
+            fireball.setYield(3);
+            fireball.setIsIncendiary(true);
+            fireball.setShooter(blaze);
+            fireball.getPersistentDataContainer().set(new NamespacedKey(plugin, "custom_fireball"), PersistentDataType.BYTE, (byte) 1);
+        }
+    }
+
+    private void spawnCircleParticles(Blaze blaze) {
+        blaze.getWorld().playSound(blaze.getLocation(), Sound.ENTITY_BLAZE_AMBIENT, 1.5f, 0.7f);
+        Set<Player> damagedPlayers = new HashSet<>();
+
+        new BukkitRunnable() {
+            double radius = 0;
+            int cycles = 0;
+
+            @Override
+            public void run() {
+                if (cycles >= 30 || !blaze.isValid()) {
+                    damagedPlayers.clear();
+                    cancel();
+                    return;
+                }
+
+                radius += 0.5;
+                double increment = Math.PI / 12; // Menos partículas pero más espaciadas
+
+                // Partículas principales del círculo
+                for (double angle = 0; angle < 2 * Math.PI; angle += increment) {
+                    double x = radius * Math.cos(angle);
+                    double z = radius * Math.sin(angle);
+                    Location loc = blaze.getLocation().clone().add(x, 1, z);
+                    blaze.getWorld().spawnParticle(Particle.FLAME, loc, 1, 0, 0, 0, 0.05);
+                }
+
+                // Partículas adicionales para mejor visibilidad (cada 3 ciclos)
+                if (cycles % 3 == 0) {
+                    blaze.getWorld().spawnParticle(Particle.LAVA, blaze.getLocation().add(0, 1, 0), 5, radius, 0.5, radius, 0.1);
+                }
+
+                // Daño a jugadores
+                if (radius >= 2) {
+                    for (Entity entity : blaze.getWorld().getNearbyEntities(blaze.getLocation(), radius, 2, radius)) {
+                        if (entity instanceof Player player && !damagedPlayers.contains(player)) {
+                            player.damage(3, blaze);
+                            player.setFireTicks(100);
+                            damagedPlayers.add(player);
+                        }
+                    }
+                }
+
+                cycles++;
+            }
+        }.runTaskTimer(plugin, 0L, 1L);
+    }
+
+    private Player getClosestPlayer(Blaze blaze, double radius) {
+        return blaze.getWorld().getPlayers().stream()
+                .filter(p -> p.getLocation().distance(blaze.getLocation()) <= radius)
+                .filter(p -> p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE)
+                .min(Comparator.comparingDouble(p -> p.getLocation().distanceSquared(blaze.getLocation())))
+                .orElse(null);
+    }
+
+    private List<Player> getRandomPlayers(Blaze blaze, double radius, int count) {
+        List<Player> players = blaze.getWorld().getPlayers().stream()
+                .filter(p -> p.getLocation().distance(blaze.getLocation()) <= radius)
+                .filter(p -> p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE)
+                .collect(Collectors.toList());
+
+        Collections.shuffle(players);
+        return players.stream().limit(count).collect(Collectors.toList());
     }
 
     @EventHandler
-    public void onVanillaAttack(EntityDamageByEntityEvent event) {
+    public void onEntityDamage(EntityDamageByEntityEvent event) {
         if (event.getDamager() instanceof Blaze blaze && isGuardianBlaze(blaze)) {
             if (event.getCause() == EntityDamageEvent.DamageCause.PROJECTILE) {
                 event.setCancelled(true);
             } else if (event.getEntity() instanceof Player player) {
-                knockbackPlayer(blaze, player);
+                // Knockback mejorado
+                Vector knockback = player.getLocation().toVector().subtract(blaze.getLocation().toVector()).normalize();
+                knockback.setY(0.5); // Añadir un poco de elevación
+                player.setVelocity(knockback.multiply(1.5));
             }
         }
     }
 
-    private void launchFireballAttack(Blaze blaze) {
-        List<Player> nearbyPlayers = getNearbyPlayers(blaze.getWorld(), blaze.getLocation(), 40);
-
-        if (nearbyPlayers.isEmpty()) {
-            return;
+    @EventHandler
+    public void onEntityDamage(EntityDamageEvent event) {
+        if (event.getEntity() instanceof Blaze blaze && isGuardianBlaze(blaze)) {
+            // Inmunidad a explosiones
+            if (event.getCause() == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION ||
+                    event.getCause() == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) {
+                event.setCancelled(true);
+            }
         }
-
-        new BukkitRunnable() {
-            int fireballCount = 0;
-
-            @Override
-            public void run() {
-                if (fireballCount >= 4 || !blaze.isValid()) { // 4 rondas de ataque
-                    cancel();
-                    return;
-                }
-
-                // Seleccionar al jugador objetivo para esta ronda
-                Player target = getClosestPlayer(blaze, nearbyPlayers);
-
-                if (target != null) {
-                    Location adjustedBlazeLocation = blaze.getLocation().clone();
-                    adjustedBlazeLocation.setY(adjustedBlazeLocation.getY() + 2.5); // Ajuste para el tamaño del Blaze
-
-                    Vector baseDirection = target.getLocation().toVector().subtract(adjustedBlazeLocation.toVector()).normalize();
-
-                    // Lanzar 1 bola de fuego
-                    Fireball fireball = blaze.launchProjectile(Fireball.class);
-                    fireball.setYield(0);
-                    fireball.setIsIncendiary(true);
-                    fireball.getPersistentDataContainer().set(new NamespacedKey(plugin, "custom_fireball"), PersistentDataType.BYTE, (byte) 1);
-
-                    // Ajustar dirección con un ligero desvío aleatorio
-                    Vector direction = baseDirection.clone().add(new Vector(
-                            (Math.random() - 0.5) * 0.1, // Pequeño ajuste aleatorio en X
-                            (Math.random() - 0.5) * 0.1, // Pequeño ajuste aleatorio en Y
-                            (Math.random() - 0.5) * 0.1  // Pequeño ajuste aleatorio en Z
-                    ));
-
-                    fireball.setDirection(direction);
-                    fireball.setVelocity(fireball.getVelocity().multiply(1.5));
-                }
-
-                fireballCount++;
-            }
-        }.runTaskTimer(plugin, 0L, 20L); // 1 segundo entre cada ronda
-    }
-
-    private Player getClosestPlayer(Blaze blaze, List<Player> players) {
-        return players.stream()
-                .min((p1, p2) -> Double.compare(p1.getLocation().distance(blaze.getLocation()),
-                        p2.getLocation().distance(blaze.getLocation())))
-                .orElse(null);
-    }
-
-    private void trackPlayers(Blaze blaze) {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (!blaze.isValid()) {
-                    cancel();
-                    return;
-                }
-
-                List<Player> nearbyPlayers = getNearbyPlayers(blaze.getWorld(), blaze.getLocation(), 40);
-
-                if (!nearbyPlayers.isEmpty()) {
-                    Player closestPlayer = getClosestPlayer(blaze, nearbyPlayers);
-                    if (closestPlayer != null) {
-                        // Mover al Blaze hacia el jugador más cercano
-                        Vector direction = closestPlayer.getLocation().toVector().subtract(blaze.getLocation().toVector()).normalize();
-                        blaze.setVelocity(direction.multiply(0.5)); // Ajustar la velocidad de movimiento
-                    }
-                }
-            }
-        }.runTaskTimer(plugin, 0L, 20L); // Ejecutar cada segundo
     }
 
     @EventHandler
@@ -257,8 +279,8 @@ public class GuardianBlaze implements Listener {
         if (event.getDamager() instanceof Fireball fireball &&
                 fireball.getPersistentDataContainer().has(new NamespacedKey(plugin, "custom_fireball"), PersistentDataType.BYTE) &&
                 event.getEntity() instanceof Player player) {
-
-            event.setDamage(12.0);
+            event.setDamage(8.0);
+            player.setFireTicks(100);
         }
     }
 
@@ -266,83 +288,37 @@ public class GuardianBlaze implements Listener {
     public void onFireballExplode(EntityExplodeEvent event) {
         if (event.getEntity() instanceof Fireball fireball &&
                 fireball.getPersistentDataContainer().has(new NamespacedKey(plugin, "custom_fireball"), PersistentDataType.BYTE)) {
-
             event.blockList().clear();
 
-            Location explosionLocation = fireball.getLocation();
-            double explosionRadius = 6.0;
+            Location loc = fireball.getLocation();
+            fireball.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, loc, 3);
+            fireball.getWorld().playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 1.0f, 1.0f);
+        }
+    }
 
-            // Partículas para indicar el radio de explosión
-            fireball.getWorld().spawnParticle(Particle.EXPLOSION, explosionLocation, 10);
+    @EventHandler
+    public void onEntityDeath(EntityDeathEvent event) {
+        if (event.getEntity() instanceof Blaze blaze && isGuardianBlaze(blaze)) {
+            event.getDrops().clear();
 
-            // Aplicar daño a los jugadores cercanos
-            for (Entity entity : fireball.getWorld().getNearbyEntities(explosionLocation, explosionRadius, explosionRadius, explosionRadius)) {
-                if (entity instanceof Player player) {
-                    double distance = player.getLocation().distance(explosionLocation);
-                    double damage = (1.0 - (distance / explosionRadius)) * 12.0;
-                    player.damage(damage, fireball);
-                    player.setFireTicks(20);
-                }
+            if (random.nextInt(100) < 90) {
+                event.getDrops().add(new ItemStack(Material.NETHERITE_SCRAP, getRandomNetheriteScrapAmount()));
+            }
+
+            if (random.nextBoolean()) {
+                event.getDrops().add(BlazeItems.createBlazeRod());
             }
         }
     }
 
-    private void spawnCircleParticles(Blaze blaze) {
-        new BukkitRunnable() {
-            double radius = 0;
-
-            @Override
-            public void run() {
-                if (radius >= 15 || !blaze.isValid()) {
-                    cancel();
-                    return;
-                }
-
-                radius += 0.5;
-                double increment = Math.PI / 20;
-
-                for (double angle = 0; angle < 2 * Math.PI; angle += increment) {
-                    double x = radius * Math.cos(angle);
-                    double z = radius * Math.sin(angle);
-                    Location particleLocation = blaze.getLocation().clone().add(x, 1, z);
-
-                    blaze.getWorld().spawnParticle(Particle.LAVA, particleLocation, 2);
-
-                    blaze.getWorld().getNearbyEntities(particleLocation, 1.5, 1.5, 1.5).stream()
-                            .filter(entity -> entity instanceof Player)
-                            .map(entity -> (Player) entity)
-                            .forEach(player -> player.setFireTicks(Integer.MAX_VALUE));
-                }
-            }
-        }.runTaskTimer(plugin, 0L, 5L);
-    }
-
-
-    private void knockbackPlayer(Blaze blaze, Player player) {
-        Vector knockback = player.getLocation().toVector().subtract(blaze.getLocation().toVector()).normalize();
-
-        if (!isVectorValid(knockback)) {
-            return;
-        }
-
-        knockback.multiply(2.5);
-        player.setVelocity(knockback);
-
-        blaze.setVelocity(player.getLocation().toVector().subtract(blaze.getLocation().toVector()).normalize().multiply(0.5));
-    }
-
-    private boolean isVectorValid(Vector vector) {
-        return Double.isFinite(vector.getX()) && Double.isFinite(vector.getY()) && Double.isFinite(vector.getZ());
-    }
-
-    private List<Player> getNearbyPlayers(World world, Location location, double radius) {
-        return world.getPlayers().stream()
-                .filter(player -> player.getLocation().distance(location) <= radius)
-                .filter(player -> player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR)
-                .toList();
+    private int getRandomNetheriteScrapAmount() {
+        int randomValue = random.nextInt(100);
+        if (randomValue < 50) return 1;
+        if (randomValue < 80) return 2;
+        return 3;
     }
 
     private boolean isGuardianBlaze(Blaze blaze) {
-        return blaze.getPersistentDataContainer().has(blazeRootKey, PersistentDataType.BYTE);
+        return blaze.getPersistentDataContainer().has(guardianblazeKey, PersistentDataType.BYTE);
     }
 }

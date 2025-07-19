@@ -39,11 +39,9 @@ public class BonusAnimation {
                     return;
                 }
 
-                // frame actual con interpolación
                 String unicodeFrame = String.valueOf((char) (FRAME_PREFIX.codePointAt(0) + frame));
                 player.sendTitle(unicodeFrame, "", 0, 20, 0);
 
-                // Calcula y avanza frames suavemente
                 accumulatedFrames += framesPerTick;
                 while (accumulatedFrames >= 1) {
                     frame++;

@@ -2,13 +2,16 @@ package Dificultades.CustomMobs;
 
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.world.WorldLoadEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -29,7 +32,6 @@ public class GuardianCorruptedSkeleton implements Listener {
     private final NamespacedKey guardianProjectileKey;
     private final Random random = new Random();
     private boolean eventsRegistered = false;
-    // Para gestionar el runnable de cada esqueleto
     private final Map<Creature, Integer> skeletonTasks = new HashMap<>();
 
     public GuardianCorruptedSkeleton(JavaPlugin plugin) {
@@ -54,7 +56,6 @@ public class GuardianCorruptedSkeleton implements Listener {
                     }
                 }
             }
-            // Cancelamos runnables pendientes
             for (Integer taskId : skeletonTasks.values()) {
                 Bukkit.getScheduler().cancelTask(taskId);
             }
@@ -75,13 +76,13 @@ public class GuardianCorruptedSkeleton implements Listener {
 
     private void applyGuardianCorruptedSkeletonAttributes(WitherSkeleton skeleton) {
         skeleton.setCustomName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Guardian Corrupted Skeleton");
-        skeleton.setCustomNameVisible(true);
-        // Establecemos salud y daño
+        skeleton.setCustomNameVisible(false);
+
         Objects.requireNonNull(skeleton.getAttribute(Attribute.GENERIC_MAX_HEALTH)).setBaseValue(30.0);
         skeleton.setHealth(30.0);
-        Objects.requireNonNull(skeleton.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE)).setBaseValue(10.0);
+        Objects.requireNonNull(skeleton.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE)).setBaseValue(6.0);
         skeleton.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, 0));
-        // Marcamos al esqueleto como corrupto
+
         skeleton.getPersistentDataContainer().set(gcorruptedskelKey, PersistentDataType.BYTE, (byte) 1);
         startSkullRunnable(skeleton);
     }
@@ -94,20 +95,20 @@ public class GuardianCorruptedSkeleton implements Listener {
     private void startSkullRunnable(WitherSkeleton skeleton) {
         int taskId = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (skeleton == null || skeleton.isDead() || !isCorruptedWither(skeleton)) {
-                // Cancelamos el runnable si el esqueleto ya no es válido
                 skeletonTasks.remove(skeleton);
                 return;
             }
 
-            if (skeleton.getTarget() instanceof Player player) {
-                // Solo lanza si el jugador está a 15 bloques o menos
-                if (skeleton.getLocation().distance(player.getLocation()) <= 15) {
-                    if (random.nextDouble() < 0.6) {
+            // Solo atacar jugadores, no otros mobs
+            LivingEntity target = skeleton.getTarget();
+            if (target instanceof Player player) {
+                if (skeleton.getLocation().distance(player.getLocation()) <= 20) {
+                    if (random.nextDouble() < 0.5) {
                         launchSkull(skeleton, player);
                     }
                 }
             }
-        }, 0L, 40L).getTaskId();  // Se ejecuta cada 40 ticks (2 segundos aprox.)
+        }, 0L, 60L).getTaskId();
         skeletonTasks.put(skeleton, taskId);
     }
 
@@ -126,7 +127,6 @@ public class GuardianCorruptedSkeleton implements Listener {
         data.set(guardianProjectileKey, PersistentDataType.BYTE, (byte) 1);
         skull.setCustomName("Corrupted Skeleton Skull");
 
-        // Efectos de partículas mientras el proyectil está en el aire
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -140,7 +140,6 @@ public class GuardianCorruptedSkeleton implements Listener {
             }
         }.runTaskTimer(plugin, 0L, 1L);
 
-        // Un sonido al ser lanzado (opcional)
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (skull.isValid()) {
                 skull.getWorld().playSound(skull.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1.0F, 1.0F);
@@ -148,7 +147,6 @@ public class GuardianCorruptedSkeleton implements Listener {
         }, 5L);
     }
 
-    // Evento para cuando el proyectil (WitherSkull) impacta
     @EventHandler
     public void onSkullHit(ProjectileHitEvent event) {
         if (!(event.getEntity() instanceof WitherSkull skull)) return;
@@ -158,34 +156,60 @@ public class GuardianCorruptedSkeleton implements Listener {
         Location impactLocation = skull.getLocation();
         World world = impactLocation.getWorld();
         if (world != null) {
-            // Partículas y sonido propios para el impacto del esqueleto
             world.spawnParticle(Particle.EXPLOSION, impactLocation, 5, 0.5, 0.5, 0.5);
             world.spawnParticle(Particle.SMOKE, impactLocation, 10, 0.5, 0.5, 0.5);
             world.playSound(impactLocation, Sound.ENTITY_WITHER_HURT, 1.0F, 0.7F);
         }
 
-        if (event.getHitEntity() instanceof LivingEntity target) {
-            int duration = 200; // 10 segundos
-            int amplifier = 4;  // Wither V
-            target.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, duration, amplifier, false, true));
+        if (event.getHitEntity() instanceof WitherSkeleton hitSkeleton && isCorruptedWither(hitSkeleton)) {
+            skull.remove();
+            return;
+        }
 
+        if (event.getHitEntity() instanceof Player target) {
+            if (target.isBlocking()) {
+                skull.remove();
+                target.getWorld().playSound(target.getLocation(), Sound.ITEM_SHIELD_BLOCK, 1.0F, 1.0F);
+                return;
+            }
+
+            int duration = 200;
+            int amplifier = 4;
+            target.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, duration, amplifier, false, true));
         }
         skull.remove();
     }
 
-    // Evento para aplicar efecto en ataque cuerpo a cuerpo
+    @EventHandler
+    public void onEntityDamage(EntityDamageEvent event) {
+        if (event.getEntity() instanceof WitherSkeleton skeleton && isCorruptedWither(skeleton)) {
+
+            if (event.getCause() == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION ||
+                    event.getCause() == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    public NamespacedKey getGCSkeletonKey() {
+        return gcorruptedskelKey ;
+    }
+
     @EventHandler
     public void onSkeletonAttack(EntityDamageByEntityEvent event) {
         if (!(event.getDamager() instanceof WitherSkeleton skeleton)) return;
         if (!isCorruptedWither(skeleton)) return;
-        if (!(event.getEntity() instanceof LivingEntity target)) return;
+        if (!(event.getEntity() instanceof Player target)) return;
 
-        // Aplica Wither II durante 8 segundos (160 ticks)
+        // Verificar si el jugador está bloqueando con un escudo
+        if (target.isBlocking()) {
+            event.setCancelled(true);
+            target.getWorld().playSound(target.getLocation(), Sound.ITEM_SHIELD_BLOCK, 1.0F, 1.0F);
+            return;
+        }
         target.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 120, 2, false, true));
     }
 
-
-    // Si el esqueleto muere, cancelamos su runnable
     @EventHandler
     public void onSkeletonDeath(EntityDeathEvent event) {
         if (event.getEntity() instanceof WitherSkeleton skeleton && isCorruptedWither(skeleton)) {

@@ -27,6 +27,7 @@ public class MuerteAnimation {
 
     public synchronized void playAnimation(Player player, String jsonMessage) {
         if (ongoingAnimations == 0) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule sendCommandFeedback false");
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tick rate 30");
         }
 
@@ -66,18 +67,17 @@ public class MuerteAnimation {
                     if (!jsonMessage.isEmpty()) {
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a " + jsonMessage);
                     }
-                    // Decrementar el contador de animaciones en curso y cambiar la tasa de ticks de vuelta a 20 si no hay más animaciones en curso
                     synchronized (MuerteAnimation.this) {
                         ongoingAnimations--;
                         if (ongoingAnimations == 0) {
                             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tick rate 20");
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule sendCommandFeedback true");
                         }
                     }
                     cancel();
                     return;
                 }
 
-                // frame actual a todos los jugadores
                 String unicodeFrame = unicodeFrames.get(frameIndex);
                 String fixedFrame = "§r" + "\u2009".repeat(300) + unicodeFrame + "\u2009".repeat(300);
                 Bukkit.getOnlinePlayers().forEach(p -> p.sendTitle(fixedFrame, "", 0, 10, 0));

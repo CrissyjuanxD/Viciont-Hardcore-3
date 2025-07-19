@@ -4,7 +4,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import vct.hardcore3.DayHandler;
+import Handlers.DayHandler;
 
 public class DayCommandHandler implements CommandExecutor {
     private final DayHandler dayHandler;

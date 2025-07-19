@@ -29,8 +29,6 @@ public class PingCommand implements CommandExecutor {
         Player player = (Player) sender;
         UUID playerUUID = player.getUniqueId();
 
-
-        //ping del jugador
         int ping = player.getPing();
         player.sendMessage(ChatColor.GRAY + "Tu ping es de: " + ChatColor.LIGHT_PURPLE + ping + "ms.");
 

@@ -27,13 +27,10 @@ public class CustomDolphin implements Listener {
     public CustomDolphin(JavaPlugin plugin) {
         this.plugin = plugin;
         this.dolphinKey = new NamespacedKey(plugin, "dolphin_key");
-        Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
-    /**
-     * Método para spawnear un delfín personalizado
-     */
-    public Dolphin spawnDolphin(Location location, String type) {
+
+    public Dolphin spawnPinguin(Location location, String type) {
         Dolphin dolphin = (Dolphin) location.getWorld().spawnEntity(location, EntityType.DOLPHIN);
 
         if (type.equalsIgnoreCase("Pingo")) {
@@ -43,47 +40,39 @@ public class CustomDolphin implements Listener {
         }
         dolphin.setCustomNameVisible(true);
 
-        // Guardar el tipo en PersistentDataContainer
         dolphin.getPersistentDataContainer().set(dolphinKey, PersistentDataType.STRING, type);
 
-        // Tarea para evitar que el delfín salte en tierra firme
         new BukkitRunnable() {
             @Override
             public void run() {
                 if (dolphin.isDead() || !dolphin.isValid()) {
-                    this.cancel(); // Cancelar la tarea si el delfín está muerto o no es válido
+                    this.cancel();
                     return;
                 }
 
-                // Evitar que el delfín salte en tierra firme
                 if (!dolphin.isInWater()) {
-                    dolphin.setVelocity(new Vector(0, 0, 0)); // Detener el movimiento vertical
+                    dolphin.setVelocity(new Vector(0, 0, 0));
                 }
             }
-        }.runTaskTimer(plugin, 0L, 1L); // Ejecutar cada tick (20 veces por segundo)
+        }.runTaskTimer(plugin, 0L, 1L);
 
-        // Tarea para evitar que el delfín muera fuera del agua
         new BukkitRunnable() {
             @Override
             public void run() {
                 if (dolphin.isDead() || !dolphin.isValid()) {
-                    this.cancel(); // Cancelar la tarea si el delfín está muerto o no es válido
+                    this.cancel();
                     return;
                 }
 
-                // Curar al delfín si está en tierra firme
                 if (!dolphin.isInWater()) {
                     dolphin.setHealth(dolphin.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
                 }
             }
-        }.runTaskTimer(plugin, 0L, 20L); // Ejecutar cada segundo (20 ticks)
+        }.runTaskTimer(plugin, 0L, 20L);
 
         return dolphin;
     }
 
-    /**
-     * Si un jugador usa una nametag en un delfín, cambiar el color del nombre
-     */
     @EventHandler
     public void onPlayerNameDolphin(PlayerInteractEntityEvent event) {
         if (!(event.getRightClicked() instanceof Dolphin)) return;
@@ -103,9 +92,6 @@ public class CustomDolphin implements Listener {
         }
     }
 
-    /**
-     * Hacer que los delfines sigan a jugadores con pescado en la mano
-     */
     @EventHandler
     public void onDolphinFollowFish(EntityTargetLivingEntityEvent event) {
         if (!(event.getEntity() instanceof Dolphin)) return;
@@ -114,35 +100,29 @@ public class CustomDolphin implements Listener {
         Dolphin dolphin = (Dolphin) event.getEntity();
         Player player = (Player) event.getTarget();
 
-        // Si el jugador tiene pescado en la mano, el delfín lo sigue
         if (isHoldingFish(player)) {
             event.setCancelled(false);
             event.setTarget(player);
 
-            // Mover manualmente al delfín hacia el jugador
             new BukkitRunnable() {
                 @Override
                 public void run() {
                     if (dolphin.isDead() || !dolphin.isValid()) {
-                        this.cancel(); // Cancelar la tarea si el delfín está muerto o no es válido
+                        this.cancel();
                         return;
                     }
 
-                    // Mover al delfín hacia el jugador
                     Location playerLocation = player.getLocation();
                     Location dolphinLocation = dolphin.getLocation();
                     Vector direction = playerLocation.toVector().subtract(dolphinLocation.toVector()).normalize();
-                    dolphin.setVelocity(direction.multiply(0.5)); // Velocidad moderada
+                    dolphin.setVelocity(direction.multiply(0.5));
                 }
-            }.runTaskTimer(plugin, 0L, 10L); // Ejecutar cada medio segundo (10 ticks)
+            }.runTaskTimer(plugin, 0L, 10L);
         } else {
             event.setCancelled(true);
         }
     }
 
-    /**
-     * Verifica si un jugador sostiene cualquier tipo de pescado
-     */
     private boolean isHoldingFish(Player player) {
         Material itemInHand = player.getInventory().getItemInMainHand().getType();
         return itemInHand == Material.COD || itemInHand == Material.SALMON ||

@@ -33,11 +33,11 @@ public class chatgeneral implements Listener {
         String prefix = (team != null) ? team.getPrefix() : "";
         String suffix = (team != null) ? team.getSuffix() : "";
 
-        // Color del nombre basado en el equipo
+        // Color del nombre y prefijo basado en el equipo
         ChatColor playerNameColor = getTeamColor(team);
+        String teamPrefix = getTeamPrefix(team);
 
-        // Formatear el mensaje con colores correctos
-        String formattedMessage = prefix + playerNameColor + player.getName() + ChatColor.RESET + suffix + ChatColor.WHITE + ": " + event.getMessage();
+        String formattedMessage = teamPrefix + " " + playerNameColor + player.getName() + ChatColor.RESET + suffix + ChatColor.WHITE + ": " + event.getMessage();
 
         event.setFormat(formattedMessage);
     }
@@ -45,7 +45,7 @@ public class chatgeneral implements Listener {
     // Método para obtener el color del equipo
     private ChatColor getTeamColor(Team team) {
         if (team == null) {
-            return ChatColor.WHITE; // Si el jugador no tiene equipo, color blanco
+            return ChatColor.DARK_AQUA;
         }
         String teamName = team.getName();
 
@@ -64,8 +64,32 @@ public class chatgeneral implements Listener {
                 case "ZFantasma":
                     return ChatColor.of("#555555");
                 default:
-                    return ChatColor.RESET; // Color por defecto si no hay un equipo registrado
+                    return ChatColor.RESET;
             }
+    }
+
+    //Metodo para obtener el Prefijo del equipo.
+    private String getTeamPrefix(Team team) {
+        if (team == null) {
+            return "";
+        }
+        String teamName = team.getName();
+        switch (teamName) {
+            case "Admin":
+                return "\uEB87"; // Unicode para Admin
+            case "Mod":
+                return "\uEB88"; // Unicode para Mod
+            case "Helper":
+                return "\uEB89"; // Unicode para Helper
+            case "TSurvivor":
+                return "\uEB8A"; // Unicode para Survivor
+            case "Survivor+":
+                return "\uEB8B"; // Unicode para Survivor+
+            case "ZFantasma":
+                return "\uEB8C"; // Unicode para Fantasma
+            default:
+                return "";
+        }
     }
 
     // Mensajes de Moderacion

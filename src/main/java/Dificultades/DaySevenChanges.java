@@ -1,27 +1,27 @@
 package Dificultades;
 
+import Dificultades.CustomMobs.CorruptedCreeper;
 import Dificultades.CustomMobs.CorruptedSkeleton;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
+import Dificultades.CustomMobs.InvertedGhast;
+import Dificultades.CustomMobs.PiglinGlobo;
+import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntitySpawnEvent;
-import org.bukkit.event.entity.ProjectileLaunchEvent;
+import org.bukkit.event.entity.*;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
-import vct.hardcore3.DayHandler;
+import Handlers.DayHandler;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 public class DaySevenChanges implements Listener {
@@ -30,11 +30,17 @@ public class DaySevenChanges implements Listener {
     private boolean isApplied = false;
     private final Random random = new Random();
     private final CorruptedSkeleton corruptedSkeleton;
+    private final CorruptedCreeper corruptedCreeper;
+    private final InvertedGhast invertedGhast;
+    private final PiglinGlobo piglinGlobo;
     private final DayHandler dayHandler;
 
     public DaySevenChanges(JavaPlugin plugin, DayHandler handler) {
         this.plugin = plugin;
         this.corruptedSkeleton = new CorruptedSkeleton(plugin, handler);
+        this.corruptedCreeper = new CorruptedCreeper(plugin);
+        this.invertedGhast = new InvertedGhast(plugin);
+        this.piglinGlobo = new PiglinGlobo(plugin);
         this.dayHandler = handler;
     }
 
@@ -42,9 +48,10 @@ public class DaySevenChanges implements Listener {
         if (!isApplied) {
             Bukkit.getPluginManager().registerEvents(this, plugin);
             corruptedSkeleton.apply();
+            invertedGhast.apply();
+            piglinGlobo.apply();
             isApplied = true;
 
-            // Iniciar el chequeo periódico cada 5 segundos (100 ticks)
             new BukkitRunnable() {
                 @Override
                 public void run() {
@@ -53,13 +60,11 @@ public class DaySevenChanges implements Listener {
                         return;
                     }
 
-                    // 🔍 Revisamos cerca de cada jugador
                     for (Player player : Bukkit.getOnlinePlayers()) {
                         World world = player.getWorld();
                         Location playerLoc = player.getLocation();
 
-                        // Obtener entidades cercanas en un radio de 30 bloques
-                        world.getNearbyEntities(playerLoc, 30, 30, 30, entity ->
+                        world.getNearbyEntities(playerLoc, 60, 60, 60, entity ->
                                 entity.getType() == EntityType.CHICKEN || entity.getType() == EntityType.PIG
                         ).forEach(entity -> {
                             Location loc = entity.getLocation();
@@ -68,17 +73,16 @@ public class DaySevenChanges implements Listener {
                         });
                     }
                 }
-            }.runTaskTimer(plugin, 0L, 100L); // Repite cada 5 segundos (100 ticks)
+            }.runTaskTimer(plugin, 0L, 80L);
         }
     }
 
     public void revert() {
         if (isApplied) {
             corruptedSkeleton.revert();
-            CreatureSpawnEvent.getHandlerList().unregister(this);
-            EntitySpawnEvent.getHandlerList().unregister(this);
-            EntityDamageByEntityEvent.getHandlerList().unregister(this);
-            ProjectileLaunchEvent.getHandlerList().unregister(this);
+            invertedGhast.revert();
+            piglinGlobo.revert();
+            HandlerList.unregisterAll(this);
             isApplied = false;
         }
     }
@@ -98,8 +102,8 @@ public class DaySevenChanges implements Listener {
             }
         }
 
-        // Todos los Creepers son eléctricos
-        if (entity.getType() == EntityType.CREEPER) {
+        // Todos los Creepers son eléctricos, excepto los Corrupted Creepers
+        if (entity.getType() == EntityType.CREEPER && !corruptedCreeper.isCorruptedCreeper(entity)) {
             ((Creeper) entity).setPowered(true);
         }
 
@@ -110,25 +114,78 @@ public class DaySevenChanges implements Listener {
             entity.getWorld().spawnEntity(loc, EntityType.RAVAGER);
         }
 
-        // Verificar si el mob ya es corrupto (skeleton)
-        if (event.getEntity().getPersistentDataContainer().has(corruptedSkeleton.getCorruptedKey(), PersistentDataType.BYTE)) {
-            return; // Si ya es corrupto, no hacer nada
+        handleCorruptedSkeletonConversion(event);
+        handleGhastTransformations(event);
+
+    }
+
+    private void handleCorruptedSkeletonConversion(CreatureSpawnEvent event) {
+        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL &&
+                event.getLocation().getWorld().getEnvironment() != World.Environment.NETHER &&
+                event.getLocation().getWorld().getEnvironment() != World.Environment.THE_END) {
+            return;
         }
 
-        int currentDay = dayHandler.getCurrentDay();
-        int skeletonProbability = 25;
+        Entity entity = event.getEntity();
 
-        if (currentDay >= 7) {
-            skeletonProbability = 2;
+        // Verificar si el mob ya es corrupto
+        if (entity.getPersistentDataContainer().has(corruptedSkeleton.getCorruptedKey(), PersistentDataType.BYTE)) {
+            return;
         }
 
-        if (event.getEntityType() == EntityType.SKELETON) {
-            if (random.nextInt(skeletonProbability) == 0) {
-                Skeleton skeleton = (Skeleton) event.getEntity();
+        if (entity.getType() == EntityType.SKELETON) {
+            int day = dayHandler.getCurrentDay();
+            int chance;
+
+            if (day >= 10) {
+                chance = 4;
+            } else if (day >= 7) {
+                chance = 5;
+            } else {
+                return;
+            }
+
+            if (random.nextInt(chance) == 0) {
+                Skeleton skeleton = (Skeleton) entity;
                 corruptedSkeleton.spawnCorruptedSkeleton(skeleton.getLocation(), null);
                 skeleton.remove();
             }
         }
+    }
+
+    private void handleGhastTransformations(CreatureSpawnEvent event) {
+        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NETHER) {
+            return;
+        }
+
+        Entity entity = event.getEntity();
+
+        if (entity.getType() != EntityType.GHAST || isAlreadyCustomGhast(entity)) {
+            return;
+        }
+
+        int day = dayHandler.getCurrentDay();
+        if (day >= 7 && random.nextInt(2) == 0) {
+            Ghast ghast = (Ghast) entity;
+            PersistentDataContainer pdc = ghast.getPersistentDataContainer();
+
+            if (day >= 8 && random.nextBoolean()) {
+                // Marcar como Piglin Globo
+                pdc.set(piglinGlobo.getPiglinGloboKey(), PersistentDataType.BYTE, (byte)1);
+                piglinGlobo.spawnPiglinGlobo(ghast.getLocation());
+            } else {
+                // Marcar como Inverted Ghast (día 7 o 50% de probabilidad día 8+)
+                pdc.set(invertedGhast.getInvertedGhastKey(), PersistentDataType.BYTE, (byte)1);
+                invertedGhast.spawnInvertedGhast(ghast.getLocation());
+            }
+            ghast.remove();
+        }
+    }
+
+    private boolean isAlreadyCustomGhast(Entity ghast) {
+        // Verificar ambas keys de mobs custom
+        return ghast.getPersistentDataContainer().has(invertedGhast.getInvertedGhastKey(), PersistentDataType.BYTE) ||
+                ghast.getPersistentDataContainer().has(piglinGlobo.getPiglinGloboKey(), PersistentDataType.BYTE);
     }
 
     @EventHandler
@@ -152,22 +209,15 @@ public class DaySevenChanges implements Listener {
         if (entity.getType() == EntityType.PHANTOM) {
             if (entity instanceof Phantom) {
                 Phantom phantom = (Phantom) entity;
-                phantom.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(40.0); // Doble de la salud original
+                phantom.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(40.0);
                 phantom.setHealth(40.0);
                 phantom.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, Integer.MAX_VALUE, 2)); // Fuerza III
             }
         }
     }
 
-    @EventHandler
-    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        if (!isApplied) return;
+    //Si te pega un phantom Normal te revuelve el inventatio, no aplica para SpectralEye - SpectralEyeLv2 - DarkPhantom
 
-        if (event.getDamager() instanceof Phantom && event.getEntity() instanceof Player) {
-            Player player = (Player) event.getEntity();
-            player.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 40, 9)); // Levitación X por 2 segundos (40 ticks)
-        }
-    }
 
     @EventHandler
     public void onProjectileLaunch(ProjectileLaunchEvent event) {
@@ -176,8 +226,25 @@ public class DaySevenChanges implements Listener {
         if (event.getEntity() instanceof Fireball) {
             Fireball fireball = (Fireball) event.getEntity();
             if (fireball.getShooter() instanceof Ghast) {
-                fireball.setYield(4.0f); // Poder de explosión nivel 4
+                fireball.setYield(3.0f);
             }
+        }
+    }
+
+    @EventHandler
+    public void onEntityDeath(EntityDeathEvent event) {
+        if (!isApplied) return;
+
+        if (event.getEntityType() == EntityType.ZOMBIFIED_PIGLIN || event.getEntityType() == EntityType.PIGLIN) {
+            // Lista de items que NO queremos que dropeen
+            List<Material> bannedDrops = Arrays.asList(
+                    Material.DIAMOND_HELMET,
+                    Material.DIAMOND_CHESTPLATE,
+                    Material.DIAMOND_LEGGINGS,
+                    Material.DIAMOND_BOOTS
+            );
+            // Filtrar y eliminar los drops prohibidos
+            event.getDrops().removeIf(item -> bannedDrops.contains(item.getType()));
         }
     }
 }

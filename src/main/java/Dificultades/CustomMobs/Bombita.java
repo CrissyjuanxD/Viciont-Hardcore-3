@@ -32,12 +32,10 @@ public class Bombita implements Listener {
 
     public void revert() {
         if (eventsRegistered) {
-            // Eliminar todos los Bombitas existentes
             for (World world : Bukkit.getWorlds()) {
                 for (Entity entity : world.getEntities()) {
-                    if (entity instanceof Creeper creeper &&
-                            creeper.getPersistentDataContainer().has(bombitaKey, PersistentDataType.BYTE)) {
-                        creeper.remove();
+                    if (isBombita(entity)) {
+                        entity.remove();
                     }
                 }
             }
@@ -47,38 +45,30 @@ public class Bombita implements Listener {
 
     public Creeper spawnBombita(Location location) {
         Creeper bombita = (Creeper) location.getWorld().spawnEntity(location, EntityType.CREEPER);
-        applyCorruptedSpiderAttributes(bombita);
+        applyBombitaAttributes(bombita);
         return bombita;
     }
 
     public void transformToBombita(Creeper creeper) {
-        applyCorruptedSpiderAttributes(creeper);
+        applyBombitaAttributes(creeper);
     }
 
-    private void applyCorruptedSpiderAttributes(Creeper creeper) {
+    private void applyBombitaAttributes(Creeper creeper) {
         creeper.setCustomName(ChatColor.RED + "" + ChatColor.BOLD + "Bombita");
-        creeper.setCustomNameVisible(true);
+        creeper.setCustomNameVisible(false);
+        creeper.getAttribute(Attribute.GENERIC_FOLLOW_RANGE).setBaseValue(32);
         creeper.setExplosionRadius(2);
         creeper.setMaxFuseTicks(5);
-        creeper.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1)); // Velocidad II
-        creeper.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(0.7); // Escala del mob
-        creeper.getPersistentDataContainer().set(bombitaKey, PersistentDataType.BYTE, (byte) 1); // Marcar como Bombita
+        creeper.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, PotionEffect.INFINITE_DURATION, 1));
+        creeper.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(1.2);
+        creeper.getPersistentDataContainer().set(bombitaKey, PersistentDataType.BYTE, (byte) 1);
     }
 
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         if (event.getDamager() instanceof Creeper creeper && event.getEntity() instanceof Creeper) {
-            if (creeper.getPersistentDataContainer().has(bombitaKey, PersistentDataType.BYTE)) {
+            if (isBombita(creeper)) {
                 event.setCancelled(true);
-            }
-        }
-    }
-
-    @EventHandler
-    public void onEntityExplode(EntityExplodeEvent event) {
-        if (event.getEntity() instanceof Creeper creeper) {
-            if (creeper.getPersistentDataContainer().has(bombitaKey, PersistentDataType.BYTE)) {
-                creeper.removePotionEffect(PotionEffectType.SPEED);
             }
         }
     }
@@ -102,13 +92,20 @@ public class Bombita implements Listener {
             if (entity instanceof Creeper creeper &&
                     creeper.getCustomName() != null &&
                     creeper.getCustomName().equals(ChatColor.RED + "" + ChatColor.BOLD + "Bombita") &&
-                    !creeper.getPersistentDataContainer().has(bombitaKey, PersistentDataType.BYTE)) {
+                    !isBombita(creeper)) {
 
-                // Usa distanceSquared para evitar la raíz cuadrada
                 if (playerLocation.distanceSquared(creeper.getLocation()) <= maxDistanceSquared) {
                     transformToBombita(creeper);
                 }
             }
         }
+    }
+
+    public NamespacedKey getBombitaKey() {
+        return bombitaKey;
+    }
+
+    private boolean isBombita(Entity entity) {
+        return entity instanceof Creeper && entity.getPersistentDataContainer().has(bombitaKey, PersistentDataType.BYTE);
     }
 }
