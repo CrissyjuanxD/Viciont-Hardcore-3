@@ -29,7 +29,8 @@ public class EnderiteTools {
                 LORE_COLOR + "Forjada con los restos de",
                 LORE_COLOR + "criaturas del End.",
                 "",
-                SECONDARY_COLOR + "» Daño: " + ChatColor.WHITE + "10"
+                SECONDARY_COLOR + "» Daño: " + ChatColor.WHITE + "10",
+                SECONDARY_COLOR + "» Velocidad de ataque: " + ChatColor.WHITE + "1.7"
         ));
 
         // Atributos mejorados (+2 sobre netherite)
@@ -44,10 +45,11 @@ public class EnderiteTools {
         meta.addAttributeModifier(Attribute.GENERIC_ATTACK_SPEED, new AttributeModifier(
                 UUID.randomUUID(),
                 "attack_speed",
-                -2.4,  // Velocidad de ataque
+                -2.3,  // Velocidad de ataque
                 AttributeModifier.Operation.ADD_NUMBER,
                 EquipmentSlot.HAND
         ));
+
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         meta.setCustomModelData(2); // Modelo custom para texturas
         item.setItemMeta(meta);
@@ -65,7 +67,8 @@ public class EnderiteTools {
                 LORE_COLOR + "criaturas del End.",
                 "",
                 SECONDARY_COLOR + "» Daño: " + ChatColor.WHITE + "11",
-                SECONDARY_COLOR + "» Velocidad: " + ChatColor.WHITE + "+1"
+                SECONDARY_COLOR + "» Velocidad de ataque: " + ChatColor.WHITE + "0.9",
+                SECONDARY_COLOR + "» Eficiencia al minar: " + ChatColor.WHITE + "+1"
 
         ));
 
@@ -80,7 +83,7 @@ public class EnderiteTools {
         meta.addAttributeModifier(Attribute.GENERIC_ATTACK_SPEED, new AttributeModifier(
                 UUID.randomUUID(),
                 "attack_speed",
-                -3.2,
+                -3.1,
                 AttributeModifier.Operation.ADD_NUMBER,
                 EquipmentSlot.HAND
         ));
@@ -93,6 +96,7 @@ public class EnderiteTools {
                 EquipmentSlot.HAND
         ));
 
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         meta.setCustomModelData(3);
         item.setItemMeta(meta);
         return item;
@@ -108,7 +112,7 @@ public class EnderiteTools {
                 LORE_COLOR + "Forjada con los restos de",
                 LORE_COLOR + "criaturas del End.",
                 "",
-                SECONDARY_COLOR + "» Velocidad: " + ChatColor.WHITE + "+1"
+                SECONDARY_COLOR + "» Eficiencia al minar: " + ChatColor.WHITE + "+1"
         ));
 
         // Atributo de eficiencia mejorada
@@ -136,7 +140,7 @@ public class EnderiteTools {
                 LORE_COLOR + "Forjada con los restos de",
                 LORE_COLOR + "criaturas del End.",
                 "",
-                SECONDARY_COLOR + "» Velocidad: " + ChatColor.WHITE + "+1"
+                SECONDARY_COLOR + "» Eficiencia al minar: " + ChatColor.WHITE + "+1"
         ));
 
         meta.addAttributeModifier(Attribute.PLAYER_BLOCK_BREAK_SPEED, new AttributeModifier(
@@ -162,7 +166,7 @@ public class EnderiteTools {
                 LORE_COLOR + "Forjada con los restos de",
                 LORE_COLOR + "criaturas del End.",
                 "",
-                SECONDARY_COLOR + "» Rango: " + ChatColor.WHITE + "+3"
+                SECONDARY_COLOR + "» Rango de ataque: " + ChatColor.WHITE + "+3"
         ));
 
         meta.addAttributeModifier(Attribute.PLAYER_ENTITY_INTERACTION_RANGE, new AttributeModifier(

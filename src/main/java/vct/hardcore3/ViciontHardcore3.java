@@ -1,6 +1,7 @@
 package vct.hardcore3;
 
 import Blocks.Endstalactitas;
+import Blocks.GuardianShulkerHeart;
 import Commands.*;
 import Dificultades.*;
 import Dificultades.CustomMobs.*;
@@ -61,6 +62,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private DayTwelveChanges dayTwelveChanges;
     private DayThirteenChanges dayThirteenChanges;
     private DayFourteenChanges dayFourteenChanges;
+    private DayFifteenChanges dayFifteenChanges;
     private DaySixteenChanges daySixteenChanges;
 
     // Manejadores de totems e items
@@ -108,11 +110,13 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     // Bloques
 
     private Endstalactitas endstalactitas;
+    private GuardianShulkerHeart guardianShulkerHeart;
 
-    // Armors
+    // Armors Y Herramentas
 
     private NightVisionHelmet nightVisionHelmet;
     private CorruptedArmor corruptedArmor;
+    private EnderiteSwordListener enderiteSwordListener;
 
     // Dimension
 
@@ -270,6 +274,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         dayTwelveChanges = new DayTwelveChanges(this, dayHandler);
         dayThirteenChanges = new DayThirteenChanges(this, dayHandler);
         dayFourteenChanges = new DayFourteenChanges(this, dayHandler);
+        dayFifteenChanges = new DayFifteenChanges(this, dayHandler);
         daySixteenChanges = new DaySixteenChanges(this, dayHandler);
 
 
@@ -370,7 +375,9 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
         //Manejador de bloques
         endstalactitas = new Endstalactitas(this);
+        guardianShulkerHeart = new GuardianShulkerHeart(this);
         getServer().getPluginManager().registerEvents(endstalactitas, this);
+        getServer().getPluginManager().registerEvents(guardianShulkerHeart, this);
 
         //Instancias y registros mobs
         corruptedZombies = new CorruptedZombies(this);
@@ -391,8 +398,10 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         //Armors
         nightVisionHelmet = new NightVisionHelmet(this);
         corruptedArmor = new CorruptedArmor(this);
+        enderiteSwordListener = new EnderiteSwordListener(this);
         getServer().getPluginManager().registerEvents(nightVisionHelmet,this);
         getServer().getPluginManager().registerEvents(corruptedArmor,this);
+        getServer().getPluginManager().registerEvents(enderiteSwordListener, this);
 
         //Dimensiones Corrupted End
 

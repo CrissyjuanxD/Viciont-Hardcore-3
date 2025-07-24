@@ -380,13 +380,8 @@ public class DayEightChanges implements Listener {
             event.getBlock().getWorld().dropItemNaturally(event.getBlock().getLocation(), corruptedancientdebris);
 
             if (random.nextDouble() <= 0.20) {
-                String[] mobs = {"netheritevexguardian"};
-                String randomMob = mobs[(int) (Math.random() * mobs.length)];
-
                 Location loc = event.getBlock().getLocation();
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                        "spawnvct " + randomMob + " " +
-                                loc.getX() + " " + loc.getY() + " " + loc.getZ());
+                netheriteVexGuardian.spawnNetheriteVexGuardian(loc);
             }
         }
     }

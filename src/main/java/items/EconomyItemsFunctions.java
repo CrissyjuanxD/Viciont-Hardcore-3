@@ -4,9 +4,11 @@ import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import net.md_5.bungee.api.ChatColor;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
@@ -27,6 +29,7 @@ public class EconomyItemsFunctions implements Listener {
     private final Map<UUID, String> mochilasAbiertas = new ConcurrentHashMap<>();
     private final Set<UUID> cooldownGancho = ConcurrentHashMap.newKeySet();
     private final Map<String, ItemStack[]> mochilasCache = new ConcurrentHashMap<>();
+    private final Map<UUID, Boolean> mochilasGuardando = new ConcurrentHashMap<>();
 
     public EconomyItemsFunctions(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -72,6 +75,11 @@ public class EconomyItemsFunctions implements Listener {
         if (item == null || !event.getAction().toString().contains("RIGHT")) return;
 
         Player player = event.getPlayer();
+
+        if (mochilasGuardando.getOrDefault(player.getUniqueId(), false)) {
+            event.setCancelled(true);
+            return;
+        }
 
         // Ender Bag
         if (isEnderBag(item)) {
@@ -126,7 +134,10 @@ public class EconomyItemsFunctions implements Listener {
     private boolean isMochila(ItemStack item) {
         if (item == null || item.getType() != Material.ECHO_SHARD) return false;
         ItemMeta meta = item.getItemMeta();
-        return meta != null && meta.hasCustomModelData() && meta.getCustomModelData() == 2020;
+        if (meta == null || !meta.hasCustomModelData()) return false;
+
+        int customModelData = meta.getCustomModelData();
+        return customModelData >= 2020 && customModelData <= 2027;
     }
 
     private boolean isGancho(ItemStack item) {
@@ -154,32 +165,67 @@ public class EconomyItemsFunctions implements Listener {
     }
 
     private void abrirMochila(Player player, ItemStack mochila) {
+        if (mochilasGuardando.getOrDefault(player.getUniqueId(), false)) {
+            player.sendMessage(ChatColor.RED + "Espera un momento antes de abrir la mochila nuevamente");
+            return;
+        }
+
         String mochilaId = getMochilaId(mochila);
         if (mochilaId == null) {
-            mochilaId = UUID.randomUUID().toString();
-            setMochilaId(mochila, mochilaId);
+            if (isNewMochila(mochila)) {
+                mochilaId = UUID.randomUUID().toString();
+                setMochilaId(mochila, mochilaId);
+                plugin.getLogger().info("Nueva mochila creada con ID: " + mochilaId);
+            } else {
+                player.sendMessage(ChatColor.RED + "Error: Esta mochila no tiene un ID válido");
+                return;
+            }
         }
 
         mochilasAbiertas.put(player.getUniqueId(), mochilaId);
-        Inventory mochilaInv = Bukkit.createInventory(null, 27, "Mochila " + mochilaId.substring(0, 4));
+        ChatColor color = getMochilaColor(mochila);
+        String guiTitle = color + "" + ChatColor.BOLD + "Mochila";
 
-        // Cargar desde cache o base de datos
+        Inventory mochilaInv = Bukkit.createInventory(null, 27, guiTitle);
+
         if (mochilasCache.containsKey(mochilaId)) {
-            mochilaInv.setContents(mochilasCache.get(mochilaId));
+            mochilaInv.setContents(Arrays.copyOf(mochilasCache.get(mochilaId), 27));
         } else {
             try {
                 ItemStack[] items = cargarMochila(mochilaId);
                 if (items != null) {
                     mochilaInv.setContents(items);
-                    mochilasCache.put(mochilaId, items);
+                    mochilasCache.put(mochilaId, Arrays.copyOf(items, 27));
                 }
             } catch (SQLException e) {
-                e.printStackTrace();
+                player.sendMessage(ChatColor.RED + "Error al cargar la mochila");
+                plugin.getLogger().severe("Error al cargar mochila " + mochilaId + ": " + e.getMessage());
+                return;
             }
         }
 
         player.playSound(player.getLocation(), Sound.ITEM_BUNDLE_DROP_CONTENTS, 2.0f, 1.0f);
         player.openInventory(mochilaInv);
+    }
+
+    private boolean isNewMochila(ItemStack mochila) {
+        return true;
+    }
+
+    public ChatColor getMochilaColor(ItemStack mochila) {
+        ItemMeta meta = mochila.getItemMeta();
+        if (meta == null || !meta.hasCustomModelData()) return ChatColor.of("#ffffcc");
+
+        switch (meta.getCustomModelData()) {
+            case 2021: return ChatColor.GREEN;
+            case 2022: return ChatColor.RED;
+            case 2023: return ChatColor.BLUE;
+            case 2024: return ChatColor.DARK_PURPLE;
+            case 2025: return ChatColor.BLACK;
+            case 2026: return ChatColor.WHITE;
+            case 2027: return ChatColor.YELLOW;
+            default: return ChatColor.of("#ffffcc");
+        }
     }
 
     private void usarGancho(Player player, ItemStack gancho) {
@@ -188,7 +234,6 @@ public class EconomyItemsFunctions implements Listener {
             return;
         }
 
-        // Aplicar cooldown
         cooldownGancho.add(playerId);
         player.setCooldown(Material.FISHING_ROD, 40);
         new BukkitRunnable() {
@@ -198,7 +243,6 @@ public class EconomyItemsFunctions implements Listener {
             }
         }.runTaskLater(plugin, 40);
 
-        // Reducir durabilidad
         if (gancho.getDurability() < gancho.getType().getMaxDurability()) {
             gancho.setDurability((short) (gancho.getDurability() + 1));
         } else {
@@ -207,8 +251,7 @@ public class EconomyItemsFunctions implements Listener {
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
         }
 
-        // Lanzar al jugador
-        Vector direction = player.getLocation().getDirection().normalize().multiply(1.5);
+        Vector direction = player.getLocation().getDirection().normalize().multiply(1.6);
         player.setVelocity(direction);
         player.playSound(player.getLocation(), Sound.ENTITY_FISHING_BOBBER_RETRIEVE, 1.0f, 1.5f);
     }
@@ -216,7 +259,6 @@ public class EconomyItemsFunctions implements Listener {
     private void usarYunque(Player player, ItemStack yunque, double porcentaje) {
         repararArmadura(player, porcentaje);
 
-        // Consumir el yunque
         if (yunque.getAmount() > 1) {
             yunque.setAmount(yunque.getAmount() - 1);
         } else {
@@ -229,7 +271,6 @@ public class EconomyItemsFunctions implements Listener {
     private void usarManzanaPanico(Player player, ItemStack manzana) {
         EconomyItems.applyPanicAppleEffects(player);
 
-        // Consumir la manzana
         if (manzana.getAmount() > 1) {
             manzana.setAmount(manzana.getAmount() - 1);
         } else {
@@ -254,12 +295,9 @@ public class EconomyItemsFunctions implements Listener {
         player.getInventory().setArmorContents(armadura);
     }
 
-    // Manejo de mochilas
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player)) return;
-        String title = event.getView().getTitle();
-        if (!title.startsWith("Mochila ")) return;
 
         Player player = (Player) event.getPlayer();
         UUID playerId = player.getUniqueId();
@@ -268,19 +306,27 @@ public class EconomyItemsFunctions implements Listener {
             String mochilaId = mochilasAbiertas.get(playerId);
             ItemStack[] contents = event.getInventory().getContents();
 
-            // Actualizar cache
+            mochilasGuardando.put(playerId, true);
+
             mochilasCache.put(mochilaId, contents);
 
-            // Guardar en base de datos async
             Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
                 try {
                     guardarMochila(mochilaId, contents);
+                    plugin.getLogger().info("Mochila " + mochilaId + " guardada correctamente");
                 } catch (SQLException e) {
-                    e.printStackTrace();
+                    plugin.getLogger().severe("Error al guardar mochila " + mochilaId + ": " + e.getMessage());
+                } finally {
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            mochilasGuardando.remove(playerId);
+                            mochilasAbiertas.remove(playerId);
+                        }
+                    }.runTaskLater(plugin, 5L);
                 }
             });
 
-            mochilasAbiertas.remove(playerId);
             player.playSound(player.getLocation(), Sound.ITEM_BUNDLE_REMOVE_ONE, 2.0f, 1.0f);
         }
     }
@@ -288,11 +334,11 @@ public class EconomyItemsFunctions implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) return;
+
         Player player = (Player) event.getWhoClicked();
         String title = event.getView().getTitle();
 
-        if (title.startsWith("Mochila ")) {
-            // Prevenir mover mochilas dentro de mochilas
+        if (title.contains("Mochila")) {
             if (event.getCurrentItem() != null && isMochila(event.getCurrentItem())) {
                 event.setCancelled(true);
             }
@@ -328,46 +374,95 @@ public class EconomyItemsFunctions implements Listener {
         }
     }
 
+    private void updateMochilaInInventory(ItemStack mochila, String id) {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            for (ItemStack item : player.getInventory().getContents()) {
+                if (item != null && item.isSimilar(mochila)) {
+                    setMochilaId(item, id);
+                }
+            }
+        }
+    }
+
     // Métodos para manejar IDs de mochilas
     private String getMochilaId(ItemStack mochila) {
+        if (mochila == null) return null;
+
         ItemMeta meta = mochila.getItemMeta();
         if (meta == null) return null;
+
         List<String> lore = meta.getLore();
         if (lore == null || lore.isEmpty()) return null;
 
-        // Buscar línea con el ID
+        // Buscar línea con el ID (ahora más flexible)
         for (String line : lore) {
-            if (line.startsWith(ChatColor.DARK_PURPLE + "ID:")) {
-                return line.substring(line.indexOf(":") + 2).trim();
+            if (line.toLowerCase().contains("id:")) {
+                String id = ChatColor.stripColor(line).split(":")[1].trim();
+                try {
+                    UUID.fromString(id);
+                    return id;
+                } catch (IllegalArgumentException e) {
+                    return null;
+                }
             }
         }
         return null;
     }
 
     private void setMochilaId(ItemStack mochila, String id) {
+        if (mochila == null || id == null) return;
+
         ItemMeta meta = mochila.getItemMeta();
         if (meta == null) return;
 
         List<String> lore = meta.getLore();
         if (lore == null) lore = new ArrayList<>();
 
-        // Añadir o actualizar línea de ID
         boolean found = false;
         for (int i = 0; i < lore.size(); i++) {
-            if (lore.get(i).startsWith(ChatColor.DARK_PURPLE + "ID:")) {
-                lore.set(i, ChatColor.DARK_PURPLE + "ID: " + id);
+            if (lore.get(i).toLowerCase().contains("id:")) {
+                lore.set(i, ChatColor.DARK_GRAY + "ID: " + ChatColor.GRAY + id);
                 found = true;
                 break;
             }
         }
 
         if (!found) {
-            lore.add(ChatColor.DARK_PURPLE + "ID: " + id);
+            lore.add(ChatColor.DARK_GRAY + "ID: " + ChatColor.GRAY + id);
         }
 
         meta.setLore(lore);
         mochila.setItemMeta(meta);
+
+        updateMochilaInInventory(mochila, id);
     }
+
+    @EventHandler
+    public void onAnvilRename(PrepareAnvilEvent event) {
+        ItemStack result = event.getResult();
+        if (result == null || !isMochila(result)) return;
+
+        ItemStack mochila = event.getInventory().getItem(0);
+        if (mochila == null || !isMochila(mochila)) return;
+
+        // Obtener el color de la mochila
+        ChatColor color = getMochilaColor(mochila);
+
+        // Aplicar el color al nombre
+        ItemMeta meta = result.getItemMeta();
+        if (meta == null) return;
+
+        if (meta.hasDisplayName()) {
+            String nombre = meta.getDisplayName();
+            // Si el nombre no empieza con el código de color, lo añadimos
+            if (!nombre.startsWith(color.toString())) {
+                meta.setDisplayName(color + nombre.replaceAll("^§[0-9a-fk-or]", ""));
+                result.setItemMeta(meta);
+                event.setResult(result);
+            }
+        }
+    }
+
 
     // Métodos de base de datos mejorados
     private ItemStack[] cargarMochila(String mochilaId) throws SQLException {
@@ -378,12 +473,12 @@ public class EconomyItemsFunctions implements Listener {
                 return ItemSerializer.deserialize(rs.getString("items"));
             }
         }
-        return new ItemStack[27]; // Mochila vacía si no existe
+        return new ItemStack[27];
     }
 
     private void guardarMochila(String mochilaId, ItemStack[] items) throws SQLException {
         if (connection == null || connection.isClosed()) {
-            setupDatabase(); // Reconectar si es necesario
+            setupDatabase();
         }
 
         String serialized = ItemSerializer.serialize(items);
@@ -401,7 +496,6 @@ public class EconomyItemsFunctions implements Listener {
     public void onDisable() {
         plugin.getLogger().info("Guardando mochilas...");
 
-        // Guardar todas las mochilas abiertas primero
         for (Map.Entry<UUID, String> entry : mochilasAbiertas.entrySet()) {
             Player player = Bukkit.getPlayer(entry.getKey());
             if (player != null) {
@@ -412,7 +506,6 @@ public class EconomyItemsFunctions implements Listener {
             }
         }
 
-        // Guardar cache
         for (Map.Entry<String, ItemStack[]> entry : mochilasCache.entrySet()) {
             try {
                 guardarMochila(entry.getKey(), entry.getValue());
@@ -421,7 +514,6 @@ public class EconomyItemsFunctions implements Listener {
             }
         }
 
-        // Cerrar conexión
         try {
             if (connection != null && !connection.isClosed()) {
                 connection.close();

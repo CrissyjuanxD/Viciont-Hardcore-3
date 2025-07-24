@@ -104,20 +104,7 @@ public class DayThirteenChanges implements Listener {
     @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (!isApplied) return;
-
-        // Solo procesar endermans en el End
-        if (event.getEntityType() != EntityType.ENDERMAN ||
-                event.getLocation().getWorld().getEnvironment() != World.Environment.THE_END) {
-            return;
-        }
-
-        // Verificar si ya es un mob especial
-        if (isSpecialMob(event.getEntity())) {
-            return;
-        }
-
         handleRandomMobConversion(event);
-
         handleSpectralEyeConversion(event);
     }
 
@@ -132,6 +119,17 @@ public class DayThirteenChanges implements Listener {
     }
 
     private void handleRandomMobConversion(CreatureSpawnEvent event) {
+
+        if (event.getEntityType() != EntityType.ENDERMAN ||
+                event.getLocation().getWorld().getEnvironment() != World.Environment.THE_END) {
+            return;
+        }
+
+        // Verificar si ya es un mob especial
+        if (isSpecialMob(event.getEntity())) {
+            return;
+        }
+
         Enderman enderman = (Enderman) event.getEntity();
         Location loc = enderman.getLocation();
 
@@ -353,7 +351,7 @@ public class DayThirteenChanges implements Listener {
         tnt.getPersistentDataContainer().set(shulkerTNTKey, PersistentDataType.BYTE, (byte) 1);
 
         // 30% de probabilidad de dropear Shulker Shell
-        if (Math.random() > 0.35) {
+        if (Math.random() > 0.40) {
             event.getDrops().removeIf(item -> item.getType() == Material.SHULKER_SHELL);
         }
     }

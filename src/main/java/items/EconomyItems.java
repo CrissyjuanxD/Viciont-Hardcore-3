@@ -55,7 +55,7 @@ public class EconomyItems {
         return item;
     }
 
-    public static ItemStack createMochila() {
+    public static ItemStack createNormalMochila() {
         ItemStack item = new ItemStack(Material.ECHO_SHARD);
         ItemMeta meta = item.getItemMeta();
 
@@ -64,7 +64,138 @@ public class EconomyItems {
 
         List<String> lore = new ArrayList<>();
         lore.add(" ");
-        lore.add(ChatColor.of("#33cccc") + "Inventario adicional");
+        lore.add(ChatColor.GRAY + "Uso:");
+        lore.add(ChatColor.GRAY + "> " + ChatColor.WHITE + "Click derecho");
+        lore.add(" ");
+
+        meta.setLore(lore);
+        meta.setRarity(ItemRarity.EPIC);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public static ItemStack createGreenMochila() {
+        ItemStack item = new ItemStack(Material.ECHO_SHARD);
+        ItemMeta meta = item.getItemMeta();
+
+        meta.setDisplayName(ChatColor.GREEN + "" + ChatColor.BOLD + "Mochila");
+        meta.setCustomModelData(2021);
+
+        List<String> lore = new ArrayList<>();
+        lore.add(" ");
+        lore.add(ChatColor.GRAY + "Uso:");
+        lore.add(ChatColor.GRAY + "> " + ChatColor.WHITE + "Click derecho");
+        lore.add(" ");
+
+        meta.setLore(lore);
+        meta.setRarity(ItemRarity.EPIC);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public static ItemStack createRedMochila() {
+        ItemStack item = new ItemStack(Material.ECHO_SHARD);
+        ItemMeta meta = item.getItemMeta();
+
+        meta.setDisplayName(ChatColor.RED + "" + ChatColor.BOLD + "Mochila");
+        meta.setCustomModelData(2022);
+
+        List<String> lore = new ArrayList<>();
+        lore.add(" ");
+        lore.add(ChatColor.GRAY + "Uso:");
+        lore.add(ChatColor.GRAY + "> " + ChatColor.WHITE + "Click derecho");
+        lore.add(" ");
+
+        meta.setLore(lore);
+        meta.setRarity(ItemRarity.EPIC);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public static ItemStack createBlueMochila() {
+        ItemStack item = new ItemStack(Material.ECHO_SHARD);
+        ItemMeta meta = item.getItemMeta();
+
+        meta.setDisplayName(ChatColor.BLUE + "" + ChatColor.BOLD + "Mochila");
+        meta.setCustomModelData(2023);
+
+        List<String> lore = new ArrayList<>();
+        lore.add(" ");
+        lore.add(ChatColor.GRAY + "Uso:");
+        lore.add(ChatColor.GRAY + "> " + ChatColor.WHITE + "Click derecho");
+        lore.add(" ");
+
+        meta.setLore(lore);
+        meta.setRarity(ItemRarity.EPIC);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public static ItemStack createPurpleMochila() {
+        ItemStack item = new ItemStack(Material.ECHO_SHARD);
+        ItemMeta meta = item.getItemMeta();
+
+        meta.setDisplayName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Mochila");
+        meta.setCustomModelData(2024);
+
+        List<String> lore = new ArrayList<>();
+        lore.add(" ");
+        lore.add(ChatColor.GRAY + "Uso:");
+        lore.add(ChatColor.GRAY + "> " + ChatColor.WHITE + "Click derecho");
+        lore.add(" ");
+
+        meta.setLore(lore);
+        meta.setRarity(ItemRarity.EPIC);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public static ItemStack createBlackMochila() {
+        ItemStack item = new ItemStack(Material.ECHO_SHARD);
+        ItemMeta meta = item.getItemMeta();
+
+        meta.setDisplayName(ChatColor.BLACK + "" + ChatColor.BOLD + "Mochila");
+        meta.setCustomModelData(2025);
+
+        List<String> lore = new ArrayList<>();
+        lore.add(" ");
+        lore.add(ChatColor.GRAY + "Uso:");
+        lore.add(ChatColor.GRAY + "> " + ChatColor.WHITE + "Click derecho");
+        lore.add(" ");
+
+        meta.setLore(lore);
+        meta.setRarity(ItemRarity.EPIC);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public static ItemStack createWhiteMochila() {
+        ItemStack item = new ItemStack(Material.ECHO_SHARD);
+        ItemMeta meta = item.getItemMeta();
+
+        meta.setDisplayName(ChatColor.WHITE + "" + ChatColor.BOLD + "Mochila");
+        meta.setCustomModelData(2026);
+
+        List<String> lore = new ArrayList<>();
+        lore.add(" ");
+        lore.add(ChatColor.GRAY + "Uso:");
+        lore.add(ChatColor.GRAY + "> " + ChatColor.WHITE + "Click derecho");
+        lore.add(" ");
+
+        meta.setLore(lore);
+        meta.setRarity(ItemRarity.EPIC);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public static ItemStack createYellowMochila() {
+        ItemStack item = new ItemStack(Material.ECHO_SHARD);
+        ItemMeta meta = item.getItemMeta();
+
+        meta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.BOLD + "Mochila");
+        meta.setCustomModelData(2027);
+
+        List<String> lore = new ArrayList<>();
         lore.add(" ");
         lore.add(ChatColor.GRAY + "Uso:");
         lore.add(ChatColor.GRAY + "> " + ChatColor.WHITE + "Click derecho");

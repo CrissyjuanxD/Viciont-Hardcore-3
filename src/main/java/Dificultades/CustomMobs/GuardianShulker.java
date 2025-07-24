@@ -1,5 +1,6 @@
 package Dificultades.CustomMobs;
 
+import items.EndItems;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.boss.BarColor;
@@ -90,6 +91,7 @@ public class GuardianShulker implements Listener {
         shulker.setHealth(300);
         shulker.getAttribute(Attribute.GENERIC_ARMOR).setBaseValue(10);
         shulker.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).setBaseValue(1.0);
+        shulker.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(2.0);
 
         // Configurar para que siempre esté abierto
         shulker.setPeek(1.0f);
@@ -626,8 +628,12 @@ public class GuardianShulker implements Listener {
             Shulker shulker = (Shulker) event.getEntity();
             UUID shulkerId = shulker.getUniqueId();
             // Limpiar drops
-            event.getDrops().clear();
-            event.setDroppedExp(0);
+            event.setDroppedExp(100);
+
+            int amount = random.nextInt(2) + 1;
+            for (int i = 0; i < amount; i++) {
+                shulker.getWorld().dropItemNaturally(shulker.getLocation(), EndItems.createGuardianShulkerShell());
+            }
 
             // Limpiar boss bar
             if (bossBars.containsKey(shulkerId)) {
@@ -652,5 +658,9 @@ public class GuardianShulker implements Listener {
     public boolean isGuardianShulker(Entity entity) {
         return entity instanceof Shulker &&
                 entity.getPersistentDataContainer().has(guardianShulkerKey, PersistentDataType.BYTE);
+    }
+
+    public NamespacedKey getGuardianShulkerKey() {
+        return guardianShulkerKey;
     }
 }

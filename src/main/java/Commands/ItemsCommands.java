@@ -3,6 +3,8 @@ package Commands;
 import Armors.CopperArmor;
 import Armors.CorruptedArmor;
 import Blocks.CorruptedAncientDebris;
+import Blocks.Endstalactitas;
+import Blocks.GuardianShulkerHeart;
 import Dificultades.CustomMobs.CustomBoat;
 import Dificultades.CustomMobs.QueenBeeHandler;
 import Dificultades.DayFourChanges;
@@ -37,6 +39,7 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
     private final CorruptedUpgrades corruptedUpgrades;
     private final CorruptedSoul corruptedSoul;
     private final CorruptedAncientDebris corruptedAncientDebris;
+    private final GuardianShulkerHeart guardianShulkerHeart;
     private final CustomBoat customBoat;
 
     public ItemsCommands(ViciontHardcore3 plugin) {
@@ -52,6 +55,7 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
         this.corruptedUpgrades = new CorruptedUpgrades(plugin);
         this.corruptedSoul = new CorruptedSoul(plugin);
         this.corruptedAncientDebris = new CorruptedAncientDebris(plugin);
+        this.guardianShulkerHeart = new GuardianShulkerHeart(plugin);
         this.customBoat = new CustomBoat(plugin);
         plugin.getCommand("givevct").setExecutor(this);
         plugin.getCommand("givevct").setTabCompleter(this);
@@ -303,10 +307,22 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
                 item = corruptedSoul.createCorruptedSoulEssence();
                 item.setAmount(cantidad);
                 break;
+
+                //BLOQUES
             case "corrupted_ancient_debris":
                 item = corruptedAncientDebris.createcorruptedancientdebris();
                 item.setAmount(cantidad);
                 break;
+            case "guardian_shulker_heart":
+                item = guardianShulkerHeart.createGuardianShulkerHeart();
+                item.setAmount(cantidad);
+                break;
+            case "endstalactitas":
+                item = Endstalactitas.createEndstalactita();
+                item.setAmount(cantidad);
+                break;
+
+                //VARIOS
             case "ultracorruptedspidereye":
                 item = ItemsTotems.createUltraCorruptedSpiderEye();
                 item.setAmount(cantidad);
@@ -356,7 +372,7 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
                 item.setAmount(cantidad);
                 break;
             case "end_amatist":
-                item = EndItems.createEndAmatist();
+                item = EndItems.createEndAmatist(cantidad);
                 item.setAmount(cantidad);
                 break;
             case "enderite_ingot":
@@ -378,7 +394,35 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
                 item.setAmount(cantidad);
                 break;
             case "mochila":
-                item = EconomyItems.createMochila();
+                item = EconomyItems.createNormalMochila();
+                item.setAmount(cantidad);
+                break;
+            case "mochila_verde":
+                item = EconomyItems.createGreenMochila();
+                item.setAmount(cantidad);
+                break;
+            case "mochila_roja":
+                item = EconomyItems.createRedMochila();
+                item.setAmount(cantidad);
+                break;
+            case "mochila_azul":
+                item = EconomyItems.createBlueMochila();
+                item.setAmount(cantidad);
+                break;
+            case "mochila_morada":
+                item = EconomyItems.createPurpleMochila();
+                item.setAmount(cantidad);
+                break;
+            case "mochila_negra":
+                item = EconomyItems.createBlackMochila();
+                item.setAmount(cantidad);
+                break;
+            case "mochila_blanca":
+                item = EconomyItems.createWhiteMochila();
+                item.setAmount(cantidad);
+                break;
+            case "mochila_amarilla":
+                item = EconomyItems.createYellowMochila();
                 item.setAmount(cantidad);
                 break;
             case "enderbag":
@@ -490,11 +534,19 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
             completions.add("enderite_nugget");
             completions.add("enderite_fragment");
             completions.add("end_amatist");
+            completions.add("endstalactitas");
             completions.add("enderite_ingot");
             completions.add("enderite_upgrades");
             completions.add("vithiums");
             completions.add("vithiums_fichas");
             completions.add("mochila");
+            completions.add("mochila_verde");
+            completions.add("mochila_roja");
+            completions.add("mochila_azul");
+            completions.add("mochila_morada");
+            completions.add("mochila_negra");
+            completions.add("mochila_blanca");
+            completions.add("mochila_amarilla");
             completions.add("enderbag");
             completions.add("gancho");
             completions.add("panic_apple");

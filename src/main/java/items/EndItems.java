@@ -39,7 +39,7 @@ public class EndItems {
     }
 
     public static ItemStack createFragmentoEnderite() {
-        ItemStack item = new ItemStack(Material.ECHO_SHARD);
+        ItemStack item = new ItemStack(Material.RAW_COPPER);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.of("#009999") + "" + ChatColor.BOLD + "Fragmento de Enderite");
         meta.setCustomModelData(400);
@@ -59,7 +59,7 @@ public class EndItems {
     }
 
     public static ItemStack createIngotEnderite() {
-        ItemStack item = new ItemStack(Material.ECHO_SHARD);
+        ItemStack item = new ItemStack(Material.NETHERITE_INGOT);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.of("#009999") + "" + ChatColor.BOLD + "Lingote de Enderite");
         meta.setCustomModelData(410);
@@ -122,8 +122,8 @@ public class EndItems {
 
     //End Amatist
 
-    public static ItemStack createEndAmatist() {
-        ItemStack item = new ItemStack(Material.AMETHYST_SHARD);
+    public static ItemStack createEndAmatist(int amount) {
+        ItemStack item = new ItemStack(Material.AMETHYST_SHARD, amount);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.of("#9933ff") + "Amatista del End");
         meta.setCustomModelData(10);

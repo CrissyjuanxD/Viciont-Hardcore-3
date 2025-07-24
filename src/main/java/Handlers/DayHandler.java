@@ -28,6 +28,7 @@
         private DayTwelveChanges dayTwelveChanges;
         private DayThirteenChanges dayThirteenChanges;
         private DayFourteenChanges dayFourteenChanges;
+        private DayFifteenChanges dayFifteenChanges;
         private DaySixteenChanges daySixteenChanges;
     
         public DayHandler(JavaPlugin plugin) {
@@ -44,6 +45,7 @@
             dayTwelveChanges = new DayTwelveChanges(plugin, this);
             dayThirteenChanges = new DayThirteenChanges(plugin, this);
             dayFourteenChanges = new DayFourteenChanges(plugin, this);
+            dayFifteenChanges = new DayFifteenChanges(plugin, this);
             daySixteenChanges = new DaySixteenChanges(plugin, this);
             loadDayData();
             startDayTimer();
@@ -132,6 +134,9 @@
             if (currentDay >= 14) {
                 dayFourteenChanges.apply();
             }
+            if (currentDay >= 15) {
+                dayFifteenChanges.apply();
+            }
             if (currentDay >= 16) {
                 daySixteenChanges.apply();
             }
@@ -140,6 +145,9 @@
         private void revertCurrentDayChanges() {
             if (currentDay < 16) {
                 daySixteenChanges.revert();
+            }
+            if (currentDay < 15) {
+                dayFifteenChanges.revert();
             }
             if (currentDay < 14) {
                 dayFourteenChanges.revert();

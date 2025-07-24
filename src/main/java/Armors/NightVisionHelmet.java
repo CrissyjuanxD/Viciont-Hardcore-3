@@ -59,6 +59,34 @@ public class NightVisionHelmet implements Listener {
         return item;
     }
 
+    // Método para crear el casco
+    public static ItemStack createNightVisionHelmetPlus() {
+        ItemStack item = new ItemStack(Material.NETHERITE_HELMET);
+        ItemMeta meta = item.getItemMeta();
+        meta.setCustomModelData(100);
+
+        meta.setDisplayName(ChatColor.DARK_AQUA + "" + ChatColor.BOLD + "Casco de Visión Nocturna Mejorado");
+        meta.setLore(Arrays.asList(
+                "",
+                ChatColor.GRAY + "Casco para afrontar la oscuridad",
+                ChatColor.GRAY + "de este mundo.",
+                "",
+                ChatColor.GRAY + "" + ChatColor.BOLD + "Shift x3 para activar/desactivar",
+                "",
+                ChatColor.DARK_PURPLE +  "" + ChatColor.BOLD + ">> Habilidad: " + ChatColor.RESET + ChatColor.DARK_PURPLE + "Visión Nocturna.",
+                ChatColor.DARK_GRAY +  "" + ChatColor.BOLD + ">> OJO: " + ChatColor.RESET + ChatColor.DARK_GRAY + "Cada 5 segundos de tener la Vision Activada",
+                ChatColor.DARK_GRAY + "se gasta 1 de durabilidad.",
+                ""
+        ));
+
+        meta.setUnbreakable(false);
+        meta.setRarity(ItemRarity.EPIC);
+        item.setItemMeta(meta);
+        item.addUnsafeEnchantment(Enchantment.UNBREAKING, 1);
+
+        return item;
+    }
+
     @EventHandler
     public void onSneak(PlayerToggleSneakEvent event) {
         Player player = event.getPlayer();
