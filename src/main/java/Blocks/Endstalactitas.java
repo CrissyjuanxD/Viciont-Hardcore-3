@@ -74,7 +74,6 @@ public class Endstalactitas implements Listener {
             return;
         }
 
-        // Hacer que el bloque tarde más en romperse
         event.setInstaBreak(false);
 
         player.addPotionEffect(new PotionEffect(

@@ -24,7 +24,7 @@ public class SpectralEyeSpawner implements Listener {
     private static final int MIN_Y = 30;
     private static final int MAX_Y = 200;
     private static final int MAX_LIGHT = 6;
-    private static final int MIN_PLAYER_DISTANCE = 25; // Bloques
+    private static final int MIN_PLAYER_DISTANCE = 25;
 
     public SpectralEyeSpawner(JavaPlugin plugin, SpectralEye spectralEye) {
         this.plugin = plugin;
@@ -33,13 +33,10 @@ public class SpectralEyeSpawner implements Listener {
 
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {
-        // Solo spawn natural (no al generar chunks)
         if (event.isNewChunk()) return;
 
-        // Verificar chance de spawn
         if (random.nextDouble() > SPAWN_CHANCE) return;
 
-        // Verificar dimensión (todas permitidas)
         World world = event.getWorld();
         World.Environment env = world.getEnvironment();
         if (env != World.Environment.NORMAL &&
@@ -48,16 +45,13 @@ public class SpectralEyeSpawner implements Listener {
             return;
         }
 
-        // Intentar spawnear en ubicaciones aleatorias del chunk
         attemptSpawnInChunk(world, event.getChunk());
     }
 
     private void attemptSpawnInChunk(World world, Chunk chunk) {
-        // Coordenadas base del chunk
         int baseX = chunk.getX() << 4;
         int baseZ = chunk.getZ() << 4;
 
-        // Intentar 3 ubicaciones aleatorias por chunk
         for (int i = 0; i < 3; i++) {
             int x = baseX + random.nextInt(16);
             int z = baseZ + random.nextInt(16);
@@ -65,29 +59,24 @@ public class SpectralEyeSpawner implements Listener {
 
             Location loc = new Location(world, x + 0.5, y, z + 0.5);
 
-            // Verificar condiciones
             if (isValidSpawnLocation(loc)) {
                 spawnSpectralEye(loc);
-                break; // Solo spawnear uno por chunk
+                break;
             }
         }
     }
 
     private boolean isValidSpawnLocation(Location loc) {
-        // Verificar que sea aire
         if (!loc.getBlock().getType().isAir()) return false;
 
-        // Verificar luz
         if (loc.getBlock().getLightFromSky() > MAX_LIGHT) return false;
 
-        // Verificar que haya espacio (3 bloques de altura)
         for (int i = 1; i <= 3; i++) {
             if (!loc.clone().add(0, i, 0).getBlock().getType().isAir()) {
                 return false;
             }
         }
 
-        // Verificar distancia a jugadores
         for (Player player : loc.getWorld().getPlayers()) {
             if (player.getLocation().distanceSquared(loc) < MIN_PLAYER_DISTANCE * MIN_PLAYER_DISTANCE) {
                 return false;
@@ -98,16 +87,12 @@ public class SpectralEyeSpawner implements Listener {
     }
 
     private void spawnSpectralEye(Location loc) {
-        // Pequeño retraso para evitar carga instantánea
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            // Verificar nuevamente las condiciones (por si algo cambió)
             if (isValidSpawnLocation(loc)) {
-                // Spawnear con 1-3 de health aleatorio para variedad
                 Phantom eye = (Phantom) loc.getWorld().spawnEntity(loc, EntityType.PHANTOM);
                 spectralEye.transformSpawnSpectralEye(eye);
                 eye.setHealth(1 + ThreadLocalRandom.current().nextInt(3));
 
-                // Efectos de spawn
                 loc.getWorld().playSound(loc, Sound.ENTITY_ENDERMAN_STARE, 0.8f, 0.5f);
                 loc.getWorld().spawnParticle(Particle.PORTAL, loc, 10, 0.5, 0.5, 0.5, 0.1);
             }

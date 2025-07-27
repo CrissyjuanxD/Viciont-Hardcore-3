@@ -117,7 +117,6 @@ public class CorruptedInfernalSpider implements Listener {
     }
 
     private void launchFireballAttack(Spider spider, Player target) {
-        // Mostrar aura de fuego
         Location loc = spider.getLocation();
         loc.getWorld().spawnParticle(Particle.FLAME, loc, 50, 1, 1, 1, 0.1);
         loc.getWorld().playSound(loc, Sound.ENTITY_BLAZE_SHOOT, 1.0f, 1.0f);
@@ -125,7 +124,6 @@ public class CorruptedInfernalSpider implements Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
-                // Lanzar fireball
                 Fireball fireball = spider.launchProjectile(Fireball.class);
                 Vector direction = target.getLocation().toVector().subtract(spider.getLocation().toVector()).normalize();
                 fireball.setDirection(direction);
@@ -182,9 +180,8 @@ public class CorruptedInfernalSpider implements Listener {
         }
 
         Location playerLocation = player.getLocation();
-        double maxDistanceSquared = 30 * 30; // 30 bloques al cuadrado
+        double maxDistanceSquared = 30 * 30;
 
-        // Obtiene entidades cercanas y filtra solo arañas sin PersistentDataKey
         for (Entity entity : player.getNearbyEntities(30, 30, 30)) {
             if (entity instanceof Spider spider &&
                     spider.getCustomName() != null &&

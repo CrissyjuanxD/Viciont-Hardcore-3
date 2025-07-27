@@ -39,11 +39,8 @@ public class SpectralEye implements Listener {
     private final ErrorNotification errorNotification;
     private boolean eventsRegistered = false;
 
-    // Mapa para rastrear los intentos de shift por jugador
     private final Map<UUID, Integer> sneakAttempts = new HashMap<>();
-    // Mapa para rastrear las bombas activas por jugador
     private final Map<UUID, Boolean> activeBombs = new HashMap<>();
-    // Número requerido de shifts
     private final int REQUIRED_SHIFTS = 25;
 
     public SpectralEye(JavaPlugin plugin) {
@@ -100,7 +97,6 @@ public class SpectralEye implements Listener {
         phantom.setCustomName(ChatColor.GREEN + "" + ChatColor.BOLD + "Ojo Espectral");
         phantom.setCustomNameVisible(false);
 
-        // Asegurar que los atributos existan antes de modificarlos
         try {
             if (phantom.getAttribute(Attribute.GENERIC_FLYING_SPEED) != null) {
                 phantom.getAttribute(Attribute.GENERIC_FLYING_SPEED).setBaseValue(0.2);
@@ -118,7 +114,6 @@ public class SpectralEye implements Listener {
             plugin.getLogger().warning("Error al configurar atributos del Phantom: " + e.getMessage());
         }
 
-        // Green glowing effect
         phantom.setGlowing(true);
         if (greenGlowTeam != null) {
             greenGlowTeam.addEntry(phantom.getUniqueId().toString());
@@ -126,7 +121,6 @@ public class SpectralEye implements Listener {
 
         phantom.getPersistentDataContainer().set(spectralEyeKey, PersistentDataType.BYTE, (byte) 1);
 
-        // Forzar el seguimiento de jugadores
         startTrackingTask(phantom);
     }
 
@@ -139,7 +133,6 @@ public class SpectralEye implements Listener {
                     return;
                 }
 
-                // Buscar jugador más cercano en un radio de 60 bloques
                 Player nearest = null;
                 double nearestDistance = Double.MAX_VALUE;
 
@@ -209,7 +202,6 @@ public class SpectralEye implements Listener {
         phantom.getWorld().spawnParticle(Particle.LARGE_SMOKE, phantom.getLocation(), 20, 0.5, 0.5, 0.5, 0.1);
         phantom.remove();
 
-        // Crear y configurar el ItemDisplay de la TNT
         ItemDisplay tntDisplay = createTNTDisplay(player);
 
         sneakAttempts.put(player.getUniqueId(), 0);
@@ -227,17 +219,15 @@ public class SpectralEye implements Listener {
                 EntityType.ITEM_DISPLAY
         );
 
-        // Configuración del display para que parezca una TNT real
         display.setItemStack(tntItem);
         display.setGlowing(true);
         display.setBrightness(new Display.Brightness(15, 15));
 
-        // Crear transformación sin usar Display.Transformation directamente
         display.setTransformation(new Transformation(
-                new Vector3f(), // traslación
-                new Quaternionf(), // rotación (sin rotación)
-                new Vector3f(1, 1, 1), // escala (tamaño normal)
-                new Quaternionf() // escala de rotación
+                new Vector3f(),
+                new Quaternionf(),
+                new Vector3f(1, 1, 1),
+                new Quaternionf()
         ));
 
         display.getPersistentDataContainer().set(tntBombKey, PersistentDataType.STRING, player.getUniqueId().toString());
@@ -300,7 +290,6 @@ public class SpectralEye implements Listener {
         int attempts = sneakAttempts.getOrDefault(playerId, 0) + 1;
         sneakAttempts.put(playerId, attempts);
 
-        // Feedback visual mejorado
         player.spawnParticle(Particle.ELECTRIC_SPARK, player.getLocation().add(0, 1, 0), 2);
         player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.5f, 0.5f + (attempts * 0.05f));
     }
@@ -309,10 +298,8 @@ public class SpectralEye implements Listener {
         successNotification.showSuccess(player);
         player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 0.8f);
 
-        // Eliminar el display de la cabeza
         headDisplay.remove();
 
-        // Crear nuevo ItemDisplay para lanzar
         ItemDisplay tntDisplay = createTNTDisplay(player);
         Location startLoc = player.getEyeLocation();
         tntDisplay.teleport(startLoc);
@@ -322,40 +309,35 @@ public class SpectralEye implements Listener {
             int ticks = 0;
             final Vector direction = player.getEyeLocation().getDirection().normalize();
             final Location currentLoc = startLoc.clone();
-            final int totalTicks = 40; // 2 segundos de animación (40 ticks)
-            final double maxHeight = 3.0; // Altura máxima de la parábola
-            final double distance = 10.0; // Distancia horizontal de la animación
-            final double speedMultiplier = 2.5; // Multiplicador de velocidad general
+            final int totalTicks = 40;
+            final double maxHeight = 3.0;
+            final double distance = 10.0;
+            final double speedMultiplier = 2.5;
 
             @Override
             public void run() {
                 if (ticks >= totalTicks || !tntDisplay.isValid()) {
-                    // Configurar velocidad y dirección final (aumentada)
-                    tntDisplay.setVelocity(direction.multiply(2.5)); // Mayor velocidad final
+                    tntDisplay.setVelocity(direction.multiply(2.5));
                     scheduleExplosion(tntDisplay);
                     this.cancel();
                     return;
                 }
 
-                // Calcular progreso normalizado (0 a 1)
                 double progress = (double) ticks / totalTicks;
 
-                // Movimiento parabólico más rápido
-                double xzProgress = Math.min(progress * 2.0, 1.0); // Avance horizontal mucho más rápido
-                double yProgress = 4 * progress * (1 - progress); // Parábola suave
+                double xzProgress = Math.min(progress * 2.0, 1.0);
+                double yProgress = 4 * progress * (1 - progress);
 
                 Vector motion = direction.clone()
-                        .multiply(xzProgress * distance * speedMultiplier) // Aplicamos el multiplicador
+                        .multiply(xzProgress * distance * speedMultiplier)
                         .setY(yProgress * maxHeight);
 
-                // Actualizar posición
                 Location newLoc = startLoc.clone().add(motion);
                 tntDisplay.teleport(newLoc);
 
-                // Rotación gradual más rápida para coincidir con la velocidad
-                if (ticks % 3 == 0) { // Rotación más frecuente
+                if (ticks % 3 == 0) {
                     tntDisplay.setRotation(
-                            player.getLocation().getYaw() + (ticks * 15), // Rotación más rápida
+                            player.getLocation().getYaw() + (ticks * 15),
                             (float) (-30 + (progress * 60))
                     );
                 }
@@ -366,7 +348,6 @@ public class SpectralEye implements Listener {
     }
 
     private void scheduleExplosion(ItemDisplay tntDisplay) {
-        // Explotar después de 5 segundos
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -375,15 +356,13 @@ public class SpectralEye implements Listener {
                 Location loc = tntDisplay.getLocation();
                 tntDisplay.remove();
 
-                // Verificar protección por escudo para jugadores cercanos
                 for (Entity entity : loc.getWorld().getNearbyEntities(loc, 5, 5, 5)) {
                     if (entity instanceof Player nearbyPlayer) {
 
                         if (nearbyPlayer.isBlocking()) {
-                            // Jugadores protegidos por escudo solo reciben ceguera
                             nearbyPlayer.addPotionEffect(new PotionEffect(
                                     PotionEffectType.BLINDNESS,
-                                    200, // 10 segundos
+                                    200,
                                     0
                             ));
                             continue;
@@ -408,20 +387,16 @@ public class SpectralEye implements Listener {
 
         errorNotification.showSuccess(player);
 
-        // Marcar que el jugador está siendo afectado por una explosión
         player.setMetadata("spectral_eye_exploding", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
 
-        // Crear explosión pero no dañar al jugador directamente
         player.getWorld().createExplosion(player.getLocation(), 7.0f, true, true);
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 2.0f, 0.8f);
         player.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, player.getLocation(), 1);
 
-        // Daño directo que no puede ser bloqueado por escudo
         if (player.isBlocking()) {
-            player.setCooldown(Material.SHIELD, 100); // 5 segundos de cooldown
+            player.setCooldown(Material.SHIELD, 100);
         }
 
-        // Eliminar la metadata después de un tiempo
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -444,16 +419,13 @@ public class SpectralEye implements Listener {
         if (event.getEntity() instanceof Player player &&
                 event.getDamager() instanceof TNTPrimed tnt) {
 
-            // Verificar si es una TNT espectral
             if (tnt.getPersistentDataContainer().has(tntBombKey, PersistentDataType.STRING)) {
                 String playerId = tnt.getPersistentDataContainer().get(tntBombKey, PersistentDataType.STRING);
 
-                // Si es el jugador original, no puede protegerse
                 if (player.getUniqueId().toString().equals(playerId)) {
                     return;
                 }
 
-                // Otros jugadores pueden protegerse con escudo
                 if (player.isBlocking()) {
                     event.setCancelled(true);
                     player.addPotionEffect(new PotionEffect(

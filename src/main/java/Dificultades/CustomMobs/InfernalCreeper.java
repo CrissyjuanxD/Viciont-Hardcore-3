@@ -94,23 +94,18 @@ public class InfernalCreeper implements Listener {
                     return;
                 }
 
-                // Fuerza constante sin reducción por distancia
                 Vector direction = creeper.getLocation().toVector()
                         .subtract(target.getLocation().toVector())
                         .normalize()
                         .multiply(0.10);
 
-                // Aplicar fuerza magnética más suave
                 Vector currentVelocity = target.getVelocity();
                 Vector newVelocity = direction;
 
-                // Limitar la velocidad vertical
                 newVelocity.setY(Math.min(newVelocity.getY(), 0.1));
 
-                // Combinar con la velocidad actual (70% de la velocidad anterior + 30% del nuevo impulso)
                 target.setVelocity(currentVelocity.multiply(0.8).add(newVelocity.multiply(0.2)));
 
-                // Efectos visuales más sutiles
                 if (Math.random() < 0.4) {
                     target.getWorld().spawnParticle(Particle.FLAME, target.getLocation(), 2, 0.2, 0.2, 0.2, 0.01);
                 }
@@ -174,7 +169,6 @@ public class InfernalCreeper implements Listener {
             double lootingBonus = 0;
             double doubleDropChance = 0;
 
-            // Verificar si el asesino fue un jugador y tiene Looting
             if (creeper.getKiller() != null) {
                 ItemStack weapon = creeper.getKiller().getInventory().getItemInMainHand();
                 if (weapon != null && weapon.getEnchantments().containsKey(Enchantment.LOOTING)) {

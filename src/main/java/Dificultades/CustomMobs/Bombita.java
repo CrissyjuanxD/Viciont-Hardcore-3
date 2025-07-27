@@ -79,15 +79,13 @@ public class Bombita implements Listener {
         Location from = event.getFrom();
         Location to = event.getTo();
 
-        // Verificar si el jugador realmente se movió (no solo giró la cámara)
         if (from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ()) {
             return;
         }
 
         Location playerLocation = player.getLocation();
-        double maxDistanceSquared = 30 * 30; // 30 bloques al cuadrado
+        double maxDistanceSquared = 30 * 30;
 
-        // Obtiene entidades cercanas y filtra solo arañas sin PersistentDataKey
         for (Entity entity : player.getNearbyEntities(30, 30, 30)) {
             if (entity instanceof Creeper creeper &&
                     creeper.getCustomName() != null &&

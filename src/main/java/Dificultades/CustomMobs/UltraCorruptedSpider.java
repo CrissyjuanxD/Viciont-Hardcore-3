@@ -170,12 +170,10 @@ public class UltraCorruptedSpider implements Listener {
             webProjectile.setGlowColorOverride(Color.GREEN);
             webProjectile.setInvulnerable(true);
 
-            // Configurar tamaño pequeño
             Transformation transformation = webProjectile.getTransformation();
             transformation.getScale().set(0.5f, 0.5f, 0.5f);
             webProjectile.setTransformation(transformation);
 
-            // Calcular dirección y velocidad
             Vector direction = target.getEyeLocation().toVector()
                     .subtract(spider.getEyeLocation().toVector())
                     .normalize()
@@ -193,11 +191,9 @@ public class UltraCorruptedSpider implements Listener {
                         return;
                     }
 
-                    // Mover el proyectil manualmente
                     currentLoc.add(direction);
                     webProjectile.teleport(currentLoc);
 
-                    // Efectos de partículas
                     webProjectile.getWorld().spawnParticle(
                             Particle.POOF,
                             webProjectile.getLocation(),
@@ -205,7 +201,6 @@ public class UltraCorruptedSpider implements Listener {
                             0.1, 0.1, 0.1, 0.02
                     );
 
-                    // Verificar colisión
                     for (Entity nearby : webProjectile.getNearbyEntities(1.5, 1.5, 1.5)) {
                         if (nearby instanceof Player hitPlayer) {
                             handleWebHit(hitPlayer, webProjectile.getLocation());
@@ -261,7 +256,6 @@ public class UltraCorruptedSpider implements Listener {
                 for (int z = -1; z <= 1; z++) {
                     Location blockLoc = centeredLocation.clone().add(x, y, z);
 
-                    // Solo colocar telaraña si el bloque es reemplazable
                     if (blockLoc.getBlock().getType().isAir() ||
                             blockLoc.getBlock().getType() == Material.WATER ||
                             blockLoc.getBlock().getType() == Material.LAVA) {
@@ -272,7 +266,6 @@ public class UltraCorruptedSpider implements Listener {
             }
         }
 
-        // Asegurarnos de que el jugador quede atrapado en el centro
         if (center.getBlock().getType().isAir()) {
             center.getBlock().setType(Material.COBWEB);
         }
@@ -312,7 +305,6 @@ public class UltraCorruptedSpider implements Listener {
             double lootingBonus = 0;
             double doubleDropChance = 0;
 
-            // Verificar si el asesino fue un jugador y tiene Looting
             if (spider.getKiller() != null) {
                 ItemStack weapon = spider.getKiller().getInventory().getItemInMainHand();
                 if (weapon != null && weapon.getEnchantments().containsKey(Enchantment.LOOTING)) {

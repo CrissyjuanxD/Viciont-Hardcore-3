@@ -91,7 +91,6 @@ public class GuardianCorruptedSkeleton implements Listener {
         return skeleton.getPersistentDataContainer().has(gcorruptedskelKey, PersistentDataType.BYTE);
     }
 
-    // Runnable para lanzar WitherSkulls
     private void startSkullRunnable(WitherSkeleton skeleton) {
         int taskId = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (skeleton == null || skeleton.isDead() || !isCorruptedWither(skeleton)) {
@@ -99,7 +98,6 @@ public class GuardianCorruptedSkeleton implements Listener {
                 return;
             }
 
-            // Solo atacar jugadores, no otros mobs
             LivingEntity target = skeleton.getTarget();
             if (target instanceof Player player) {
                 if (skeleton.getLocation().distance(player.getLocation()) <= 20) {
@@ -112,9 +110,7 @@ public class GuardianCorruptedSkeleton implements Listener {
         skeletonTasks.put(skeleton, taskId);
     }
 
-    // Lanza el WitherSkull desde el esqueleto hacia el jugador
     private void launchSkull(WitherSkeleton skeleton, Player player) {
-        // Calcula la dirección del disparo
         Vector direction = player.getLocation().toVector().subtract(skeleton.getLocation().toVector());
         if (direction.lengthSquared() == 0) {
             direction = new Vector(0, 0.1, 0);
@@ -122,7 +118,6 @@ public class GuardianCorruptedSkeleton implements Listener {
             direction = direction.normalize().multiply(1.5);
         }
         WitherSkull skull = skeleton.launchProjectile(WitherSkull.class, direction);
-        // Marca el proyectil para identificarlo
         PersistentDataContainer data = skull.getPersistentDataContainer();
         data.set(guardianProjectileKey, PersistentDataType.BYTE, (byte) 1);
         skull.setCustomName("Corrupted Skeleton Skull");
@@ -201,7 +196,6 @@ public class GuardianCorruptedSkeleton implements Listener {
         if (!isCorruptedWither(skeleton)) return;
         if (!(event.getEntity() instanceof Player target)) return;
 
-        // Verificar si el jugador está bloqueando con un escudo
         if (target.isBlocking()) {
             event.setCancelled(true);
             target.getWorld().playSound(target.getLocation(), Sound.ITEM_SHIELD_BLOCK, 1.0F, 1.0F);
@@ -220,7 +214,6 @@ public class GuardianCorruptedSkeleton implements Listener {
         }
     }
 
-    // Al cargar un mundo, se reprograman los runnables para los esqueletos corruptos existentes
     @EventHandler
     public void onWorldLoad(WorldLoadEvent event) {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {

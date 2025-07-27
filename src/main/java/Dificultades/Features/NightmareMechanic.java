@@ -50,10 +50,10 @@ public class NightmareMechanic implements Listener {
     private final int ATTEMPTS_NEEDED = 6;
     private final double PROBABILITY_MULTIPLIER = 1.5;
     private final int MAX_LEVEL = 3;
-    private final int NIGHTMARE_DURATION = 5 * 60; // 5 minutos en segundos
+    private final int NIGHTMARE_DURATION = 5 * 60;
     private final int COOLDOWN = 60 * 60; // 15 minutos en segundos
     private final int SPAWN_INTERVAL = 15 * 20;
-    private static final String NIGHTMARE_BOSSBAR_ID = "NightmareMode";// 10 segundos en ticks
+    private static final String NIGHTMARE_BOSSBAR_ID = "NightmareMode";
 
     public NightmareMechanic(JavaPlugin plugin, TiempoCommand tiempoCommand, SuccessNotification successNotification, DeathStormHandler deathStormHandler, DamageLogListener damageLogListener) {
         this.plugin = plugin;
@@ -71,7 +71,6 @@ public class NightmareMechanic implements Listener {
         Player player = (Player) event.getEntity();
         UUID playerId = player.getUniqueId();
 
-        // Reaplicar efecto darkness si está en pesadilla
         if (isInNightmare(playerId)) {
             new BukkitRunnable() {
                 @Override
@@ -83,7 +82,6 @@ public class NightmareMechanic implements Listener {
                                 0, false, false, false
                         ));
 
-                        // 30% de probabilidad de subir de nivel
                         increaseNightmareLevel(playerId);
                     }
                 }
@@ -91,17 +89,14 @@ public class NightmareMechanic implements Listener {
             return;
         }
 
-        // Verificar cooldown
         if (lastNightmareTime.containsKey(playerId)) {
             long timeSinceLast = (System.currentTimeMillis() - lastNightmareTime.get(playerId)) / 1000;
             if (timeSinceLast < COOLDOWN) return;
         }
 
-        // Incrementar contador y calcular probabilidad
         int count = totemCount.getOrDefault(playerId, 0) + 1;
         totemCount.put(playerId, count);
 
-        // Fórmula de probabilidad progresiva
         double probability = calculateActivationProbability(count);
 
         if (damageLogListener != null) {
@@ -112,13 +107,11 @@ public class NightmareMechanic implements Listener {
             deathStormHandler.pauseActionBarForPlayer(playerId);
         }
 
-        // Mostrar progreso al jugador
         TextComponent message = new TextComponent();
         TextComponent progreso = new TextComponent(ChatColor.RED + "Pesadilla: " + ChatColor.DARK_RED + ChatColor.BOLD + String.format("%.1f", probability) + "%");
         message.addExtra(progreso);
         player.spigot().sendMessage(ChatMessageType.ACTION_BAR, progreso);
 
-        // Programar reanudación del ActionBar de DeathStorm después de 3 segundos
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -134,7 +127,7 @@ public class NightmareMechanic implements Listener {
 
         if ((probability >= 60.0 || probability >= 100.0) && new Random().nextInt(100) < probability) {
             startNightmare(playerId, 1);
-            totemCount.remove(playerId); // Resetear contador
+            totemCount.remove(playerId);
         } else if (probability >= 100.0) {
             // Garantizado al 100%
             startNightmare(playerId, 1);
@@ -150,17 +143,13 @@ public class NightmareMechanic implements Listener {
         Player player = Bukkit.getPlayer(playerId);
         if (player == null) return;
 
-        // Cancelar tareas anteriores
         cancelExistingTasks(playerId);
 
-        // Configurar nivel
         nightmareLevel.put(playerId, level);
         lastNightmareTime.put(playerId, System.currentTimeMillis());
 
-        //mensaje a todos los jugadores
         broadcastNightmareMessage(player);
 
-        // Aplicar efectos
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -174,10 +163,8 @@ public class NightmareMechanic implements Listener {
             }
         }.runTask(plugin);
 
-        // Crear bossbars
         createBossBars(player, level);
 
-        // Programar fin de la pesadilla
         nightmareTasks.put(playerId, new BukkitRunnable() {
             @Override
             public void run() {
@@ -185,7 +172,6 @@ public class NightmareMechanic implements Listener {
             }
         }.runTaskLater(plugin, NIGHTMARE_DURATION * 20L));
 
-        // Sonido ambiental cada segundo
         soundTasksng.put(playerId, new BukkitRunnable() {
             @Override
             public void run() {
@@ -195,7 +181,6 @@ public class NightmareMechanic implements Listener {
             }
         }.runTaskTimer(plugin, 0L, 20L));
 
-        // Spawn gradual de monstruos
         spawnTasks.put(playerId, new BukkitRunnable() {
             @Override
             public void run() {
@@ -249,7 +234,6 @@ public class NightmareMechanic implements Listener {
             }.runTaskLater(plugin, 80L);
         }
 
-        // Misma lógica de activación que en onTotemUse
         if ((probability >= 60.0 || probability >= 100.0) && new Random().nextInt(100) < probability) {
             nightmareLevel.put(playerId, currentLevel + 1);
             levelUpAttempts.remove(playerId);
@@ -277,7 +261,6 @@ public class NightmareMechanic implements Listener {
         List<LivingEntity> monsters = spawnedMonsters.getOrDefault(player.getUniqueId(), new ArrayList<>());
         World world = player.getWorld();
 
-        // Configurar efectos según nivel
         int strength = switch (level) {
             case 2 -> 4;
             case 3 -> 6;
@@ -304,9 +287,9 @@ public class NightmareMechanic implements Listener {
 
         Random random = new Random();
         int monstersToSpawn = switch (level) {
-            case 2 -> 1 + random.nextInt(4); // 1-4
-            case 3 -> 2 + random.nextInt(3); // 2-4
-            default -> 1 + random.nextInt(3); // 1-3
+            case 2 -> 1 + random.nextInt(4);
+            case 3 -> 2 + random.nextInt(3);
+            default -> 1 + random.nextInt(3);
         };
 
         for (int i = 0; i < monstersToSpawn; i++) {
@@ -342,24 +325,18 @@ public class NightmareMechanic implements Listener {
         World world = playerLoc.getWorld();
         Random random = new Random();
 
-        // Radio de Spawn entre 8 a 12 bloques
         int radius = 8 + random.nextInt(5);
 
-        // Intentar encontrar ubicación válida
         for (int attempt = 0; attempt < 40; attempt++) {
-            // Calcular posición XZ alrededor del jugador
             double angle = random.nextDouble() * 2 * Math.PI;
             double x = playerLoc.getX() + radius * Math.cos(angle);
             double z = playerLoc.getZ() + radius * Math.sin(angle);
 
-            // Usar la altura del jugador como referencia
             int centerY = (int) playerLoc.getY();
 
-            // Buscar hacia arriba y abajo desde la altura del jugador
             for (int yOffset = -15; yOffset <= 15; yOffset++) {
                 int y = centerY + yOffset;
 
-                // Verificar si la ubicación es válida
                 if (isValidSimpleSpawnLocation(world, x, y, z)) {
                     return new Location(world, x, y, z);
                 }
@@ -370,13 +347,11 @@ public class NightmareMechanic implements Listener {
     }
 
     private boolean isValidSimpleSpawnLocation(World world, double x, double y, double z) {
-        // Verificar que el bloque debajo sea sólido
         Material below = world.getBlockAt((int)x, (int)y-1, (int)z).getType();
         if (!below.isSolid()) {
             return false;
         }
 
-        // Verificar que el bloque actual y el de arriba sean aire
         Material current = world.getBlockAt((int)x, (int)y, (int)z).getType();
         Material above = world.getBlockAt((int)x, (int)y+1, (int)z).getType();
 
@@ -385,13 +360,10 @@ public class NightmareMechanic implements Listener {
 
 
     private void createBossBars(Player player, int level) {
-        // Eliminar bossbars existentes primero
         endBossBars(player.getUniqueId());
 
-        // Crear ID único para la bossbar de este jugador
         String barId = player.getUniqueId() + "_" + NIGHTMARE_BOSSBAR_ID;
 
-        // Crear bossbar específica para el jugador con sonido desactivado
         tiempoCommand.createPlayerBossBar(
                 player,
                 ChatColor.translateAlternateColorCodes('&', "&4&lPesadilla &cNivel &4&l" + level + "&c:"),
@@ -401,7 +373,6 @@ public class NightmareMechanic implements Listener {
                 barId
         );
 
-        // Bossbar de unicode
         BossBar unicodeBar = Bukkit.createBossBar("§4\uEAA5", BarColor.WHITE, BarStyle.SOLID);
         unicodeBar.setProgress(1.0);
         unicodeBar.addPlayer(player);
@@ -412,7 +383,6 @@ public class NightmareMechanic implements Listener {
         String displayName = "&4&lPesadilla &cNivel &4&l" + level + "&c:";
         String barId = player.getUniqueId() + "_" + NIGHTMARE_BOSSBAR_ID;
 
-        // Actualizar el nombre de visualización
         tiempoCommand.updateBossBarDisplayName(
                 barId,
                 ChatColor.translateAlternateColorCodes('&', displayName)
@@ -432,7 +402,6 @@ public class NightmareMechanic implements Listener {
         long currentTime = System.currentTimeMillis();
         long lastMessageTime = lastBlockMessageTime.getOrDefault(player.getUniqueId(), 0L);
 
-        // Verificar cooldown de 10 segundos
         if (currentTime - lastMessageTime >= 10000) {
             player.sendMessage(ChatColor.RED + "۞ Mientras estés en el " + ChatColor.DARK_RED + ChatColor.BOLD + "Modo Pesadilla " + ChatColor.RESET + ChatColor.RED + "no puedes colocar bloques.");
             lastBlockMessageTime.put(player.getUniqueId(), currentTime);
@@ -441,11 +410,9 @@ public class NightmareMechanic implements Listener {
 
 
     private void endBossBars(UUID playerId) {
-        // Eliminar bossbar de tiempo
         String barId = playerId + "_" + NIGHTMARE_BOSSBAR_ID;
         tiempoCommand.removeBossBar(barId);
 
-        // Eliminar bossbar unicode
         if (nightmareBossBars.containsKey(playerId)) {
             nightmareBossBars.get(playerId).removeAll();
             nightmareBossBars.remove(playerId);
@@ -464,14 +431,11 @@ public class NightmareMechanic implements Listener {
     private void endNightmare(UUID playerId) {
         Player player = Bukkit.getPlayer(playerId);
         if (player != null) {
-            // Remover efectos
             player.removePotionEffect(PotionEffectType.DARKNESS);
 
-            // Notificación
             player.sendMessage(ChatColor.RED + "۞ La pesadilla ha terminado... " + ChatColor.RED + ChatColor.BOLD + "POR AHORA.");
         }
 
-        // Limpiar todo
         cancelExistingTasks(playerId);
         clearExistingMonsters(playerId);
         endBossBars(playerId);
@@ -492,7 +456,6 @@ public class NightmareMechanic implements Listener {
     }
 
     public void onDisableNightmare() {
-        // Limpiar todo al desactivar el plugin
         new ArrayList<>(nightmareTasks.keySet()).forEach(this::endNightmare);
         nightmareTasks.clear();
         soundTasksng.clear();

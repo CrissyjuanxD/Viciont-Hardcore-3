@@ -55,7 +55,6 @@ public class PiglinGlobo implements Listener {
     }
 
     private void applyPiglinGloboAttributes(Ghast ghast) {
-        // Configurar atributos
         ghast.setCustomName(ChatColor.YELLOW + "" + ChatColor.BOLD + "Piglin Globo");
         ghast.setCustomNameVisible(true);
         ghast.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(60);
@@ -78,13 +77,11 @@ public class PiglinGlobo implements Listener {
 
                 LivingEntity target = piglinGlobo.getTarget();
                 if (target != null && target instanceof Player) {
-                    // Lanzar flecha espectral
                     SpectralArrow arrow = piglinGlobo.launchProjectile(SpectralArrow.class);
-                    arrow.setDamage(15); // Daño equivalente a Power 15
+                    arrow.setDamage(15);
                     arrow.setGlowing(true);
                     arrow.setShooter(piglinGlobo);
 
-                    // Dirección hacia el jugador
                     arrow.setVelocity(target.getEyeLocation().toVector()
                             .subtract(piglinGlobo.getLocation().toVector())
                             .normalize()
@@ -113,7 +110,6 @@ public class PiglinGlobo implements Listener {
         if (event.getEntity() instanceof Ghast ghast &&
                 isPiglinGlobo(ghast)) {
 
-            // Limpiar drops
             event.getDrops().clear();
 
             if (Math.random() <= 0.18) {

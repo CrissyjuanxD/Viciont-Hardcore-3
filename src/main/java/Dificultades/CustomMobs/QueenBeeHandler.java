@@ -55,7 +55,6 @@ public class QueenBeeHandler implements Listener {
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
-        // Iniciar el gestor global de BossBar
         startGlobalBossBarManager();
     }
 
@@ -65,7 +64,6 @@ public class QueenBeeHandler implements Listener {
         globalBossBarManager = new BukkitRunnable() {
             @Override
             public void run() {
-                // Procesar todas las abejas reina en todos los mundos
                 for (World world : Bukkit.getWorlds()) {
                     for (Bee bee : world.getEntitiesByClass(Bee.class)) {
                         if (isQueenBee(bee)) {
@@ -75,14 +73,13 @@ public class QueenBeeHandler implements Listener {
                 }
             }
         };
-        globalBossBarManager.runTaskTimer(plugin, 0L, 10L); // Cada 0.5 segundos
+        globalBossBarManager.runTaskTimer(plugin, 0L, 10L);
     }
 
     private void manageBossBarForBee(Bee bee) {
         UUID beeId = bee.getUniqueId();
         BossBar bossBar = bossBars.get(beeId);
 
-        // Verificación más estricta antes de crear nueva BossBar
         if (bossBar == null && fullyInitializedBees.contains(beeId)) {
             bossBar = Bukkit.createBossBar(
                     ChatColor.YELLOW + "Abeja Reina",
@@ -95,15 +92,12 @@ public class QueenBeeHandler implements Listener {
         }
 
         if (bossBar != null) {
-            // Actualizar progreso de salud
             double healthPercentage = Math.max(0.0, bee.getHealth() / 500.0);
             bossBar.setProgress(healthPercentage);
 
-            // Gestionar jugadores basado en distancia
             Set<Player> currentPlayers = new HashSet<>(bossBar.getPlayers());
             Set<Player> shouldHavePlayers = new HashSet<>();
 
-            // Encontrar jugadores que deberían ver la BossBar
             for (Player player : Bukkit.getOnlinePlayers()) {
                 if (player.getWorld().equals(bee.getWorld())) {
                     double distance = player.getLocation().distance(bee.getLocation());
@@ -113,14 +107,12 @@ public class QueenBeeHandler implements Listener {
                 }
             }
 
-            // Remover jugadores que ya no deberían ver la BossBar
             for (Player player : currentPlayers) {
                 if (!shouldHavePlayers.contains(player)) {
                     bossBar.removePlayer(player);
                 }
             }
 
-            // Añadir jugadores que deberían ver la BossBar
             for (Player player : shouldHavePlayers) {
                 if (!currentPlayers.contains(player)) {
                     bossBar.addPlayer(player);
@@ -167,7 +159,6 @@ public class QueenBeeHandler implements Listener {
             return false;
         }
 
-        // Si ya está siendo procesado, NO procesar
         if (processingBees.contains(beeId)) {
             return false;
         }
@@ -187,32 +178,25 @@ public class QueenBeeHandler implements Listener {
             return;
         }
 
-        // Marcar como siendo procesado INMEDIATAMENTE
         processingBees.add(beeId);
 
         try {
-            // Limpiar cualquier estado anterior
             cleanupBee(beeId);
 
-            // Aplicar atributos solo si no los tiene ya
             if (!bee.getPersistentDataContainer().has(queenBeeKey, PersistentDataType.BYTE)) {
                 setupBeeAttributes(bee);
             }
 
-            // Inicializar estados
             isAttacking.put(beeId, false);
             isRegenerating.put(beeId, false);
 
-            // Iniciar comportamiento (BossBar se maneja automáticamente)
             startBehavior(bee);
 
-            // MARCAR COMO COMPLETAMENTE INICIALIZADO
             fullyInitializedBees.add(beeId);
 
             plugin.getLogger().info("Initialized Queen Bee: " + beeId);
 
         } finally {
-            // Remover de procesamiento después de un delay
             new BukkitRunnable() {
                 @Override
                 public void run() {
@@ -255,7 +239,7 @@ public class QueenBeeHandler implements Listener {
         if (activeBehaviors.containsKey(beeId)) {
             BukkitRunnable existing = activeBehaviors.get(beeId);
             if (existing != null && !existing.isCancelled()) {
-                return; // Ya tiene comportamiento activo
+                return;
             }
         }
 
@@ -272,7 +256,7 @@ public class QueenBeeHandler implements Listener {
             }
         };
 
-        behavior.runTaskTimer(plugin, 0L, 50L); // Cada 2.5 segundos
+        behavior.runTaskTimer(plugin, 0L, 50L);
         activeBehaviors.put(beeId, behavior);
 
         plugin.getLogger().info("Started behavior for Queen Bee: " + beeId);
@@ -283,7 +267,7 @@ public class QueenBeeHandler implements Listener {
 
         // VERIFICACIÓN CRÍTICA: Solo un ataque a la vez
         if (isAttacking.getOrDefault(beeId, false)) {
-            return; // Ya está atacando
+            return;
         }
 
         Player target = findTarget(bee);
@@ -299,13 +283,11 @@ public class QueenBeeHandler implements Listener {
             return;
         }
 
-        // Verificar regeneración
         if (bee.getHealth() < 250.0 && !isRegenerating.getOrDefault(beeId, false) && random.nextDouble() <= 0.10) {
             executeRegeneration(bee);
             return;
         }
 
-        // Ejecutar ataque
         executeRandomAttack(bee);
     }
 
@@ -340,7 +322,6 @@ public class QueenBeeHandler implements Listener {
     private void executeRandomAttack(Bee bee) {
         UUID beeId = bee.getUniqueId();
 
-        // MARCAR COMO ATACANDO PARA PREVENIR DUPLICADOS
         isAttacking.put(beeId, true);
 
         AttackType[] attacks = {AttackType.SPIKES, AttackType.EXPLOSIVE_ATTACK, AttackType.POISON_CIRCLE,
@@ -356,13 +337,12 @@ public class QueenBeeHandler implements Listener {
             case FLIGHT_ATTACK -> executeFlightAttack(bee);
         }
 
-        // Resetear estado de ataque después de un delay
         new BukkitRunnable() {
             @Override
             public void run() {
                 isAttacking.put(beeId, false);
             }
-        }.runTaskLater(plugin, 100L); // 5 segundos
+        }.runTaskLater(plugin, 100L);
     }
 
     // ==================== ATAQUES ESPECÍFICOS DE QUEEN BEE ====================
@@ -844,7 +824,6 @@ public class QueenBeeHandler implements Listener {
     private void restartBehaviorSafely(Bee bee) {
         UUID beeId = bee.getUniqueId();
 
-        // Solo reiniciar si no está siendo procesado Y está completamente inicializado
         if (processingBees.contains(beeId) || !fullyInitializedBees.contains(beeId)) {
             return;
         }
@@ -852,16 +831,13 @@ public class QueenBeeHandler implements Listener {
         processingBees.add(beeId);
 
         try {
-            // Cancelar comportamiento anterior
             BukkitRunnable oldBehavior = activeBehaviors.remove(beeId);
             if (oldBehavior != null && !oldBehavior.isCancelled()) {
                 oldBehavior.cancel();
             }
 
-            // Reiniciar estados de ataque
             isAttacking.put(beeId, false);
 
-            // Reiniciar comportamiento
             startBehavior(bee);
 
         } finally {
@@ -904,13 +880,11 @@ public class QueenBeeHandler implements Listener {
     }
 
     private void cleanupBee(UUID beeId) {
-        // Cancelar comportamiento
         BukkitRunnable behavior = activeBehaviors.remove(beeId);
         if (behavior != null && !behavior.isCancelled()) {
             behavior.cancel();
         }
 
-        // Limpiar BossBar de manera más exhaustiva
         BossBar bossBar = bossBars.remove(beeId);
         if (bossBar != null) {
             try {
@@ -921,7 +895,6 @@ public class QueenBeeHandler implements Listener {
             }
         }
 
-        // Limpiar estados
         isAttacking.remove(beeId);
         isRegenerating.remove(beeId);
         processingBees.remove(beeId);
@@ -960,12 +933,10 @@ public class QueenBeeHandler implements Listener {
     // ==================== MÉTODOS PÚBLICOS ====================
 
     public void shutdown() {
-        // Cancelar el gestor global de BossBar
         if (globalBossBarManager != null && !globalBossBarManager.isCancelled()) {
             globalBossBarManager.cancel();
         }
 
-        // Limpiar todas las abejas
         new ArrayList<>(fullyInitializedBees).forEach(this::cleanupBee);
         processingBees.clear();
         fullyInitializedBees.clear();

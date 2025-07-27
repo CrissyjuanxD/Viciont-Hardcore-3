@@ -62,14 +62,12 @@ public class BuffBreeze implements Listener {
     }
 
     private void applyBuffBreezeAttributes(Breeze breeze) {
-        // Configurar atributos
         breeze.setCustomName(ChatColor.AQUA + "" + ChatColor.BOLD + "Buff Breeze");
         breeze.setCustomNameVisible(true);
         breeze.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(60);
         breeze.setHealth(60);
         breeze.getAttribute(Attribute.GENERIC_FOLLOW_RANGE).setBaseValue(32);
 
-        // Efectos permanentes
         breeze.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, 0));
 
         breeze.getPersistentDataContainer().set(buffBreezeKey, PersistentDataType.BYTE, (byte) 1);
@@ -86,11 +84,9 @@ public class BuffBreeze implements Listener {
 
                 LivingEntity target = breeze.getTarget();
                 if (target != null && target instanceof Player) {
-                    // Sonidos de carga
                     breeze.getWorld().playSound(breeze.getLocation(), Sound.ENTITY_BREEZE_CHARGE, 5.0f, 0.6f);
                     breeze.getWorld().playSound(breeze.getLocation(), Sound.ENTITY_BREEZE_INHALE, 5.0f, 0.6f);
 
-                    // Lanzar después de 1.5 segundos (30 ticks)
                     new BukkitRunnable() {
                         @Override
                         public void run() {
@@ -105,26 +101,22 @@ public class BuffBreeze implements Listener {
     }
 
     private void launchCustomSnowball(Breeze shooter, LivingEntity target) {
-        // Sonido de lanzamiento
         shooter.getWorld().playSound(shooter.getLocation(), Sound.ENTITY_BREEZE_SHOOT, 5.0f, 0.6f);
 
         Snowball snowball = shooter.launchProjectile(Snowball.class);
         snowball.getPersistentDataContainer().set(buffBreezeKey, PersistentDataType.BYTE, (byte) 1);
 
-        // Aplicar CustomModelData 5
         ItemStack snowballItem = new ItemStack(Material.SNOWBALL);
         ItemMeta meta = snowballItem.getItemMeta();
         meta.setCustomModelData(5);
         snowballItem.setItemMeta(meta);
         snowball.setItem(snowballItem);
 
-        // Cálculo de dirección más preciso
         Location targetLocation = target.getLocation().clone();
-        // Predecir posición del jugador basado en su velocidad
         if (target instanceof Player) {
             Vector velocity = target.getVelocity();
             double distance = shooter.getLocation().distance(targetLocation);
-            double timeToImpact = distance / 1.5; // Velocidad aproximada del proyectil
+            double timeToImpact = distance / 1.5;
             targetLocation.add(velocity.multiply(timeToImpact * 0.5));
         }
 
@@ -142,16 +134,13 @@ public class BuffBreeze implements Listener {
             return;
         }
 
-        // Sonido de impacto
         snowball.getWorld().playSound(snowball.getLocation(), Sound.ENTITY_BREEZE_WIND_BURST, 5.0f, 0.6f);
         snowball.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, snowball.getLocation(), 30, 2.5, 2.5, 2.5, 0.1);
 
-        // Seleccionar efecto aleatorio (1-4)
         int effect = random.nextInt(4) + 1;
         boolean hitBlock = event.getHitBlock() != null;
         boolean hitEntity = event.getHitEntity() != null;
 
-        // Aplicar efectos a los jugadores cercanos (5 bloques) si golpeó un bloque
         if (hitBlock) {
             for (Entity nearby : snowball.getWorld().getNearbyEntities(
                     snowball.getLocation(), 5.0, 5.0, 5.0)) {
@@ -160,7 +149,6 @@ public class BuffBreeze implements Listener {
                 }
             }
         }
-        // O solo al jugador golpeado si fue impacto directo
         else if (hitEntity && event.getHitEntity() instanceof Player player) {
             applyEffect(effect, player, snowball);
         }
@@ -168,7 +156,7 @@ public class BuffBreeze implements Listener {
 
     private void applyEffect(int effect, Player target, Snowball snowball) {
         switch (effect) {
-            case 1: // Efectos negativos
+            case 1:
                 target.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 200, 4, true, true));
                 target.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 200, 4, true, true));
                 target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 200, 4, true, true));
@@ -191,7 +179,7 @@ public class BuffBreeze implements Listener {
                 );
                 break;
 
-            case 3: // Teletransporte
+            case 3:
                 if (snowball.getShooter() instanceof Breeze shooter && shooter.isValid()) {
                     Location safeLocation = shooter.getLocation().clone();
                     safeLocation.setYaw(target.getLocation().getYaw());
@@ -223,17 +211,14 @@ public class BuffBreeze implements Listener {
             return;
         }
 
-        // Verificar si el daño proviene de un proyectil (flecha)
         if (event.getDamager() instanceof Projectile) {
             Projectile projectile = (Projectile) event.getDamager();
 
-            // Reducir el daño en un 75% para flechas
             if (projectile instanceof Arrow) {
                 double originalDamage = event.getDamage();
                 double reducedDamage = originalDamage * 0.25;
                 event.setDamage(reducedDamage);
 
-                // Efecto visual al recibir daño por flecha
                 breeze.getWorld().playEffect(breeze.getLocation(), Effect.STEP_SOUND, Material.REDSTONE_BLOCK);
             }
         }
@@ -246,13 +231,11 @@ public class BuffBreeze implements Listener {
             return;
         }
 
-        // Limpiar drops y agregar recompensa
         event.getDrops().clear();
         if (Math.random() <= 0.20) {
             event.getDrops().add(helmetNetheriteEssence.createHelmetNetheriteEssence());
         }
 
-        // Efectos de muerte
         World world = breeze.getWorld();
         world.playEffect(breeze.getLocation(), Effect.EXTINGUISH, 0);
         world.playSound(breeze.getLocation(), Sound.ENTITY_BREEZE_DEATH, 1.0f, 0.7f);

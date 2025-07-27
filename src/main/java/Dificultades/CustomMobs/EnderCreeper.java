@@ -77,7 +77,6 @@ public class EnderCreeper extends EnderMobsTP implements Listener {
                     return;
                 }
 
-                // Partículas moradas para hacer visible su ubicación
                 creeper.getWorld().spawnParticle(
                         Particle.TRIAL_SPAWNER_DETECTION_OMINOUS,
                         creeper.getLocation().add(0, 1, 0),
@@ -109,7 +108,6 @@ public class EnderCreeper extends EnderMobsTP implements Listener {
         if (isCustomMob(event.getEntity())) {
             Creeper creeper = (Creeper) event.getEntity();
 
-            // Limpiar drops
             event.getDrops().clear();
 
             creeper.getWorld().playSound(creeper.getLocation(), Sound.ENTITY_ENDERMAN_DEATH, 2.0f, 0.7f);
@@ -139,7 +137,7 @@ public class EnderCreeper extends EnderMobsTP implements Listener {
 
             creeper.addPotionEffect(new PotionEffect(
                     PotionEffectType.GLOWING,
-                    20, // 1 segundo
+                    20,
                     0,
                     false, false
             ));

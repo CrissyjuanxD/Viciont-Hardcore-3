@@ -76,7 +76,6 @@ public class Iceologer implements Listener {
                     return;
                 }
 
-                // Comprobar si tiene un objetivo
                 if (iceologer.getTarget() instanceof Player player) {
                     if ((player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE) &&
                             iceologer.hasLineOfSight(player) &&
@@ -100,13 +99,11 @@ public class Iceologer implements Listener {
         Location startLocation = player.getLocation().add(0, 10, 0);
         BlockData blockData = Material.PACKED_ICE.createBlockData();
 
-        // Crear un solo bloque
         BlockDisplay blockDisplay = (BlockDisplay) iceologer.getWorld().spawnEntity(startLocation, EntityType.BLOCK_DISPLAY);
         blockDisplay.setBlock(blockData);
         blockDisplay.setCustomName("iceSphere");
         blockDisplay.setCustomNameVisible(false);
 
-        // Escala pequeña
         blockDisplay.setTransformation(new Transformation(
                 new Vector3f(0, 0, 0),
                 new Quaternionf(),
@@ -114,7 +111,6 @@ public class Iceologer implements Listener {
                 new Quaternionf()
         ));
 
-        // Añadir glowing celeste
         blockDisplay.setGlowing(true);
         blockDisplay.setGlowColorOverride(Color.AQUA);
 
@@ -132,14 +128,12 @@ public class Iceologer implements Listener {
                 boolean hit = false;
                 Location currentLocation = blockDisplay.getLocation();
 
-                // Verificar impacto con el jugador
                 if (currentLocation.distance(player.getLocation()) <= 1.0) {
                     hit = true;
                 } else {
                     Vector direction = player.getLocation().toVector().subtract(currentLocation.toVector()).normalize();
                     blockDisplay.teleport(currentLocation.add(direction.multiply(0.3))); // Movimiento rápido
 
-                    // Rotación fluida
                     rotationAngle += 10.0f;
                     Quaternionf rotation = new Quaternionf().rotateY((float) Math.toRadians(rotationAngle));
                     blockDisplay.setTransformation(new Transformation(
@@ -154,7 +148,6 @@ public class Iceologer implements Listener {
                     if (player.isBlocking()) {
                         player.getWorld().playSound(player.getLocation(), Sound.ITEM_SHIELD_BLOCK, 1f, 0.8f);
                     } else {
-                        // Daño y congelación
                         player.damage(4);
                         applyFreezeEffect(player);
                         player.getWorld().playSound(player.getLocation(), Sound.BLOCK_GLASS_BREAK, 1f, 0.5f);
@@ -174,7 +167,6 @@ public class Iceologer implements Listener {
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_HURT_FREEZE, 1f, 0.1f);
     }
 
-    // Flechas con partículas blancas y congelamiento al golpear
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         if (event.getDamager() instanceof Arrow arrow && arrow.getShooter() instanceof Illusioner) {
@@ -199,7 +191,6 @@ public class Iceologer implements Listener {
         }
     }
 
-    //ataque de hielo en area
     private void performIceBlockAttack(Illusioner iceologer) {
         if (random.nextInt(4) != 0) return;
 
@@ -207,7 +198,6 @@ public class Iceologer implements Listener {
 
         List<Player> nearbyPlayers = new ArrayList<>();
 
-        // Obtener entidades cercanas al Iceologer
         for (Entity entity : iceologer.getNearbyEntities(10, 10, 10)) {
             if (entity instanceof Player player &&
                     (player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE)) {
@@ -217,19 +207,16 @@ public class Iceologer implements Listener {
 
         if (nearbyPlayers.isEmpty()) return;
 
-        // Seleccionar jugador objetivo (aleatorio o más cercano)
         Player target = nearbyPlayers.size() > 1
                 ? nearbyPlayers.get(new Random().nextInt(nearbyPlayers.size()))
                 : nearbyPlayers.get(0);
 
-        // Posición objetivo sobre el jugador seleccionado
         Location origin = target.getLocation().add(0, 10, 0);
 
         world.playSound(target.getLocation(), Sound.ENTITY_ILLUSIONER_PREPARE_MIRROR, 1f, 0.5f);
 
-        // Crear los 8 bloques alrededor del jugador objetivo
         for (int i = 0; i < 8; i++) {
-            double angle = Math.toRadians(45 * i); // Dividir círculo en 8 partes
+            double angle = Math.toRadians(45 * i);
             double x = Math.cos(angle) * 3;
             double z = Math.sin(angle) * 3;
             Location spawnLocation = origin.clone().add(x, 0, z);
@@ -252,15 +239,12 @@ public class Iceologer implements Listener {
 
             @Override
             public void run() {
-                // Actualizar posición
                 Location currentLocation = blockDisplay.getLocation();
                 height -= velocity;
                 blockDisplay.teleport(currentLocation.subtract(0, velocity, 0));
 
-                // Crear partículas mientras cae
                 currentLocation.getWorld().spawnParticle(Particle.SNOWFLAKE, currentLocation, 5, 0.1, 0.1, 0.1, 0.1);
 
-                // Al llegar al suelo
                 if (height <= 0) {
                     applyExplosionEffect(blockDisplay.getLocation(), center);
                     blockDisplay.remove();
@@ -273,19 +257,17 @@ public class Iceologer implements Listener {
     private void applyExplosionEffect(Location location, Location center) {
         World world = location.getWorld();
 
-        // Crear partículas y sonido al caer
         world.spawnParticle(Particle.EXPLOSION_EMITTER, location, 1);
         world.playSound(location, Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 2f, 2f);
 
-        // Aplicar daño y efectos a jugadores en el radio
         double radius = 3.0;
         for (Entity entity : world.getNearbyEntities(location, radius, radius, radius)) {
             if (entity instanceof Player player &&
                     (player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE)) {
 
                 if (player.getLocation().distance(center) <= radius) {
-                    player.damage(4);
-                    player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 100, 1)); // Lentitud 2 por 3 segundos
+                    player.damage(5);
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 100, 1));
                 }
             }
         }

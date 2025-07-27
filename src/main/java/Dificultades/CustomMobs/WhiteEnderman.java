@@ -75,7 +75,6 @@ public class WhiteEnderman implements Listener {
                 isWhiteEnderman(enderman) &&
                 event.getTarget() != null) {
 
-            // Iniciar el sistema de ataque periódico
             startEnderpearlAttack(enderman, event.getTarget());
         }
     }
@@ -89,18 +88,16 @@ public class WhiteEnderman implements Listener {
                     return;
                 }
 
-                // Verificar distancia y línea de visión
                 if (enderman.getLocation().distance(target.getLocation()) > 20 ||
                         !enderman.hasLineOfSight(target)) {
                     return;
                 }
 
-                // Lanzar enderpearl con mayor probabilidad (80%)
                 if (Math.random() < 0.8) {
                     launchEnderpearl(enderman, target);
                 }
             }
-        }.runTaskTimer(plugin, 0L, 40L); // Cada 2 segundos (40 ticks)
+        }.runTaskTimer(plugin, 0L, 40L);
     }
 
     private void launchEnderpearl(Enderman enderman, LivingEntity target) {
@@ -109,19 +106,16 @@ public class WhiteEnderman implements Listener {
                 .subtract(eyeLocation.toVector())
                 .normalize();
 
-        // Añadir un pequeño desplazamiento aleatorio
         direction.add(new Vector(
                 (Math.random() - 0.5) * 0.1,
                 (Math.random() - 0.5) * 0.1,
                 (Math.random() - 0.5) * 0.1
         )).normalize();
 
-        // Lanzar la enderpearl
         EnderPearl pearl = enderman.launchProjectile(EnderPearl.class, direction.multiply(1.8));
         pearl.setShooter(enderman);
         pearl.getPersistentDataContainer().set(whiteEndermanKey, PersistentDataType.BYTE, (byte) 1);
 
-        // Efectos de sonido
         enderman.getWorld().playSound(enderman.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 0.8f);
     }
 
@@ -130,7 +124,6 @@ public class WhiteEnderman implements Listener {
         if (event.getEntity() instanceof Enderman enderman &&
                 isWhiteEnderman(enderman)) {
 
-            // Cancelar daño por agua o contacto con agua (sin afectar el teletransporte por perlas)
             if (event.getCause() == EntityDamageEvent.DamageCause.DROWNING ||
                     event.getCause() == EntityDamageEvent.DamageCause.CONTACT) {
                 event.setCancelled(true);
@@ -150,7 +143,6 @@ public class WhiteEnderman implements Listener {
             double lootingBonus = 0;
             double doubleDropChance = 0;
 
-            // Verificar si el asesino fue un jugador y tiene Looting
             if (enderman.getKiller() != null) {
                 ItemStack weapon = enderman.getKiller().getInventory().getItemInMainHand();
                 if (weapon != null && weapon.getEnchantments().containsKey(Enchantment.LOOTING)) {

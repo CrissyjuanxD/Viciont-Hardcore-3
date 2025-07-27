@@ -55,7 +55,6 @@ public class NetheriteVexGuardian implements Listener {
     }
 
     private void applyVexGuardianAttributes(Vex vex) {
-        // Configurar atributos
         vex.setCustomName(ChatColor.of("#B87333") + "" + ChatColor.BOLD + "Netherite Vex Guardian");
         vex.setCustomNameVisible(false);
         vex.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(10);
@@ -63,15 +62,13 @@ public class NetheriteVexGuardian implements Listener {
         vex.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(6);
         vex.getAttribute(Attribute.GENERIC_FOLLOW_RANGE).setBaseValue(32);
 
-        // Equipar espada de hierro con Empuje III
         ItemStack ironSword = new ItemStack(Material.IRON_SWORD);
         ItemMeta swordMeta = ironSword.getItemMeta();
         swordMeta.addEnchant(Enchantment.KNOCKBACK, 3, true);
-        swordMeta.addEnchant(Enchantment.FIRE_ASPECT, 1, true); // Quema al jugador
+        swordMeta.addEnchant(Enchantment.FIRE_ASPECT, 1, true);
         ironSword.setItemMeta(swordMeta);
         vex.getEquipment().setItemInMainHand(ironSword);
 
-        // Efectos visuales
         vex.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, Integer.MAX_VALUE, 0));
         vex.getPersistentDataContainer().set(vexGuardianKey, PersistentDataType.BYTE, (byte) 1);
     }
@@ -81,7 +78,6 @@ public class NetheriteVexGuardian implements Listener {
         if (!(event.getDamager() instanceof Vex vex) || !isNetheriteVexGuardian(vex)) {
             return;
         }
-        // Aplicar fuego al jugador golpeado
         if (event.getEntity() instanceof Player player) {
             player.setFireTicks(Integer.MAX_VALUE);
         }
@@ -93,11 +89,9 @@ public class NetheriteVexGuardian implements Listener {
             return;
         }
 
-        // Limpiar drops
         event.getDrops().clear();
-        event.setDroppedExp(20);
+        event.setDroppedExp(40);
 
-        // Efectos de muerte
         vex.getWorld().spawnParticle(Particle.END_ROD, vex.getLocation(), 50, 0.5, 0.5, 0.5, 0.1);
         vex.getWorld().playSound(vex.getLocation(), Sound.ENTITY_VEX_DEATH, 5.0f, 0.6f);
     }

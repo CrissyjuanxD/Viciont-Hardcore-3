@@ -102,7 +102,6 @@ public class BatBoom implements Listener {
                 double nearestDistance = Double.MAX_VALUE;
 
                 for (Player player : bat.getWorld().getPlayers()) {
-                    // Solo considerar jugadores en Survival o Adventure
                     if (player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE) {
                         double distance = player.getLocation().distance(bat.getLocation());
                         if (distance <= 40 && distance < nearestDistance) {

@@ -25,7 +25,6 @@ public class CorruptedCreeper implements Listener {
     private final Map<UUID, BukkitRunnable> creeperTasks = new HashMap<>();
     private final MobSoundManager soundManager;
 
-    // Configuración personalizable
     private static final int SLOWNESS_DURATION = 10 * 20;
     private static final int SLOWNESS_AMPLIFIER = 2;
     private static final int EFFECT_RADIUS = 8;
@@ -75,7 +74,7 @@ public class CorruptedCreeper implements Listener {
         creeper.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, PotionEffect.INFINITE_DURATION, 2)); // Velocidad II
         creeper.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, PotionEffect.INFINITE_DURATION, 0)); // Resistencia al fuego
 
-        creeper.setExplosionRadius(3); // Radio base
+        creeper.setExplosionRadius(3);
         creeper.setMaxFuseTicks(20);
         creeper.setPowered(false);
 
@@ -107,7 +106,6 @@ public class CorruptedCreeper implements Listener {
 
         cancelExistingTask(creeper);
 
-        // Iniciar nueva tarea de actualización para este creeper
         BukkitRunnable task = new BukkitRunnable() {
             @Override
             public void run() {
@@ -117,7 +115,6 @@ public class CorruptedCreeper implements Listener {
                     return;
                 }
 
-                // Actualizar radio basado en las antorchas del jugador objetivo
                 int torchCount = countTorchesInInventory(target);
                 int explosionRadius = calculateExplosionRadius(torchCount);
                 creeper.setExplosionRadius(explosionRadius);
@@ -144,7 +141,6 @@ public class CorruptedCreeper implements Listener {
         Creeper creeper = (Creeper) event.getEntity();
         cancelExistingTask(creeper);
 
-        // Aplicar efectos a jugadores cercanos
         for (Entity entity : creeper.getNearbyEntities(EFFECT_RADIUS, EFFECT_RADIUS, EFFECT_RADIUS)) {
             if (entity instanceof Player player &&
                     (player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE)) {

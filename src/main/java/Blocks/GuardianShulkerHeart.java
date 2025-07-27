@@ -31,10 +31,8 @@ public class GuardianShulkerHeart implements Listener {
         ItemMeta meta = block.getItemMeta();
 
         if (meta != null) {
-            // Set display name
             meta.setDisplayName(ChatColor.of("#009999") + "" + ChatColor.BOLD + "Corazón de Shulker Guardián");
 
-            // Set lore
             List<String> lore = new ArrayList<>();
             lore.add("");
             lore.add(ChatColor.of("#333366") + "Se dice que una antigua civilización");
@@ -43,7 +41,6 @@ public class GuardianShulkerHeart implements Listener {
             lore.add("");
             meta.setLore(lore);
 
-            // Set custom model data
             meta.setCustomModelData(5);
             meta.setRarity(ItemRarity.EPIC);
 
@@ -66,7 +63,6 @@ public class GuardianShulkerHeart implements Listener {
 
             block.getWorld().dropItemNaturally(block.getLocation(), createGuardianShulkerHeart());
 
-            // Efectos
             Player player = event.getPlayer();
             player.playSound(block.getLocation(), Sound.BLOCK_GLASS_BREAK, 1.0f, 0.5f);
         }

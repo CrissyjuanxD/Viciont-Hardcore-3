@@ -106,6 +106,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
     private HellishBeeHandler hellishBeeHandler;
     private InfestedBeeHandler infestedBeeHandler;
+    private QueenBeeHandler queenBeeHandler;
 
     // Bloques
 
@@ -394,6 +395,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         //CInstancia de Bosses
         infestedBeeHandler = new InfestedBeeHandler(this);
         hellishBeeHandler = new HellishBeeHandler(this);
+        queenBeeHandler = new QueenBeeHandler(this);
 
         //Armors
         nightVisionHelmet = new NightVisionHelmet(this);
@@ -485,6 +487,16 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
                 getLogger().warning("Error al limpiar HellishBeeHandler: " + e.getMessage());
             }
             hellishBeeHandler = null;
+        }
+
+        if (queenBeeHandler != null) {
+            try {
+                queenBeeHandler.shutdown();
+                getLogger().info("QueenBeeHandler limpiado correctamente");
+            } catch (Exception e) {
+                getLogger().warning("Error al limpiar QueenBeeHandler: " + e.getMessage());
+            }
+            queenBeeHandler = null;
         }
 
         // Cancelar todas las tareas pendientes del plugin

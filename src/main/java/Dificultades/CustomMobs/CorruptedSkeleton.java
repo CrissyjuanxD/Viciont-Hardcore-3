@@ -130,7 +130,7 @@ public class CorruptedSkeleton implements Listener {
 
     private void equipSkeleton(Skeleton skeleton, Variant variant) {
         DyeColor baseColor = DyeColor.valueOf(variant.name());
-        ItemStack banner = new ItemStack(getBannerMaterial(baseColor)); // Usar el material correcto según el color base
+        ItemStack banner = new ItemStack(getBannerMaterial(baseColor));
         BannerMeta bannerMeta = (BannerMeta) banner.getItemMeta();
         if (bannerMeta != null) {
             List<Pattern> patterns = new ArrayList<>();
@@ -142,7 +142,6 @@ public class CorruptedSkeleton implements Listener {
         }
         Objects.requireNonNull(skeleton.getEquipment()).setHelmet(banner);
 
-        // Crear el arco con encantamientos según la variante
         ItemStack bow = new ItemStack(Material.BOW);
         ItemMeta bowMeta = bow.getItemMeta();
         if (bowMeta != null) {
@@ -168,17 +167,14 @@ public class CorruptedSkeleton implements Listener {
         }
         skeleton.getEquipment().setItemInMainHand(bow);
 
-        // Crear flechas con efectos según la variante
         ItemStack arrows = new ItemStack(Material.TIPPED_ARROW, 64);
         PotionMeta arrowMeta = (PotionMeta) arrows.getItemMeta();
         if (arrowMeta != null) {
-            // Configuración base para las flechas
             arrowMeta.addCustomEffect(new PotionEffect(PotionEffectType.INSTANT_DAMAGE, 1, 0), true);
             arrows.setItemMeta(arrowMeta);
         }
         skeleton.getEquipment().setItemInOffHand(arrows);
 
-        // Equipar hacha de Netherite al esqueleto Rojo
         if (variant == Variant.RED) {
             ItemStack netheriteAxe = new ItemStack(Material.NETHERITE_AXE);
             ItemMeta axeMeta = netheriteAxe.getItemMeta();
@@ -203,7 +199,6 @@ public class CorruptedSkeleton implements Listener {
         ItemStack armorPiece = new ItemStack(material);
         LeatherArmorMeta meta = (LeatherArmorMeta) armorPiece.getItemMeta();
         if (meta != null) {
-            // Convertir HEX a Color RGB
             String hex = variant.getHexColor().substring(1);
             int r = Integer.parseInt(hex.substring(0, 2), 16);
             int g = Integer.parseInt(hex.substring(2, 4), 16);
@@ -213,7 +208,6 @@ public class CorruptedSkeleton implements Listener {
             meta.setDisplayName("ArmorCorruptedSkeleton");
             meta.addEnchant(Enchantment.PROTECTION, 2, true);
 
-            // Añadir atributos de armadura y resistencia
             if (armor > 0) {
                 meta.addAttributeModifier(
                         Attribute.GENERIC_ARMOR,
@@ -264,7 +258,6 @@ public class CorruptedSkeleton implements Listener {
             Arrow arrow = (Arrow) event.getProjectile();
             arrow.getPersistentDataContainer().set(arrowVariantKey, PersistentDataType.STRING, variantName);
 
-            // Aplicar efectos base a la flecha según la variante
             Variant variant = Variant.valueOf(variantName);
             if (arrow instanceof TippedArrow) {
                 TippedArrow tippedArrow = (TippedArrow) arrow;
@@ -293,7 +286,6 @@ public class CorruptedSkeleton implements Listener {
 
         Variant variant = Variant.valueOf(variantName);
 
-        // Aplicar efectos si impacta en una entidad
         if (event.getHitEntity() instanceof LivingEntity) {
             LivingEntity target = (LivingEntity) event.getHitEntity();
             applyArrowEffects(target, variant, arrow.getLocation(), arrow);
@@ -328,12 +320,10 @@ public class CorruptedSkeleton implements Listener {
                 if (!isShielding && arrow.getShooter() instanceof Skeleton) {
                     Skeleton shooter = (Skeleton) arrow.getShooter();
 
-                    // 1. Efecto de teletransporte mejorado
                     Location teleportLocation = shooter.getLocation().clone()
                             .add(shooter.getLocation().getDirection().multiply(-1))
-                            .setDirection(target.getLocation().getDirection()); // Mantiene la dirección del jugador
+                            .setDirection(target.getLocation().getDirection());
 
-                    // Asegurar que el lugar de teletransporte es seguro
                     teleportLocation.setY(shooter.getLocation().getY());
                     if (teleportLocation.getBlock().getType().isSolid()) {
                         teleportLocation.add(0, 1, 0);
@@ -345,17 +335,14 @@ public class CorruptedSkeleton implements Listener {
                     target.teleport(teleportLocation);
                     target.getWorld().spawnParticle(Particle.PORTAL, teleportLocation, 5);
 
-                    // 2. Sistema de cambio de arma dinámico
                     double distance = target.getLocation().distance(shooter.getLocation());
                     if (distance <= 4) {
                         equipMeleeWeapon(shooter);
 
-                        // Programar verificación para cambiar de vuelta al arco
                         new BukkitRunnable() {
                             @Override
                             public void run() {
                                 if (shooter.isValid() && !shooter.isDead()) {
-                                    // Verificar distancia cada segundo
                                     if (shooter.getLocation().distance(target.getLocation()) > 4) {
                                         equipBow(shooter);
                                         this.cancel();
@@ -405,7 +392,6 @@ public class CorruptedSkeleton implements Listener {
         Objects.requireNonNull(skeleton.getEquipment()).setItemInMainHand(bow);
         skeleton.getEquipment().setItemInMainHandDropChance(0.0f);
 
-        // Asegurarse de que tenga flechas
         if (skeleton.getEquipment().getItemInOffHand().getType() != Material.ARROW) {
             skeleton.getEquipment().setItemInOffHand(new ItemStack(Material.ARROW));
         }
@@ -426,7 +412,6 @@ public class CorruptedSkeleton implements Listener {
         double lootingBonus = 0;
         double doubleDropChance = 0;
 
-        // Verificar Looting del jugador asesino
         if (skeleton.getKiller() != null) {
             ItemStack weapon = skeleton.getKiller().getInventory().getItemInMainHand();
             if (weapon != null && weapon.getEnchantments().containsKey(Enchantment.LOOTING)) {
@@ -455,7 +440,6 @@ public class CorruptedSkeleton implements Listener {
                 CorruptedMobItems.BoneVariant variant = CorruptedMobItems.BoneVariant.valueOf(variantName);
                 ItemStack bone = CorruptedMobItems.createCorruptedBone(variant);
 
-                // Aplicar chance de doble drop
                 if (doubleDropChance > 0 && Math.random() <= doubleDropChance) {
                     bone.setAmount(2);
                 }
@@ -464,7 +448,6 @@ public class CorruptedSkeleton implements Listener {
             }
         }
 
-        // Efecto de sonido opcional al morir
         skeleton.getWorld().playSound(skeleton.getLocation(), Sound.ENTITY_SKELETON_DEATH, 1f, 0.6f);
     }
 

@@ -59,7 +59,6 @@ public class HellishBeeHandler implements Listener {
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
-        // Iniciar el gestor global de BossBar
         startGlobalBossBarManager();
     }
 
@@ -69,7 +68,6 @@ public class HellishBeeHandler implements Listener {
         globalBossBarManager = new BukkitRunnable() {
             @Override
             public void run() {
-                // Procesar todas las abejas infernales en todos los mundos
                 for (World world : Bukkit.getWorlds()) {
                     for (Bee bee : world.getEntitiesByClass(Bee.class)) {
                         if (isHellishBee(bee)) {
@@ -79,14 +77,13 @@ public class HellishBeeHandler implements Listener {
                 }
             }
         };
-        globalBossBarManager.runTaskTimer(plugin, 0L, 10L); // Cada 0.5 segundos
+        globalBossBarManager.runTaskTimer(plugin, 0L, 10L);
     }
 
     private void manageBossBarForBee(Bee bee) {
         UUID beeId = bee.getUniqueId();
         BossBar bossBar = bossBars.get(beeId);
 
-        // Verificación más estricta antes de crear nueva BossBar
         if (bossBar == null && fullyInitializedBees.contains(beeId)) {
             bossBar = Bukkit.createBossBar(
                     ChatColor.RED + "Abeja Infernal",
@@ -99,15 +96,13 @@ public class HellishBeeHandler implements Listener {
         }
 
         if (bossBar != null) {
-            // Actualizar progreso de salud
+
             double healthPercentage = Math.max(0.0, bee.getHealth() / 500.0);
             bossBar.setProgress(healthPercentage);
 
-            // Gestionar jugadores basado en distancia
             Set<Player> currentPlayers = new HashSet<>(bossBar.getPlayers());
             Set<Player> shouldHavePlayers = new HashSet<>();
 
-            // Encontrar jugadores que deberían ver la BossBar
             for (Player player : Bukkit.getOnlinePlayers()) {
                 if (player.getWorld().equals(bee.getWorld())) {
                     double distance = player.getLocation().distance(bee.getLocation());
@@ -117,14 +112,12 @@ public class HellishBeeHandler implements Listener {
                 }
             }
 
-            // Remover jugadores que ya no deberían ver la BossBar
             for (Player player : currentPlayers) {
                 if (!shouldHavePlayers.contains(player)) {
                     bossBar.removePlayer(player);
                 }
             }
 
-            // Añadir jugadores que deberían ver la BossBar
             for (Player player : shouldHavePlayers) {
                 if (!currentPlayers.contains(player)) {
                     bossBar.addPlayer(player);
@@ -171,7 +164,6 @@ public class HellishBeeHandler implements Listener {
             return false;
         }
 
-        // Si ya está siendo procesado, NO procesar
         if (processingBees.contains(beeId)) {
             return false;
         }
@@ -191,32 +183,25 @@ public class HellishBeeHandler implements Listener {
             return;
         }
 
-        // Marcar como siendo procesado INMEDIATAMENTE
         processingBees.add(beeId);
 
         try {
-            // Limpiar cualquier estado anterior
             cleanupBee(beeId);
 
-            // Aplicar atributos solo si no los tiene ya
             if (!bee.getPersistentDataContainer().has(hellishBeeKey, PersistentDataType.BYTE)) {
                 setupBeeAttributes(bee);
             }
 
-            // Inicializar estados
             isAttacking.put(beeId, false);
             isRegenerating.put(beeId, false);
 
-            // Iniciar comportamiento (BossBar se maneja automáticamente)
             startBehavior(bee);
 
-            // MARCAR COMO COMPLETAMENTE INICIALIZADO
             fullyInitializedBees.add(beeId);
 
             plugin.getLogger().info("Initialized Hellish Bee: " + beeId);
 
         } finally {
-            // Remover de procesamiento después de un delay
             new BukkitRunnable() {
                 @Override
                 public void run() {
@@ -261,7 +246,7 @@ public class HellishBeeHandler implements Listener {
         if (activeBehaviors.containsKey(beeId)) {
             BukkitRunnable existing = activeBehaviors.get(beeId);
             if (existing != null && !existing.isCancelled()) {
-                return; // Ya tiene comportamiento activo
+                return;
             }
         }
 
@@ -278,7 +263,7 @@ public class HellishBeeHandler implements Listener {
             }
         };
 
-        behavior.runTaskTimer(plugin, 0L, 50L); // Cada 2.5 segundos (igual que original)
+        behavior.runTaskTimer(plugin, 0L, 50L);
         activeBehaviors.put(beeId, behavior);
 
         plugin.getLogger().info("Started behavior for Hellish Bee: " + beeId);
@@ -289,7 +274,7 @@ public class HellishBeeHandler implements Listener {
 
         // VERIFICACIÓN CRÍTICA: Solo un ataque a la vez
         if (isAttacking.getOrDefault(beeId, false)) {
-            return; // Ya está atacando
+            return;
         }
 
         Player target = findTarget(bee);
@@ -305,13 +290,11 @@ public class HellishBeeHandler implements Listener {
             return;
         }
 
-        // Verificar regeneración
         if (bee.getHealth() < 250.0 && !isRegenerating.getOrDefault(beeId, false) && random.nextDouble() <= 0.20) {
             executeRegeneration(bee);
             return;
         }
 
-        // Ejecutar ataque
         executeRandomAttack(bee);
     }
 
@@ -346,7 +329,6 @@ public class HellishBeeHandler implements Listener {
     private void executeRandomAttack(Bee bee) {
         UUID beeId = bee.getUniqueId();
 
-        // MARCAR COMO ATACANDO PARA PREVENIR DUPLICADOS
         isAttacking.put(beeId, true);
 
         AttackType[] attacks = {AttackType.PARALYSIS, AttackType.FIRE_CIRCLE, AttackType.SUMMON_VEXES,
@@ -362,13 +344,12 @@ public class HellishBeeHandler implements Listener {
             case MELEE -> executeMeleeAttack(bee);
         }
 
-        // Resetear estado de ataque después de un delay
         new BukkitRunnable() {
             @Override
             public void run() {
                 isAttacking.put(beeId, false);
             }
-        }.runTaskLater(plugin, 100L); // 5 segundos
+        }.runTaskLater(plugin, 100L);
     }
 
     // ==================== ATAQUES ESPECÍFICOS DE HELLISH BEE ====================
@@ -376,30 +357,24 @@ public class HellishBeeHandler implements Listener {
     private void executeParalysisAttack(Bee bee) {
         Location beeLocation = bee.getLocation();
 
-        // Play nether-themed sound
         bee.getWorld().playSound(beeLocation, Sound.ENTITY_WITHER_SHOOT, 5.0f, 0.5f);
 
-        // Create white bossbar
         BossBar paralysisBar = Bukkit.createBossBar(ChatColor.DARK_RED + "\uEAA5", BarColor.WHITE, BarStyle.SOLID);
         paralysisBar.setVisible(true);
 
-        // Affect all players in 30 block radius
         for (Player player : beeLocation.getWorld().getPlayers()) {
-            if (player.getLocation().distanceSquared(beeLocation) <= 900) { // 30^2
+            if (player.getLocation().distanceSquared(beeLocation) <= 900) {
                 paralysisBar.addPlayer(player);
                 player.sendTitle(ChatColor.RED + "☠Parálisis☠", "", 10, 70, 20);
 
-                // Apply extreme slowness and blindness
                 player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 200, 250, true, true));
                 player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 200, 0, true, true));
 
-                // Nether particle effects
                 player.spawnParticle(Particle.LAVA, player.getLocation(), 30);
                 player.spawnParticle(Particle.SMOKE, player.getLocation(), 15);
             }
         }
 
-        // Lanzar fireballs después de 1 segundo (20 ticks)
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -409,7 +384,6 @@ public class HellishBeeHandler implements Listener {
             }
         }.runTaskLater(plugin, 10L);
 
-        // Remove bossbar after 10 seconds
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -421,23 +395,19 @@ public class HellishBeeHandler implements Listener {
     private void launchFireballAttack(Bee bee) {
         Location beeLocation = bee.getLocation().add(0, 1, 0);
 
-        // Play initial spawn sound
         bee.getWorld().playSound(beeLocation, Sound.ENTITY_BLAZE_SHOOT, 2.0f, 0.8f);
 
-        // Get all nearby players within 30 blocks
         List<Player> targets = beeLocation.getWorld().getNearbyEntities(beeLocation, 30, 30, 30).stream()
                 .filter(e -> e instanceof Player)
                 .map(e -> (Player)e)
                 .collect(Collectors.toList());
 
-        // Crear y lanzar fireballs usando BlockDisplay en lugar de Fireball
         for (int i = 0; i < 4; i++) {
             double angle = 2 * Math.PI * i / 4;
             double x = beeLocation.getX() + 1 * Math.cos(angle);
             double z = beeLocation.getZ() + 1 * Math.sin(angle);
             Location spawnLoc = new Location(beeLocation.getWorld(), x, beeLocation.getY() + 0.5, z);
 
-            // Asignar objetivo
             Player target = null;
             if (!targets.isEmpty()) {
                 if (targets.size() <= i) {
@@ -458,14 +428,12 @@ public class HellishBeeHandler implements Listener {
         fireball.setGlowing(true);
         fireball.setGlowColorOverride(Color.ORANGE);
 
-        // Dirección inicial aleatoria
         Vector initialDirection = new Vector(
                 random.nextDouble() - 0.5,
                 0.2,
                 random.nextDouble() - 0.5
         ).normalize().multiply(0.8);
 
-        // Sonido de lanzamiento
         fireball.getWorld().playSound(fireball.getLocation(), Sound.ENTITY_GHAST_SHOOT, 1.5f, 0.7f);
 
         if (target != null) {
@@ -485,33 +453,29 @@ public class HellishBeeHandler implements Listener {
                     return;
                 }
 
-                // Fase 1: Movimiento inicial (30 ticks = 1.5 segundos)
+                // Fase 1: Movimiento inicial
                 if (ticks < 30) {
                     Location newLoc = fireball.getLocation().add(currentDirection.clone().multiply(0.5));
                     fireball.teleport(newLoc);
 
-                    // Partículas de rastro
                     fireball.getWorld().spawnParticle(Particle.FLAME, fireball.getLocation(), 2, 0.1, 0.1, 0.1, 0);
                     fireball.getWorld().spawnParticle(Particle.LAVA, fireball.getLocation(), 1);
                 }
-                // Momento de rebote (ticks 30-40)
+                // Momento de rebote
                 else if (ticks >= 30 && ticks < 40 && !hasRebounded) {
                     hasRebounded = true;
 
-                    // Detener y efectos de rebote
                     fireball.getWorld().playSound(fireball.getLocation(), Sound.ENTITY_BLAZE_HURT, 1.0f, 1.5f);
                     fireball.getWorld().spawnParticle(Particle.FLAME, fireball.getLocation(), 15, 0.5, 0.5, 0.5, 0.1);
                     fireball.getWorld().spawnParticle(Particle.EXPLOSION, fireball.getLocation(), 1);
 
-                    // Calcular nueva dirección hacia el objetivo
                     if (target != null && target.isOnline()) {
                         Vector newDirection = target.getLocation().add(0, 1, 0)
                                 .subtract(fireball.getLocation()).toVector().normalize();
-                        currentDirection = newDirection.multiply(1.2); // Más rápido en el rebote
+                        currentDirection = newDirection.multiply(1.2);
 
                         fireball.getWorld().playSound(fireball.getLocation(), Sound.ENTITY_GHAST_SHOOT, 1.0f, 2.0f);
                     } else {
-                        // Si no hay objetivo, explotar
                         explodeCustomFireball(fireball);
                         cancel();
                         return;
@@ -522,11 +486,9 @@ public class HellishBeeHandler implements Listener {
                     Location newLoc = fireball.getLocation().add(currentDirection.clone().multiply(0.6));
                     fireball.teleport(newLoc);
 
-                    // Partículas más intensas
                     fireball.getWorld().spawnParticle(Particle.FLAME, fireball.getLocation(), 3, 0.2, 0.2, 0.2, 0.05);
                     fireball.getWorld().spawnParticle(Particle.LAVA, fireball.getLocation(), 2);
 
-                    // Verificar colisión con jugadores
                     for (Entity entity : fireball.getWorld().getNearbyEntities(fireball.getLocation(), 1.5, 1.5, 1.5)) {
                         if (entity instanceof Player player) {
                             player.damage(8);
@@ -540,7 +502,6 @@ public class HellishBeeHandler implements Listener {
                         }
                     }
 
-                    // Verificar colisión con bloques sólidos
                     if (fireball.getLocation().getBlock().getType().isSolid()) {
                         explodeCustomFireball(fireball);
                         cancel();
@@ -550,7 +511,6 @@ public class HellishBeeHandler implements Listener {
 
                 ticks++;
 
-                // Timeout después de 10 segundos
                 if (ticks > 200) {
                     explodeCustomFireball(fireball);
                     cancel();
@@ -564,7 +524,6 @@ public class HellishBeeHandler implements Listener {
         fireball.getWorld().spawnParticle(Particle.EXPLOSION, loc, 3, 1, 1, 1, 0);
         fireball.getWorld().playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 2.0f, 1.0f);
 
-        // Daño en área
         for (Entity entity : fireball.getWorld().getNearbyEntities(loc, 4, 4, 4)) {
             if (entity instanceof Player player) {
                 player.damage(20);
@@ -620,11 +579,10 @@ public class HellishBeeHandler implements Listener {
         }.runTaskLater(plugin, 100L);
     }
 
-    // Nuevo ataque: Rayos de Fuego
+    // Ataque: Rayos de Fuego
     private void executeFireRays(Bee bee) {
         bee.getWorld().playSound(bee.getLocation(), Sound.ENTITY_BLAZE_AMBIENT, 5.0f, 0.5f);
 
-        // Obtener jugadores cercanos (2-5 jugadores)
         List<Player> nearbyPlayers = bee.getWorld().getNearbyEntities(bee.getLocation(), 30, 30, 30).stream()
                 .filter(e -> e instanceof Player)
                 .map(e -> (Player) e)
@@ -633,10 +591,9 @@ public class HellishBeeHandler implements Listener {
         if (nearbyPlayers.isEmpty()) return;
 
         Collections.shuffle(nearbyPlayers);
-        int targetCount = Math.min(random.nextInt(4) + 2, nearbyPlayers.size()); // 2-5 jugadores
+        int targetCount = Math.min(random.nextInt(4) + 2, nearbyPlayers.size());
         List<Player> targets = nearbyPlayers.subList(0, targetCount);
 
-        // Sonido inicial
         bee.getWorld().playSound(bee.getLocation(), Sound.ENTITY_EVOKER_PREPARE_ATTACK, 3.0f, 0.8f);
 
         for (Player target : targets) {
@@ -648,7 +605,7 @@ public class HellishBeeHandler implements Listener {
         new BukkitRunnable() {
             int ticks = 0;
             int damageTicks = 0;
-            final int DURATION = 100; // 5 segundos
+            final int DURATION = 100;
 
             @Override
             public void run() {
@@ -657,57 +614,45 @@ public class HellishBeeHandler implements Listener {
                     return;
                 }
 
-                // Actualizar la posición de la abeja en cada tick
                 Location beeLocation = bee.getLocation().add(0, 1, 0);
                 Location targetLocation = target.getEyeLocation();
 
-                // Crear línea de partículas desde la abeja hasta el jugador
                 Vector direction = targetLocation.toVector().subtract(beeLocation.toVector());
                 double distance = direction.length();
                 direction.normalize();
 
-                // Animación de expansión del rayo (primeros 20 ticks)
                 double currentDistance = ticks < 20 ? (distance * ticks / 20.0) : distance;
 
                 for (double d = 0; d < currentDistance; d += 0.3) {
                     Location particleLoc = beeLocation.clone().add(direction.clone().multiply(d));
 
-                    // Partículas naranjas (dust)
                     Particle.DustOptions dustOptions = new Particle.DustOptions(Color.ORANGE, 1.0f);
                     bee.getWorld().spawnParticle(Particle.DUST, particleLoc, 1, 0.1, 0.1, 0.1, 0, dustOptions);
 
-                    // Partículas adicionales para efecto
                     if (random.nextDouble() < 0.3) {
                         bee.getWorld().spawnParticle(Particle.FLAME, particleLoc, 1, 0.05, 0.05, 0.05, 0);
                     }
                 }
 
-                // Sonidos cada 20 ticks
                 if (ticks % 20 == 0) {
                     bee.getWorld().playSound(beeLocation, Sound.BLOCK_FIRE_AMBIENT, 2.0f, 1.5f);
                     target.playSound(target.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.3f, 2.0f);
                 }
 
-                // Daño cada segundo (20 ticks) después de que el rayo esté completamente formado
                 if (ticks >= 20 && ticks % 20 == 0) {
                     damageTicks++;
 
-                    // Verificar si el jugador está usando escudo
                     boolean isBlocking = target.isBlocking();
 
                     if (!isBlocking) {
-                        // Aplicar daño y fuego
                         target.damage(3.0);
-                        target.setFireTicks(300); // 2 segundos de fuego
+                        target.setFireTicks(300);
 
-                        // Efectos visuales en el jugador
                         target.getWorld().spawnParticle(Particle.FLAME, target.getLocation(), 10, 0.5, 1.0, 0.5, 0.1);
                         target.getWorld().spawnParticle(Particle.LAVA, target.getLocation(), 5);
 
-                        // Sonido de daño
                         target.playSound(target.getLocation(), Sound.ENTITY_PLAYER_HURT_ON_FIRE, 1.0f, 1.0f);
                     } else {
-                        // Efectos cuando se bloquea
                         target.getWorld().spawnParticle(Particle.CRIT, target.getLocation(), 5, 0.5, 0.5, 0.5, 0.1);
                         target.playSound(target.getLocation(), Sound.ITEM_SHIELD_BLOCK, 1.0f, 1.0f);
                     }
@@ -1037,16 +982,13 @@ public class HellishBeeHandler implements Listener {
         processingBees.add(beeId);
 
         try {
-            // Cancelar comportamiento anterior
             BukkitRunnable oldBehavior = activeBehaviors.remove(beeId);
             if (oldBehavior != null && !oldBehavior.isCancelled()) {
                 oldBehavior.cancel();
             }
 
-            // Reiniciar estados de ataque
             isAttacking.put(beeId, false);
 
-            // Reiniciar comportamiento
             startBehavior(bee);
 
         } finally {
@@ -1093,13 +1035,11 @@ public class HellishBeeHandler implements Listener {
     }
 
     private void cleanupBee(UUID beeId) {
-        // Cancelar comportamiento
         BukkitRunnable behavior = activeBehaviors.remove(beeId);
         if (behavior != null && !behavior.isCancelled()) {
             behavior.cancel();
         }
 
-        // Limpiar BossBar de manera más exhaustiva
         BossBar bossBar = bossBars.remove(beeId);
         if (bossBar != null) {
             try {
@@ -1110,7 +1050,6 @@ public class HellishBeeHandler implements Listener {
             }
         }
 
-        // Limpiar estados
         isAttacking.remove(beeId);
         isRegenerating.remove(beeId);
         processingBees.remove(beeId);
@@ -1137,12 +1076,10 @@ public class HellishBeeHandler implements Listener {
     // ==================== MÉTODOS PÚBLICOS ====================
 
     public void shutdown() {
-        // Cancelar el gestor global de BossBar
         if (globalBossBarManager != null && !globalBossBarManager.isCancelled()) {
             globalBossBarManager.cancel();
         }
 
-        // Limpiar todas las abejas
         new ArrayList<>(fullyInitializedBees).forEach(this::cleanupBee);
         processingBees.clear();
         fullyInitializedBees.clear();

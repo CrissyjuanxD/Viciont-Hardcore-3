@@ -31,7 +31,6 @@ public class NightVisionHelmet implements Listener {
         this.plugin = plugin;
     }
 
-    // Método para crear el casco
     public static ItemStack createNightVisionHelmet() {
         ItemStack item = new ItemStack(Material.IRON_HELMET);
         ItemMeta meta = item.getItemMeta();
@@ -59,7 +58,6 @@ public class NightVisionHelmet implements Listener {
         return item;
     }
 
-    // Método para crear el casco
     public static ItemStack createNightVisionHelmetPlus() {
         ItemStack item = new ItemStack(Material.NETHERITE_HELMET);
         ItemMeta meta = item.getItemMeta();
@@ -149,7 +147,6 @@ public class NightVisionHelmet implements Listener {
         bar.setVisible(true);
         bossBarMap.put(uuid, bar);
 
-        // Inicia el gasto de durabilidad
         BukkitRunnable task = new BukkitRunnable() {
             int ticks = 0;
 
@@ -180,7 +177,6 @@ public class NightVisionHelmet implements Listener {
     private void damageHelmet(ItemStack helmet, Player player) {
         helmet.setDurability((short) (helmet.getDurability() + 1));
 
-        // Romper si se acabó la durabilidad
         if (helmet.getType().getMaxDurability() - helmet.getDurability() <= 1) {
             player.getInventory().setHelmet(null);
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
@@ -239,7 +235,6 @@ public class NightVisionHelmet implements Listener {
 
         Map<Enchantment, Integer> enchants = new HashMap<>(helmet.getEnchantments());
 
-        // Si tiene más de un encantamiento o unbreaking > 1 o mending, resetear
         if (enchants.size() != 1 || !enchants.containsKey(Enchantment.UNBREAKING) || enchants.get(Enchantment.UNBREAKING) != 1) {
             for (Enchantment ench : enchants.keySet()) {
                 helmet.removeEnchantment(ench);

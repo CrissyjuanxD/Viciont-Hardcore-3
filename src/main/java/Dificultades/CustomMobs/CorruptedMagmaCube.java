@@ -58,7 +58,6 @@ public class CorruptedMagmaCube implements Listener {
     }
 
     private void applyCorruptedMagmaAttributes(MagmaCube magma) {
-        // Set attributes
         magma.setCustomName(ChatColor.DARK_RED + "" + ChatColor.BOLD + "Corrupted Magma Cube");
         magma.setCustomNameVisible(false);
         magma.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(200);
@@ -67,7 +66,6 @@ public class CorruptedMagmaCube implements Listener {
         magma.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(3.0);
         magma.getAttribute(Attribute.GENERIC_FOLLOW_RANGE).setBaseValue(50);
 
-        // Visual effects
         magma.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, Integer.MAX_VALUE, 0));
         magma.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, Integer.MAX_VALUE, 10));
         magma.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 15));
@@ -79,7 +77,6 @@ public class CorruptedMagmaCube implements Listener {
         if (event.getEntity() instanceof MagmaCube magma &&
                 magma.getPersistentDataContainer().has(corruptedMagmaKey, PersistentDataType.BYTE)) {
 
-            // Clear drops
             event.getDrops().clear();
 
             if (Math.random() <= 0.08) {

@@ -52,27 +52,24 @@ public class DarkCreeper extends DarkMobSB implements Listener {
         creeper.setCustomName(ChatColor.DARK_GRAY + "" + ChatColor.BOLD + "Dark Creeper");
         creeper.setCustomNameVisible(false);
 
-        // Atributos base
         creeper.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(80);
         creeper.setHealth(80);
         creeper.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.25);
 
-        // Efectos permanentes
         creeper.addPotionEffect(new PotionEffect(
                 PotionEffectType.SPEED,
                 PotionEffect.INFINITE_DURATION,
-                2, // Velocidad III (2 porque empieza en 0)
+                2,
                 false, false
         ));
 
         creeper.addPotionEffect(new PotionEffect(
                 PotionEffectType.RESISTANCE,
                 PotionEffect.INFINITE_DURATION,
-                1, // Resistencia II
+                1,
                 false, false
         ));
 
-        // Configuración de explosión
         creeper.setExplosionRadius(8);
         creeper.setPowered(false);
 
@@ -90,7 +87,6 @@ public class DarkCreeper extends DarkMobSB implements Listener {
                     return;
                 }
 
-                // Partículas oscuras
                 creeper.getWorld().spawnParticle(
                         Particle.LARGE_SMOKE,
                         creeper.getLocation().add(0, 1, 0),
@@ -98,7 +94,6 @@ public class DarkCreeper extends DarkMobSB implements Listener {
                         0.3, 0.5, 0.3, 0.05
                 );
 
-                // Partículas de energía oscura
                 creeper.getWorld().spawnParticle(
                         Particle.SOUL_FIRE_FLAME,
                         creeper.getLocation(),
@@ -116,14 +111,11 @@ public class DarkCreeper extends DarkMobSB implements Listener {
             Location explosionLoc = creeper.getLocation();
             World world = creeper.getWorld();
 
-            // Efectos de sonido y partículas
             world.playSound(explosionLoc, Sound.ENTITY_WARDEN_SONIC_BOOM, 2.0f, 0.7f);
             world.spawnParticle(Particle.EXPLOSION_EMITTER, explosionLoc, 1);
 
-            // Aplicar efectos a jugadores en 20 bloques
             for (Player player : world.getPlayers()) {
                 if (player.getLocation().distance(explosionLoc) <= 20) {
-                    // Oscuridad por 30 segundos (600 ticks)
                     player.addPotionEffect(new PotionEffect(
                             PotionEffectType.DARKNESS,
                             600,
@@ -131,15 +123,13 @@ public class DarkCreeper extends DarkMobSB implements Listener {
                             false, true
                     ));
 
-                    // Lentitud II por 30 segundos
                     player.addPotionEffect(new PotionEffect(
                             PotionEffectType.SLOWNESS,
                             600,
-                            1, // Nivel II
+                            1,
                             false, true
                     ));
 
-                    // Efecto visual
                     player.spawnParticle(Particle.SQUID_INK, player.getLocation(), 30, 0.5, 1, 0.5, 0.1);
                 }
             }
@@ -169,7 +159,6 @@ public class DarkCreeper extends DarkMobSB implements Listener {
             Creeper creeper = (Creeper) event.getEntity();
             event.getDrops().clear();
 
-            // Efectos de muerte
             creeper.getWorld().playSound(creeper.getLocation(), Sound.ENTITY_WARDEN_DEATH, 1.5f, 0.8f);
             creeper.getWorld().spawnParticle(
                     Particle.SOUL,
@@ -186,7 +175,6 @@ public class DarkCreeper extends DarkMobSB implements Listener {
             Creeper creeper = (Creeper) event.getEntity();
             creeper.getWorld().playSound(creeper.getLocation(), Sound.ENTITY_WARDEN_HURT, 1.5f, 0.7f);
 
-            // Efecto al recibir daño
             creeper.getWorld().spawnParticle(
                     Particle.SMOKE,
                     creeper.getLocation(),

@@ -22,7 +22,7 @@ public class EnderGhast extends EnderMobsTP implements Listener {
 
     @Override
     public void apply() {
-        super.apply(); // Registra el listener de daño para el TP
+        super.apply();
         if (!eventsRegistered) {
             Bukkit.getPluginManager().registerEvents(this, plugin);
             eventsRegistered = true;
@@ -55,7 +55,6 @@ public class EnderGhast extends EnderMobsTP implements Listener {
         ghast.setHealth(100);
         ghast.getAttribute(Attribute.GENERIC_FOLLOW_RANGE).setBaseValue(96);
 
-        // Color morado para el ghast (partículas)
         ghast.getPersistentDataContainer().set(mobKey, PersistentDataType.BYTE, (byte) 1);
     }
 
@@ -110,7 +109,6 @@ public class EnderGhast extends EnderMobsTP implements Listener {
         }
     }
 
-    //la key publica
     public NamespacedKey getEnderGhastKey() {
         return mobKey;
     }

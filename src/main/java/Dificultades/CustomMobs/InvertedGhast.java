@@ -39,13 +39,11 @@ public class InvertedGhast implements Listener {
     public void revert() {
         if (eventsRegistered) {
 
-            // Detener todas las tareas de alucinación
             for (BukkitRunnable task : hallucinationTasks.values()) {
                 task.cancel();
             }
             hallucinationTasks.clear();
 
-            // Eliminar todos los Inverted Ghasts
             for (World world : Bukkit.getWorlds()) {
                 for (Entity entity : world.getEntities()) {
                     if (entity instanceof Ghast ghast &&
@@ -87,27 +85,23 @@ public class InvertedGhast implements Listener {
     }
 
     private void createParticleCloud(Location center) {
-        // Crear área de efecto
         AreaEffectCloud cloud = (AreaEffectCloud) center.getWorld().spawnEntity(center, EntityType.AREA_EFFECT_CLOUD);
 
-        // Configurar la nube
         cloud.setRadius(8f);
-        cloud.setDuration(30 * 20); // 30 segundos
+        cloud.setDuration(30 * 20);
         cloud.setParticle(Particle.DRAGON_BREATH);
         cloud.setColor(Color.BLACK);
         cloud.setWaitTime(10);
 
-        // Añadir efectos
-        cloud.addCustomEffect(new PotionEffect(PotionEffectType.POISON, 20, 9), true); // Veneno X
-        cloud.addCustomEffect(new PotionEffect(PotionEffectType.WITHER, 20, 9), true); // Wither X
-        cloud.addCustomEffect(new PotionEffect(PotionEffectType.NAUSEA, 20, 9), true); // Nausea X
-        cloud.addCustomEffect(new PotionEffect(PotionEffectType.SLOWNESS, 20, 9), true); // Lentitud X
-        cloud.addCustomEffect(new PotionEffect(PotionEffectType.BLINDNESS, 20, 9), true); // Blindness X
+        cloud.addCustomEffect(new PotionEffect(PotionEffectType.POISON, 20, 9), true);
+        cloud.addCustomEffect(new PotionEffect(PotionEffectType.WITHER, 20, 9), true);
+        cloud.addCustomEffect(new PotionEffect(PotionEffectType.NAUSEA, 20, 9), true);
+        cloud.addCustomEffect(new PotionEffect(PotionEffectType.SLOWNESS, 20, 9), true);
+        cloud.addCustomEffect(new PotionEffect(PotionEffectType.BLINDNESS, 20, 9), true);
 
     }
 
     private void startHallucinationEffects(Ghast ghast) {
-        // Cancelar tarea existente si hay una
         stopHallucinationEffects(ghast);
 
         BukkitRunnable task = new BukkitRunnable() {
@@ -118,11 +112,9 @@ public class InvertedGhast implements Listener {
                     return;
                 }
 
-                // Aplicar efectos a jugadores en radio de 64 bloques
                 for (Player player : ghast.getWorld().getPlayers()) {
                     if (player.getLocation().distance(ghast.getLocation()) <= 64 &&
                             (player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE)) {
-                        // Alucinación del totem
                         createFakeTotemAnimation(player);
                         strikePlayerWithLightning(player);
                     }
@@ -130,22 +122,16 @@ public class InvertedGhast implements Listener {
             }
         };
 
-        task.runTaskTimer(plugin, 0L, 15 * 20L); // Cada 25 segundos
+        task.runTaskTimer(plugin, 0L, 15 * 20L);
         hallucinationTasks.put(ghast.getUniqueId(), task);
     }
 
     private void createFakeTotemAnimation(Player player) {
-        // Verificación adicional por si el método es llamado desde otro lugar
         if (player.getGameMode() != GameMode.SURVIVAL && player.getGameMode() != GameMode.ADVENTURE) {
             return;
         }
-        // Efecto visual del totem
         player.playEffect(EntityEffect.TOTEM_RESURRECT);
-
-        // Sonido
         player.playSound(player.getLocation(), Sound.ITEM_TOTEM_USE, 1.0f, 1.0f);
-
-        // Partículas
         player.spawnParticle(Particle.TOTEM_OF_UNDYING, player.getLocation().add(0, 1, 0),
                 30, 0.5, 0.5, 0.5, 0.5);
     }
@@ -154,14 +140,10 @@ public class InvertedGhast implements Listener {
         if (player.getGameMode() != GameMode.SURVIVAL && player.getGameMode() != GameMode.ADVENTURE) {
             return;
         }
-        // Rayo sin daño real
         LightningStrike lightning = player.getWorld().strikeLightningEffect(player.getLocation());
 
-        // Efectos adicionales
         player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 200, 0));
         player.playSound(player.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1.0f, 0.8f);
-
-        // Partículas eléctricas
         player.spawnParticle(Particle.ELECTRIC_SPARK, player.getLocation(), 15, 0.5, 1, 0.5, 0.1);
     }
 

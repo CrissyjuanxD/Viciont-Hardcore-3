@@ -42,7 +42,6 @@ public class GuardianShulker implements Listener {
         this.plugin = plugin;
         this.guardianShulkerKey = new NamespacedKey(plugin, "guardian_shulker");
 
-        // Configurar equipo para el glowing azul
         if (Bukkit.getScoreboardManager().getMainScoreboard().getTeam("GuardianShulkerProjectile") == null) {
             projectileTeam = Bukkit.getScoreboardManager().getMainScoreboard().registerNewTeam("GuardianShulkerProjectile");
             projectileTeam.setColor(ChatColor.BLUE);
@@ -68,7 +67,6 @@ public class GuardianShulker implements Listener {
                 }
             }
 
-            // Limpiar boss bars
             bossBars.values().forEach(BossBar::removeAll);
             bossBars.clear();
 
@@ -86,31 +84,26 @@ public class GuardianShulker implements Listener {
         shulker.setCustomName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Guardian Shulker");
         shulker.setCustomNameVisible(true);
 
-        // Atributos
         shulker.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(300);
         shulker.setHealth(300);
         shulker.getAttribute(Attribute.GENERIC_ARMOR).setBaseValue(10);
         shulker.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).setBaseValue(1.0);
         shulker.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(2.0);
 
-        // Configurar para que siempre esté abierto
         shulker.setPeek(1.0f);
-        shulker.setAI(false); // Desactivar AI normal para controlar manualmente
+        shulker.setAI(false);
 
-        // Marcar como mob personalizado
         shulker.getPersistentDataContainer().set(guardianShulkerKey, PersistentDataType.BYTE, (byte) 1);
 
-        // Crear boss bar
         BossBar bossBar = Bukkit.createBossBar(
                 ChatColor.LIGHT_PURPLE + "Guardian Shulker",
                 BarColor.PURPLE,
                 BarStyle.SEGMENTED_10
         );
         bossBar.setProgress(1.0);
-        bossBar.addPlayer((Player) Bukkit.getOnlinePlayers().toArray()[0]); // Añadir a todos los jugadores en producción
+        bossBar.addPlayer((Player) Bukkit.getOnlinePlayers().toArray()[0]);
         bossBars.put(shulker.getUniqueId(), bossBar);
 
-        // Iniciar comportamiento del boss
         startBossBehavior(shulker);
     }
 
@@ -123,12 +116,10 @@ public class GuardianShulker implements Listener {
                     return;
                 }
 
-                // Verificar si hay jugadores válidos antes de atacar
                 if (getRandomPlayer(shulker, 70) == null) {
                     return;
                 }
 
-                // Seleccionar ataque aleatorio solo si no está atacando actualmente
                 if (shulker.getNoDamageTicks() == 0 && !isAttacking.getOrDefault(shulker.getUniqueId(), false)) {
                     int attack = random.nextInt(5);
                     switch (attack) {
@@ -140,7 +131,7 @@ public class GuardianShulker implements Listener {
                     }
                 }
             }
-        }.runTaskTimer(plugin, 0L, 20L); // Revisar cada segundo
+        }.runTaskTimer(plugin, 0L, 20L);
     }
 
     private void startBossBarUpdateTask(Shulker shulker, BossBar bossBar) {
@@ -155,19 +146,17 @@ public class GuardianShulker implements Listener {
                 updateBossBarPlayers(shulker, bossBar);
             }
         };
-        task.runTaskTimer(plugin, 0L, 20L); // Actualizar cada segundo (20 ticks)
+        task.runTaskTimer(plugin, 0L, 20L);
         bossBarUpdates.put(shulker.getUniqueId(), task);
     }
 
     private void updateBossBarPlayers(Shulker shulker, BossBar bossBar) {
-        // Obtener todos los jugadores en el rango
         Collection<Player> playersInRange = shulker.getWorld().getNearbyEntities(shulker.getLocation(), BOSSBAR_RANGE, BOSSBAR_RANGE, BOSSBAR_RANGE)
                 .stream()
                 .filter(e -> e instanceof Player)
                 .map(e -> (Player)e)
                 .collect(Collectors.toList());
 
-        // Actualizar jugadores de la bossbar
         for (Player player : Bukkit.getOnlinePlayers()) {
             boolean shouldHaveBar = playersInRange.contains(player);
             boolean hasBar = bossBar.getPlayers().contains(player);
@@ -198,7 +187,6 @@ public class GuardianShulker implements Listener {
         isAttacking.put(shulker.getUniqueId(), true);
         Location center = shulker.getLocation().add(0, 10, 0);
 
-        // Crear rayo de partículas
         BlockDisplay particleBeam = (BlockDisplay) shulker.getWorld().spawnEntity(shulker.getLocation(), EntityType.BLOCK_DISPLAY);
         particleBeam.setBlock(Material.END_ROD.createBlockData());
         particleBeam.setTransformation(new Transformation(
@@ -217,23 +205,21 @@ public class GuardianShulker implements Listener {
 
             @Override
             public void run() {
-                if (ticks >= 100 || shulker.isDead()) { // 5 segundos de duración
+                if (ticks >= 100 || shulker.isDead()) {
                     particleBeam.remove();
                     isAttacking.put(shulker.getUniqueId(), false);
                     cancel();
                     return;
                 }
 
-                // Girar el shulker
                 float yaw = shulker.getLocation().getYaw() + 10f;
                 Location newLoc = shulker.getLocation();
                 newLoc.setYaw(yaw);
                 shulker.teleport(newLoc);
 
-                // Lanzar TNT cada 5 ticks
                 if (ticks % 5 == 0) {
                     double angle = Math.toRadians(random.nextDouble() * 360);
-                    double distance = 5 + random.nextDouble() * 10; // Entre 5 y 15 bloques
+                    double distance = 5 + random.nextDouble() * 10;
 
                     TNTPrimed tnt = shulker.getWorld().spawn(center.clone().add(
                             Math.cos(angle) * distance,
@@ -241,15 +227,13 @@ public class GuardianShulker implements Listener {
                             Math.sin(angle) * distance
                     ), TNTPrimed.class);
 
-                    tnt.setFuseTicks(40); // Explotará en 2 segundos
-                    tnt.setYield(4.0f); // Explosión más poderosa
+                    tnt.setFuseTicks(40);
+                    tnt.setYield(4.0f);
                     tnt.setMetadata("NoBlockDamage", new FixedMetadataValue(plugin, true));
 
-                    // Efecto visual
                     shulker.getWorld().spawnParticle(Particle.FLAME, tnt.getLocation(), 5, 0.2, 0.2, 0.2, 0.05);
                 }
 
-                // Actualizar posición del rayo
                 particleBeam.teleport(shulker.getLocation());
 
                 ticks++;
@@ -259,7 +243,6 @@ public class GuardianShulker implements Listener {
 
     // Ataque 2: Desprotección
     private void vulnerabilityAttack(Shulker shulker) {
-        // Aplicar glowing azul
         projectileTeam.addEntry(shulker.getUniqueId().toString());
         shulker.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 200, 0, false, false));
 
@@ -272,7 +255,7 @@ public class GuardianShulker implements Listener {
                 projectileTeam.removeEntry(shulker.getUniqueId().toString());
                 shulker.removePotionEffect(PotionEffectType.GLOWING);
             }
-        }.runTaskLater(plugin, 200L); // 10 segundos de vulnerabilidad
+        }.runTaskLater(plugin, 200L);
     }
 
     // Ataque 3: Rafaga
@@ -280,7 +263,6 @@ public class GuardianShulker implements Listener {
         Player target = getRandomPlayer(shulker, 20);
         if (target == null) return;
 
-        // Lanzar proyectil teletransportador desde una posición más alta
         Location spawnLoc = shulker.getLocation().add(0, 1.5, 0);
         BlockDisplay projectile = (BlockDisplay) shulker.getWorld().spawnEntity(
                 spawnLoc,
@@ -296,7 +278,6 @@ public class GuardianShulker implements Listener {
                 new Quaternionf()
         ));
 
-        // Calcular dirección
         Vector direction = target.getLocation().add(0, 1, 0)
                 .toVector()
                 .subtract(spawnLoc.toVector())
@@ -322,14 +303,12 @@ public class GuardianShulker implements Listener {
 
                 projectile.teleport(projectile.getLocation().add(direction.clone().multiply(0.8)));
 
-                // Verificar colisión con jugadores
+                // Verifica colisión con jugadores
                 for (Entity nearby : projectile.getNearbyEntities(1.5, 1.5, 1.5)) {
                     if (nearby instanceof Player hitPlayer && hitPlayer.equals(target)) {
-                        // Verificar si el jugador está bloqueando con escudo
                         if (!hitPlayer.isBlocking()) {
                             handleBurstHit(shulker, hitPlayer);
                         } else {
-                            // Efecto cuando se bloquea el proyectil
                             hitPlayer.getWorld().playSound(hitPlayer.getLocation(),
                                     Sound.ITEM_SHIELD_BLOCK, 1.0f, 1.0f);
                         }
@@ -339,7 +318,7 @@ public class GuardianShulker implements Listener {
                     }
                 }
 
-                // Verificar colisión con bloques
+                // Verifica colisión con bloques
                 if (!projectile.getLocation().getBlock().isPassable()) {
                     projectile.remove();
                     cancel();
@@ -352,29 +331,23 @@ public class GuardianShulker implements Listener {
     }
 
     private void handleBurstHit(Shulker shulker, Player player) {
-        // Guardar la dirección original del jugador
         float originalYaw = player.getLocation().getYaw();
         float originalPitch = player.getLocation().getPitch();
 
-        // Teletransportar jugador 5 bloques frente al shulker pero sobre el suelo
         Vector direction = shulker.getLocation().getDirection().normalize();
         Location tpLocation = shulker.getLocation().add(direction.multiply(5));
         tpLocation.setY(shulker.getWorld().getHighestBlockYAt(tpLocation) + 1);
 
-        // Restaurar la dirección original después del teleport
         tpLocation.setYaw(originalYaw);
         tpLocation.setPitch(originalPitch);
         player.teleport(tpLocation);
 
-        // Efectos de sonido y partículas al teletransportar
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
         player.getWorld().spawnParticle(Particle.PORTAL, player.getLocation(), 50);
 
-        // Aplicar efectos
         player.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 100, 0));
         player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 100, 255));
 
-        // Crear rayo de partículas
         BlockDisplay beam = (BlockDisplay) shulker.getWorld().spawnEntity(shulker.getLocation(), EntityType.BLOCK_DISPLAY);
         beam.setBlock(Material.END_ROD.createBlockData());
         beam.setGlowing(true);
@@ -386,7 +359,6 @@ public class GuardianShulker implements Listener {
                 new Quaternionf()
         ));
 
-        // Disparar ráfaga de 7 shulker bullets cada medio segundo
         new BukkitRunnable() {
             int shotsFired = 0;
 
@@ -411,19 +383,17 @@ public class GuardianShulker implements Listener {
 
     // Ataque 4: NormalProyectil
     private void normalProjectileAttack(Shulker shulker) {
-        int projectiles = 1 + random.nextInt(2); // 1-2 proyectiles
+        int projectiles = 1 + random.nextInt(2);
 
         for (int i = 0; i < projectiles; i++) {
             Player target = getRandomPlayer(shulker, 20);
             if (target == null) continue;
 
-            // Añadir delay aleatorio entre proyectiles (0-10 ticks)
             final int delay = i * 10;
 
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    // Posición de spawn más alta y centrada
                     Location spawnLoc = shulker.getLocation().add(0, 1.5, 0);
 
                     BlockDisplay projectile = (BlockDisplay) shulker.getWorld().spawnEntity(
@@ -440,7 +410,6 @@ public class GuardianShulker implements Listener {
                             new Quaternionf()
                     ));
 
-                    // Dirección con pequeño offset aleatorio
                     Vector direction = target.getLocation().add(0, 1, 0)
                             .toVector()
                             .subtract(spawnLoc.toVector())
@@ -464,10 +433,8 @@ public class GuardianShulker implements Listener {
                                 return;
                             }
 
-                            // Mover proyectil
                             projectile.teleport(projectile.getLocation().add(direction.clone().multiply(0.7)));
 
-                            // Verificar colisión
                             for (Entity nearby : projectile.getNearbyEntities(1.2, 1.2, 1.2)) {
                                 if (nearby instanceof Player hitPlayer) {
                                     if (hitPlayer.isBlocking()) {
@@ -484,7 +451,6 @@ public class GuardianShulker implements Listener {
                                 }
                             }
 
-                            // Verificar colisión con bloques
                             if (!projectile.getLocation().getBlock().isPassable()) {
                                 projectile.remove();
                                 cancel();
@@ -503,7 +469,6 @@ public class GuardianShulker implements Listener {
     private void burstAttackV2(Shulker shulker) {
         shulker.getWorld().playSound(shulker.getLocation(), Sound.ENTITY_SHULKER_SHOOT, 2.0f, 0.5f);
 
-        // Crear rayo de partículas central como en handleBurstHit
         BlockDisplay beam = (BlockDisplay) shulker.getWorld().spawnEntity(shulker.getLocation(), EntityType.BLOCK_DISPLAY);
         beam.setBlock(Material.END_ROD.createBlockData());
         beam.setGlowing(true);
@@ -528,16 +493,13 @@ public class GuardianShulker implements Listener {
                     return;
                 }
 
-                // Girar el shulker
                 rotation += 18;
                 Location loc = shulker.getLocation();
                 loc.setYaw(rotation);
                 shulker.teleport(loc);
 
-                // Actualizar posición del rayo
                 beam.teleport(shulker.getLocation());
 
-                // Disparar ráfaga de 7 shulker bullets cada medio segundo (10 ticks)
                 if (ticks % 10 == 0 && shotsFired < 7) {
                     Player target = getRandomPlayer(shulker, 20);
                     if (target != null) {
@@ -559,7 +521,6 @@ public class GuardianShulker implements Listener {
 
         for (Entity entity : shulker.getWorld().getNearbyEntities(shulker.getLocation(), radius, radius, radius)) {
             if (entity instanceof Player player) {
-                // Solo considerar jugadores en modo supervivencia o aventura
                 if (player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE) {
                     validPlayers.add(player);
                 }
@@ -575,7 +536,6 @@ public class GuardianShulker implements Listener {
         if (isGuardianShulker(event.getEntity())) {
             Shulker shulker = (Shulker) event.getEntity();
 
-            // Resistencia a explosiones
             if (event.getCause() == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION ||
                     event.getCause() == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) {
                 event.setCancelled(true);
@@ -591,9 +551,7 @@ public class GuardianShulker implements Listener {
         if (isGuardianShulker(event.getEntity())) {
             Shulker shulker = (Shulker) event.getEntity();
 
-            // Verificar si el daño proviene de un proyectil
             if (event.getDamager() instanceof Projectile) {
-                // Solo permitir daño si el Shulker está en estado vulnerable (con glowing)
                 if (!shulker.hasPotionEffect(PotionEffectType.GLOWING)) {
                     event.setCancelled(true);
                 }
@@ -627,7 +585,7 @@ public class GuardianShulker implements Listener {
         if (isGuardianShulker(event.getEntity())) {
             Shulker shulker = (Shulker) event.getEntity();
             UUID shulkerId = shulker.getUniqueId();
-            // Limpiar drops
+
             event.setDroppedExp(100);
 
             int amount = random.nextInt(2) + 1;
@@ -635,7 +593,6 @@ public class GuardianShulker implements Listener {
                 shulker.getWorld().dropItemNaturally(shulker.getLocation(), EndItems.createGuardianShulkerShell());
             }
 
-            // Limpiar boss bar
             if (bossBars.containsKey(shulkerId)) {
                 BossBar bossBar = bossBars.remove(shulkerId);
                 if (bossBar != null) {
@@ -643,13 +600,11 @@ public class GuardianShulker implements Listener {
                 }
             }
 
-            // Cancelar tarea de actualización de BossBar
             BukkitRunnable updateTask = bossBarUpdates.remove(shulkerId);
             if (updateTask != null) {
                 updateTask.cancel();
             }
 
-            // Efectos de muerte
             shulker.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, shulker.getLocation(), 1);
             shulker.getWorld().playSound(shulker.getLocation(), Sound.ENTITY_SHULKER_DEATH, 2.0f, 0.8f);
         }

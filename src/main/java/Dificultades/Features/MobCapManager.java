@@ -32,7 +32,6 @@ public class MobCapManager {
     private void initialize() {
         if (isInitialized) return;
 
-        // Ejecutar en el hilo principal si es necesario
         if (!Bukkit.isPrimaryThread()) {
             Bukkit.getScheduler().runTask(plugin, this::initialize);
             return;
@@ -52,12 +51,11 @@ public class MobCapManager {
         }
 
         if (this.currentMultiplier == multiplier) {
-            return; // Ya está aplicado
+            return;
         }
 
         this.currentMultiplier = multiplier;
 
-        // Ejecutar en el hilo principal
         if (!Bukkit.isPrimaryThread()) {
             Bukkit.getScheduler().runTask(plugin, () -> updateMobCap(multiplier));
             return;
@@ -72,7 +70,6 @@ public class MobCapManager {
                 world.setMonsterSpawnLimit(newLimit);
                 currentLimits.put(world.getName(), newLimit);
 
-                // Log para debugging
                 plugin.getLogger().info("Updated mob cap for " + world.getName() +
                         " from " + currentLimit + " to " + newLimit);
             }

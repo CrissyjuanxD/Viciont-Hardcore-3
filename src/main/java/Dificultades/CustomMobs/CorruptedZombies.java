@@ -95,7 +95,6 @@ public class CorruptedZombies implements Listener {
         return corruptedKey;
     }
 
-    // Runnable para lanzar bolas de nieve
     private void startSnowballRunnable(Zombie zombie) {
         int taskId = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (zombie == null || zombie.isDead() || !isCorrupted(zombie)) {
@@ -107,7 +106,6 @@ public class CorruptedZombies implements Listener {
             }
 
             if (zombie.getTarget() instanceof Player player) {
-                // Verificar que el jugador está en rango
                 if (isPlayerInRange(zombie, player) && Math.random() < 0.4) {
                     lanzarSnowball(zombie, player);
                 }
@@ -158,7 +156,6 @@ public class CorruptedZombies implements Listener {
 
     @EventHandler
     public void onSnowballHit(EntityDamageByEntityEvent event) {
-        // Verificar que el proyectil es una bola de nieve del zombie
         if (event.getDamager() instanceof Snowball snowball &&
                 "Corrupted Zombie Snowball".equals(snowball.getCustomName())) {
 

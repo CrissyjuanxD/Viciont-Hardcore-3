@@ -31,12 +31,10 @@ public class CorruptedArmor implements Listener {
         this.plugin = plugin;
     }
 
-    // Métodos para crear cada pieza de la armadura
     public static ItemStack createCorruptedHelmet() {
         ItemStack item = new ItemStack(Material.NETHERITE_HELMET);
         ItemMeta meta = item.getItemMeta();
 
-        // Nombre y lore
         meta.setDisplayName(ChatColor.of("#9966ff") + "" + ChatColor.BOLD + "Corrupted Netherite Helmet");
         meta.setLore(Arrays.asList(
                 "",
@@ -50,7 +48,6 @@ public class CorruptedArmor implements Listener {
                 ""
         ));
 
-        // Atributos
         meta.addAttributeModifier(Attribute.GENERIC_ARMOR, new AttributeModifier(
                 UUID.randomUUID(),
                 "armor_modifier",
@@ -232,11 +229,9 @@ public class CorruptedArmor implements Listener {
 
         if (hasFullSet) {
             if (!fullSetPlayers.contains(uuid)) {
-                // Guardar la salud original si es la primera vez que equipa el set completo
                 if (!originalMaxHealth.containsKey(uuid)) {
                     originalMaxHealth.put(uuid, player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue());
                 }
-                // Aplicar bonus
                 player.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(
                         originalMaxHealth.get(uuid) + BONUS_HEARTS
                 );
@@ -244,12 +239,10 @@ public class CorruptedArmor implements Listener {
             }
         } else {
             if (fullSetPlayers.contains(uuid)) {
-                // Remover bonus
                 if (originalMaxHealth.containsKey(uuid)) {
                     double originalHealth = originalMaxHealth.get(uuid);
                     player.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(originalHealth);
 
-                    // Ajustar salud actual si es necesario
                     if (player.getHealth() > originalHealth) {
                         player.setHealth(originalHealth);
                     }
@@ -273,7 +266,6 @@ public class CorruptedArmor implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        // No hacemos nada al salir, el bonus se mantiene persistente
     }
 
     @EventHandler
@@ -294,7 +286,6 @@ public class CorruptedArmor implements Listener {
         }
     }
 
-    // Método para forzar la actualización del set (puede ser útil desde otras clases)
     public void forceUpdate(Player player) {
         updatePlayerHealth(player);
     }

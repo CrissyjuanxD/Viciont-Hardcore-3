@@ -57,12 +57,10 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
         skeleton.setCustomName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Dark Skeleton");
         skeleton.setCustomNameVisible(false);
 
-        // Attributes
         skeleton.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(80);
         skeleton.setHealth(80);
         skeleton.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.3);
 
-        // Equipment
         ItemStack darkBow = new ItemStack(Material.BOW);
         darkBow.addUnsafeEnchantment(Enchantment.POWER, 20);
         darkBow.addUnsafeEnchantment(Enchantment.INFINITY, 1);
@@ -70,11 +68,9 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
         skeleton.getEquipment().setItemInMainHand(darkBow);
         skeleton.getEquipment().setItemInMainHandDropChance(0);
 
-        // Give it some arrows (needed even with infinity)
         skeleton.getEquipment().setItemInOffHand(new ItemStack(Material.ARROW, 1));
         skeleton.getEquipment().setItemInOffHandDropChance(0);
 
-        // Effects
         skeleton.addPotionEffect(new PotionEffect(
                 PotionEffectType.RESISTANCE,
                 PotionEffect.INFINITE_DURATION,
@@ -96,7 +92,6 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
                     return;
                 }
 
-                // Dark aura particles
                 skeleton.getWorld().spawnParticle(
                         Particle.LARGE_SMOKE,
                         skeleton.getLocation().add(0, 1, 0),
@@ -104,7 +99,6 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
                         0.3, 0.5, 0.3, 0.05
                 );
 
-                // Soul particles
                 skeleton.getWorld().spawnParticle(
                         Particle.SOUL_FIRE_FLAME,
                         skeleton.getLocation(),
@@ -119,10 +113,8 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
     public void onDarkSkeletonShoot(EntityShootBowEvent event) {
         if (isCustomMob(event.getEntity()) && event.getEntity() instanceof Skeleton skeleton) {
             if (event.getProjectile() instanceof Arrow arrow) {
-                // Make the arrow dark
                 arrow.setColor(Color.BLACK);
 
-                // Track the arrow to apply effects on hit
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -131,7 +123,6 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
                             return;
                         }
 
-                        // Trail particles
                         arrow.getWorld().spawnParticle(
                                 Particle.SQUID_INK,
                                 arrow.getLocation(),
@@ -151,15 +142,13 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
                 isCustomMob(skeleton)) {
 
             if (event.getEntity() instanceof LivingEntity target) {
-                // Apply Darkness effect
                 target.addPotionEffect(new PotionEffect(
                         PotionEffectType.DARKNESS,
-                        600, // 30 seconds
+                        600,
                         0,
                         false, true
                 ));
 
-                // Dark explosion effect
                 target.getWorld().spawnParticle(
                         Particle.SOUL_FIRE_FLAME,
                         target.getLocation(),
@@ -182,7 +171,6 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
             Skeleton skeleton = (Skeleton) event.getEntity();
             event.getDrops().clear();
 
-            // Death effects
             skeleton.getWorld().playSound(skeleton.getLocation(), Sound.ENTITY_WARDEN_DEATH, 1.5f, 1.0f);
             skeleton.getWorld().spawnParticle(
                     Particle.SOUL,
@@ -199,7 +187,6 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
             Skeleton skeleton = (Skeleton) event.getEntity();
             skeleton.getWorld().playSound(skeleton.getLocation(), Sound.ENTITY_WARDEN_HURT, 1.2f, 1.0f);
 
-            // Hurt particles
             skeleton.getWorld().spawnParticle(
                     Particle.DAMAGE_INDICATOR,
                     skeleton.getLocation(),

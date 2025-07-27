@@ -29,11 +29,9 @@ public class chatgeneral implements Listener {
         Scoreboard scoreboard = player.getScoreboard();
         Team team = scoreboard.getEntryTeam(player.getName());
 
-        // Prefijos y sufijos del equipo
         String prefix = (team != null) ? team.getPrefix() : "";
         String suffix = (team != null) ? team.getSuffix() : "";
 
-        // Color del nombre y prefijo basado en el equipo
         ChatColor playerNameColor = getTeamColor(team);
         String teamPrefix = getTeamPrefix(team);
 
@@ -49,7 +47,6 @@ public class chatgeneral implements Listener {
         }
         String teamName = team.getName();
 
-            // Personalizar colores según el nombre del equipo
             switch (teamName) {
                 case "Admin":
                     return ChatColor.of("#F6763A");
@@ -76,23 +73,24 @@ public class chatgeneral implements Listener {
         String teamName = team.getName();
         switch (teamName) {
             case "Admin":
-                return "\uEB87"; // Unicode para Admin
+                return "\uEB87";
             case "Mod":
-                return "\uEB88"; // Unicode para Mod
+                return "\uEB88";
             case "Helper":
-                return "\uEB89"; // Unicode para Helper
+                return "\uEB89";
             case "TSurvivor":
-                return "\uEB8A"; // Unicode para Survivor
+                return "\uEB8A";
             case "Survivor+":
-                return "\uEB8B"; // Unicode para Survivor+
+                return "\uEB8B";
             case "ZFantasma":
-                return "\uEB8C"; // Unicode para Fantasma
+                return "\uEB8C";
             default:
                 return "";
         }
     }
 
     // Mensajes de Moderacion
+
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();

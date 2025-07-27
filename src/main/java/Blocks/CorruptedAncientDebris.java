@@ -24,10 +24,8 @@ public class CorruptedAncientDebris {
         ItemMeta meta = block.getItemMeta();
 
         if (meta != null) {
-            // Set display name
             meta.setDisplayName(ChatColor.of("#990066") + "" + ChatColor.BOLD + "Corrupted Ancient Debris");
 
-            // Set lore
             List<String> lore = new ArrayList<>();
             lore.add("");
             lore.add(ChatColor.of("#996699") + "Parece que un poder oscuro ha");
@@ -36,7 +34,6 @@ public class CorruptedAncientDebris {
             lore.add("");
             meta.setLore(lore);
 
-            // Set custom model data
             meta.setCustomModelData(5);
             meta.setRarity(ItemRarity.EPIC);
 

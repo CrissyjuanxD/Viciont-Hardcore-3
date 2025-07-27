@@ -44,38 +44,32 @@ public class BedEvents implements Listener {
         World world = player.getWorld();
         int currentDay = dayHandler.getCurrentDay();
 
-        // Configurar gamerule según el día
         int sleepPercentage;
         if (currentDay >= 12) {
-            sleepPercentage = 200; // Nadie puede dormir
+            sleepPercentage = 200;
         } else if (currentDay >= 4) {
             sleepPercentage = 200;
         } else {
-            sleepPercentage = 0; // 1 jugador puede saltar
+            sleepPercentage = 0;
         }
 
-        // Aplicar con delay para asegurar
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             world.setGameRule(GameRule.PLAYERS_SLEEPING_PERCENTAGE, sleepPercentage);
         }, 1L);
 
-        // Verificar DeathStorm
         if (currentDay < 12 && deathStormHandler.isDeathStormActive()) {
             player.sendMessage(ChatColor.GRAY + "No puedes dormir durante una DeathStorm");
             event.setCancelled(true);
             return;
         }
 
-        // Día 12+ - Solo lógica de phantoms
         if (currentDay >= 12) {
             event.setCancelled(true);
             handlePhantomReset(player);
             return;
         }
 
-        // Lógica para días 1-11
         if (world.getTime() >= 12530 && world.getTime() <= 23458 && !world.isThundering()) {
-            // Días 4-11: Verificar jugadores online
             if (currentDay >= 4 && Bukkit.getOnlinePlayers().size() < 4) {
                 sendActionBar(player, ChatColor.RED + "¡No hay suficientes jugadores online para dormir! (Se necesitan 4)");
                 event.setCancelled(true);
@@ -84,10 +78,9 @@ public class BedEvents implements Listener {
 
             if (!playersInBed.contains(player)) {
                 playersInBed.add(player);
-                player.setSleepingIgnored(true); // Evitar conteo vanilla
+                player.setSleepingIgnored(true);
             }
 
-            // Mostrar mensaje
             String message = currentDay < 4
                     ? ChatColor.YELLOW + "" + ChatColor.BOLD + "۞ " + ChatColor.of("#F8F8A4") + ChatColor.BOLD + "Durmiendo" + ChatColor.GRAY + ChatColor.BOLD +": " + ChatColor.GOLD + "1" + ChatColor.GRAY + ChatColor.BOLD + "/" + ChatColor.GOLD + "1 " + ChatColor.GRAY + ChatColor.ITALIC + "(" + ChatColor.of("#F8F8A4") + "Noche saltada" + ChatColor.GRAY + ")"
                     : ChatColor.GOLD + String.format("Durmiendo: %d/4 (%.0f%%)",
@@ -95,7 +88,6 @@ public class BedEvents implements Listener {
 
             sendGlobalActionBar(message);
 
-            // Verificar condiciones para saltar noche
             if ((currentDay < 4 && playersInBed.size() >= 1) ||
                     (currentDay >= 4 && playersInBed.size() >= 4)) {
 
@@ -112,7 +104,6 @@ public class BedEvents implements Listener {
                 if (current < 23800) {
                     world.setTime(current + 100);
                 } else {
-                    // Limpiar jugadores de la cama
                     for (Player p : new ArrayList<>(playersInBed)) {
                         try {
                             if (p.isSleeping()) {
@@ -125,7 +116,6 @@ public class BedEvents implements Listener {
                     }
                     playersInBed.clear();
 
-                    // Limpiar clima si no hay DeathStorm
                     if (!deathStormHandler.isDeathStormActive()) {
                         world.setStorm(false);
                         world.setThundering(false);
@@ -156,7 +146,6 @@ public class BedEvents implements Listener {
     }
 
     private void handlePhantomReset(Player player) {
-        // Verificar cooldown
         if (lastPhantomReset.containsKey(player)) {
             long timeSinceLastReset = System.currentTimeMillis() - lastPhantomReset.get(player);
             if (timeSinceLastReset < PHANTOM_RESET_COOLDOWN) {
@@ -166,13 +155,11 @@ public class BedEvents implements Listener {
             }
         }
 
-        // 50% de probabilidad de reset
         if (random.nextDouble() < 0.5) {
             lastPhantomReset.put(player, System.currentTimeMillis());
             player.setStatistic(Statistic.TIME_SINCE_REST, 0);
             player.sendMessage(ChatColor.GREEN + "Contador de phantoms reseteado!");
 
-            // 25% de probabilidad de spawnear phantoms
             if (random.nextDouble() < 0.25) {
                 spawnPhantomSwarm(player);
                 player.sendMessage(ChatColor.RED + "Phantoms aparecieron!");

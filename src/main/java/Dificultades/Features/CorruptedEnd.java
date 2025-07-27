@@ -51,7 +51,7 @@ public class CorruptedEnd implements Listener {
     public World corruptedWorld;
     private Map<String, Clipboard> loadedSchematics = new HashMap<>();
 
-    private final int STRUCTURE_SPACING = 500; // Bloques entre estructuras
+    private final int STRUCTURE_SPACING = 500;
     private final Map<Long, Boolean> generatedStructures = new HashMap<>();
 
     public CorruptedEnd(JavaPlugin plugin) {
@@ -59,7 +59,6 @@ public class CorruptedEnd implements Listener {
     }
 
     public void createCorruptedWorld() {
-        // Verificar si el mundo ya existe
         corruptedWorld = Bukkit.getWorld(WORLD_NAME);
         if (corruptedWorld != null) return;
 
@@ -82,7 +81,6 @@ public class CorruptedEnd implements Listener {
     private void createReturnPortal() {
         Location spawnLoc = new Location(corruptedWorld, 0, 100, 0);
 
-        // Crear plataforma decorativa
         for (int x = -3; x <= 3; x++) {
             for (int z = -3; z <= 3; z++) {
                 spawnLoc.clone().add(x, -1, z).getBlock().setType(Material.END_STONE_BRICKS);
@@ -90,7 +88,6 @@ public class CorruptedEnd implements Listener {
             }
         }
 
-        // Crear portal de retorno
         createPortalStructure(spawnLoc, true);
     }
 
@@ -130,16 +127,13 @@ public class CorruptedEnd implements Listener {
     }
 
     private void generateStructures(Chunk chunk) {
-        // Coordenadas del chunk en términos de estructura (cada STRUCTURE_SPACING bloques)
         int structureX = Math.floorDiv(chunk.getX() * 16, STRUCTURE_SPACING);
         int structureZ = Math.floorDiv(chunk.getZ() * 16, STRUCTURE_SPACING);
         long structureKey = ((long)structureX << 32) | (structureZ & 0xFFFFFFFFL);
 
-        // Verificar si ya generamos una estructura en esta área
         if (generatedStructures.containsKey(structureKey)) return;
         generatedStructures.put(structureKey, true);
 
-        // Solo generar si este chunk es el central del área de STRUCTURE_SPACING
         if (chunk.getX() * 16 % STRUCTURE_SPACING < 16 &&
                 chunk.getZ() * 16 % STRUCTURE_SPACING < 16) {
 
@@ -155,7 +149,6 @@ public class CorruptedEnd implements Listener {
     private void tryGenerateStructure(Chunk chunk) {
         Random random = new Random(chunk.getX() * 341873128712L + chunk.getZ() * 132897987541L);
 
-        // 30% de probabilidad de generar una estructura en esta área
         if (random.nextInt(100) < 30) {
             Location structureLoc = findStructureLocation(chunk, random);
             if (structureLoc != null) {
@@ -165,7 +158,6 @@ public class CorruptedEnd implements Listener {
             }
         }
 
-        // 5% de probabilidad de estructura especial
         if (random.nextInt(100) < 5) {
             Location structureLoc = findStructureLocation(chunk, random);
             if (structureLoc != null) {
@@ -177,18 +169,15 @@ public class CorruptedEnd implements Listener {
 
 
     private Location findStructureLocation(Chunk chunk, Random random) {
-        // Buscar ubicación dentro del área de STRUCTURE_SPACING
         int baseX = (chunk.getX() * 16 / STRUCTURE_SPACING) * STRUCTURE_SPACING;
         int baseZ = (chunk.getZ() * 16 / STRUCTURE_SPACING) * STRUCTURE_SPACING;
 
         int x = baseX + random.nextInt(STRUCTURE_SPACING);
         int z = baseZ + random.nextInt(STRUCTURE_SPACING);
 
-        // Encontrar la superficie más alta
         World world = chunk.getWorld();
         int y = world.getHighestBlockYAt(x, z);
 
-        // Verificar que hay espacio para la estructura
         if (y > 50 && y < 120) {
             return new Location(world, x, y + 1, z);
         }
@@ -225,7 +214,6 @@ public class CorruptedEnd implements Listener {
         Block block = event.getClickedBlock();
         if (block == null || block.getType() != Material.BEDROCK) return;
 
-        // Usar isCustomPortal en lugar de isValidPortalFrame
         if (isCustomPortal(block.getLocation())) {
             activatePortal(block.getLocation());
             event.setCancelled(true);
@@ -233,13 +221,11 @@ public class CorruptedEnd implements Listener {
     }
 
 /*    private boolean isValidPortalFrame(Location loc) {
-        // Verificar frame de bedrock 7x12
         for (int y = 0; y < 12; y++) {
             for (int x = 0; x < 7; x++) {
                 Location checkLoc = loc.clone().add(x - 3, y, 0);
                 Material type = checkLoc.getBlock().getType();
 
-                // Bordes deben ser bedrock, interior aire
                 boolean shouldBeBedrock = (x == 0 || x == 6 || y == 0 || y == 11);
                 if (shouldBeBedrock && type != Material.BEDROCK) return false;
                 if (!shouldBeBedrock && type != Material.AIR) return false;
@@ -249,17 +235,14 @@ public class CorruptedEnd implements Listener {
     }*/
 
     private void activatePortal(Location loc) {
-        // Llenar interior con END_GATEWAY
         for (int y = 1; y < 11; y++) {
             for (int x = 1; x < 6; x++) {
                 Location fillLoc = loc.clone().add(x - 3, y, 0);
-                // Guardar información del portal en metadata
                 fillLoc.getBlock().setMetadata("CustomPortal", new FixedMetadataValue(plugin, true));
                 fillLoc.getBlock().setType(Material.END_GATEWAY);
             }
         }
 
-        // Efectos de activación
         loc.getWorld().playSound(loc, Sound.BLOCK_END_PORTAL_FRAME_FILL, 1.0f, 1.0f);
         loc.getWorld().spawnParticle(Particle.PORTAL, loc.clone().add(0, 6, 0), 50, 1.5, 3, 1.5);
     }
@@ -274,15 +257,12 @@ public class CorruptedEnd implements Listener {
         Block block = event.getTo().getBlock();
 
         if (block.getType() == Material.END_GATEWAY) {
-            // Solo procesar si es un portal custom
             if (isCustomPortal(block.getLocation())) {
                 if (player.getWorld().getName().equals(WORLD_NAME)) {
-                    // Teletransportar al overworld
                     World overworld = Bukkit.getWorlds().get(0);
                     Location overworldSpawn = new Location(overworld, 0, overworld.getHighestBlockYAt(0, 0) + 1, 0);
                     player.teleport(overworldSpawn);
                 } else if (!player.getWorld().getEnvironment().equals(World.Environment.THE_END)) {
-                    // Solo teletransportar si no viene del End vanilla
                     if (corruptedWorld == null) {
                         createCorruptedWorld();
                     }
@@ -296,12 +276,10 @@ public class CorruptedEnd implements Listener {
     public void onPlayerPortal(PlayerPortalEvent event) {
         Player player = event.getPlayer();
 
-        // Si el destino es nuestra dimensión custom, permitirlo
         if (event.getTo() != null && event.getTo().getWorld().getName().equals(WORLD_NAME)) {
             return;
         }
 
-        // Si viene de nuestra dimensión y no es a través de un portal custom
         if (player.getWorld().getName().equals(WORLD_NAME) &&
                 !isCustomPortal(event.getFrom())) {
             event.setCancelled(true);
@@ -312,18 +290,15 @@ public class CorruptedEnd implements Listener {
     }
 
     private boolean isCustomPortal(Location loc) {
-        // Verificar metadata primero
         if (loc.getBlock().hasMetadata("CustomPortal")) {
             return true;
         }
 
-        // Verificar frame de bedrock 7x12
         for (int y = 0; y < 12; y++) {
             for (int x = 0; x < 7; x++) {
                 Location checkLoc = loc.clone().add(x - 3, y, 0);
                 Material type = checkLoc.getBlock().getType();
 
-                // Bordes deben ser bedrock, interior aire o end gateway
                 boolean shouldBeBedrock = (x == 0 || x == 6 || y == 0 || y == 11);
                 if (shouldBeBedrock && type != Material.BEDROCK) return false;
                 if (!shouldBeBedrock && (y >= 1 && y <= 10 && x >= 1 && x <= 5)) {
@@ -342,13 +317,10 @@ public class CorruptedEnd implements Listener {
         Location loc = player.getLocation();
         Block block = loc.getBlock();
 
-        // Verificar si está en agua
         if (block.getType() == Material.WATER || block.getRelative(BlockFace.DOWN).getType() == Material.WATER) {
-            // Aplicar efectos
             player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 60, 1));
             player.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 60, 0));
 
-            // Sonido de miel
             player.playSound(loc, Sound.BLOCK_HONEY_BLOCK_STEP, 0.5f, 1.0f);
         }
     }
@@ -369,8 +341,7 @@ public class CorruptedEnd implements Listener {
             Location loc = player.getLocation();
             Random random = new Random();
 
-            // Pocas partículas aleatorias en el suelo
-            if (random.nextInt(100) < 5) { // 5% de probabilidad
+            if (random.nextInt(100) < 5) {
                 Location particleLoc = loc.clone().add(
                         random.nextInt(10) - 5,
                         -2,
@@ -383,7 +354,6 @@ public class CorruptedEnd implements Listener {
     }
 
     private void createPortalStructure(Location loc, boolean isReturn) {
-        // Crear estructura de portal básica
         for (int y = 0; y < 12; y++) {
             for (int x = 0; x < 7; x++) {
                 Location buildLoc = loc.clone().add(x - 3, y, 0);
@@ -402,10 +372,8 @@ public class CorruptedEnd implements Listener {
         if (event.getWorld().getName().equals(WORLD_NAME)) {
             World world = event.getWorld();
 
-            // Configurar spawns de mobs
             world.setSpawnFlags(true, true);
 
-            // Scheduled task para spawnar mobs específicos
             new BukkitRunnable() {
                 @Override
                 public void run() {
@@ -421,21 +389,18 @@ public class CorruptedEnd implements Listener {
         for (Player player : world.getPlayers()) {
             Location playerLoc = player.getLocation();
 
-            // Spawnar mobs ocasionalmente cerca del jugador
-            if (random.nextInt(100) < 10) { // 10% probabilidad
+            if (random.nextInt(100) < 10) {
                 Location spawnLoc = playerLoc.clone().add(
                         random.nextInt(20) - 10,
                         random.nextInt(5),
                         random.nextInt(20) - 10
                 );
 
-                // Asegurar que sea una superficie sólida
                 while (spawnLoc.getBlock().getType() == Material.AIR && spawnLoc.getY() > 0) {
                     spawnLoc.subtract(0, 1, 0);
                 }
                 spawnLoc.add(0, 1, 0);
 
-                // Lista de mobs que pueden spawnar
                 EntityType[] mobTypes = {
                         EntityType.SKELETON, EntityType.VEX, EntityType.GHAST,
                         EntityType.CREEPER, EntityType.ZOMBIE, EntityType.SPIDER,
@@ -455,13 +420,11 @@ public class CorruptedEnd implements Listener {
 
         @Override
         public ChunkData generateChunkData(World world, Random cRandom, int chunkX, int chunkZ, BiomeGrid biomes) {
-            // Generador principal para la forma de las islas
             SimplexOctaveGenerator islandGenerator = new SimplexOctaveGenerator(new Random(world.getSeed()), 8);
             islandGenerator.setScale(0.02D);
 
-            // Generador específico para zonas Crimson (con escala más grande)
             SimplexOctaveGenerator crimsonGenerator = new SimplexOctaveGenerator(new Random(world.getSeed() + 1), 4);
-            crimsonGenerator.setScale(0.005D); // Escala más grande para áreas más extensas
+            crimsonGenerator.setScale(0.005D);
 
             ChunkData chunk = createChunkData(world);
 
@@ -479,7 +442,7 @@ public class CorruptedEnd implements Listener {
 
                     // Determinar si es zona Crimson (usando un rango continuo en lugar de división modular)
                     double crimsonValue = crimsonGenerator.noise(globalX, globalZ, 0.5D, 0.5D);
-                    boolean isCrimsonZone = crimsonValue > 0.3; // Aprox 30% del área será Crimson
+                    boolean isCrimsonZone = crimsonValue > 0.3;
 
                     // Suavizar transiciones entre biomas
                     double blendFactor = 0.0;
@@ -494,7 +457,6 @@ public class CorruptedEnd implements Listener {
                     Material secondaryBlock = Material.CRIMSON_HYPHAE;
 
                     for (int i = 0; i < noise / 3; i++) {
-                        // Mezcla de bloques en zonas de transición
                         if (random.nextDouble() < blendFactor) {
                             chunk.setBlock(X, i + HEIGHT, Z, secondaryBlock);
                         } else {
@@ -511,9 +473,8 @@ public class CorruptedEnd implements Listener {
                     }
 
                     // Decoración superficial
-                    if (noise > 8 && random.nextInt(13) == 0) { // Mayor frecuencia (de 5% a 10%)
-                        if (blendFactor > 0.7) { // Zona principalmente Crimson
-                            // Variedad de bloques Crimson mejorada
+                    if (noise > 8 && random.nextInt(13) == 0) {
+                        if (blendFactor > 0.7) {
                             Material[] crimsonDecorations = {
                                     Material.SCULK_VEIN,
                                     Material.RED_MUSHROOM,
@@ -524,17 +485,9 @@ public class CorruptedEnd implements Listener {
                             Material decoration = crimsonDecorations[random.nextInt(crimsonDecorations.length)];
                             chunk.setBlock(X, HEIGHT + (noise / 3), Z, decoration);
 
-                            // Añadir luz para sensores/shriekers en zona Crimson
-                           /* if (decoration == Material.SCULK_SENSOR || decoration == Material.SCULK_SHRIEKER) {
-                                chunk.setBlock(X, HEIGHT + (noise / 3) + 1, Z, Material.LIGHT);
-                            }*/
-
-                        } else { // Zona Sculk
+                        } else {
                             Material sculkBlock = random.nextBoolean() ? Material.SCULK_SENSOR : Material.SCULK_SHRIEKER;
                             chunk.setBlock(X, HEIGHT + (noise / 3), Z, sculkBlock);
-
-                            // Añadir luz nivel 7 encima
-                            /*chunk.setBlock(X, HEIGHT + (noise / 3) + 1, Z, Material.LIGHT);*/
 
                             // 33% de probabilidad de añadir Sculk Catalyst debajo
                             if (random.nextInt(3) == 0) {

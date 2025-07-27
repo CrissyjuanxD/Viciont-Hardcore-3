@@ -57,13 +57,11 @@ public class DarkVex extends DarkMobSB implements Listener {
         vex.setCustomName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Dark Vex");
         vex.setCustomNameVisible(false);
 
-        // Attributes
         vex.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(60);
         vex.setHealth(60);
         vex.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(8);
         vex.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.4);
 
-        // Equipment
         ItemStack netheriteSword = new ItemStack(Material.NETHERITE_SWORD);
         vex.getEquipment().setItemInMainHand(netheriteSword);
 
@@ -71,7 +69,6 @@ public class DarkVex extends DarkMobSB implements Listener {
         vex.getEquipment().setItemInOffHand(endCrystal);
         vex.getEquipment().setItemInOffHandDropChance(0);
 
-        // Effects
         vex.addPotionEffect(new PotionEffect(
                 PotionEffectType.RESISTANCE,
                 PotionEffect.INFINITE_DURATION,
@@ -93,7 +90,6 @@ public class DarkVex extends DarkMobSB implements Listener {
                     return;
                 }
 
-                // Dark particles
                 vex.getWorld().spawnParticle(
                         Particle.LARGE_SMOKE,
                         vex.getLocation(),
@@ -101,7 +97,6 @@ public class DarkVex extends DarkMobSB implements Listener {
                         0.3, 0.3, 0.3, 0.05
                 );
 
-                // Soul particles
                 vex.getWorld().spawnParticle(
                         Particle.SOUL_FIRE_FLAME,
                         vex.getLocation(),
@@ -116,15 +111,12 @@ public class DarkVex extends DarkMobSB implements Listener {
     public void onDarkVexAttack(EntityDamageByEntityEvent event) {
         if (isCustomMob(event.getDamager()) && event.getDamager() instanceof Vex vex) {
             if (event.getEntity() instanceof Player player) {
-                // Small explosion on hit
                 Location hitLoc = player.getLocation();
                 vex.getWorld().spawnParticle(Particle.EXPLOSION, hitLoc, 10, 0.5, 0.5, 0.5, 0.1);
                 vex.getWorld().playSound(hitLoc, Sound.ENTITY_GENERIC_EXPLODE, 1.0f, 1.2f);
 
-                // Damage only the hit player
-                player.damage(4); // 2 hearts additional damage
+                player.damage(4);
 
-                // Knockback
                 Vector direction = player.getLocation().toVector()
                         .subtract(vex.getLocation().toVector())
                         .normalize()
@@ -141,7 +133,6 @@ public class DarkVex extends DarkMobSB implements Listener {
             Vex vex = (Vex) event.getEntity();
             event.getDrops().clear();
 
-            // Death effects
             vex.getWorld().playSound(vex.getLocation(), Sound.ENTITY_WARDEN_DEATH, 1.5f, 1.2f);
             vex.getWorld().spawnParticle(
                     Particle.SOUL,
@@ -158,7 +149,6 @@ public class DarkVex extends DarkMobSB implements Listener {
             Vex vex = (Vex) event.getEntity();
             vex.getWorld().playSound(vex.getLocation(), Sound.ENTITY_WARDEN_HURT, 1.2f, 1.1f);
 
-            // Hurt particles
             vex.getWorld().spawnParticle(
                     Particle.DAMAGE_INDICATOR,
                     vex.getLocation(),

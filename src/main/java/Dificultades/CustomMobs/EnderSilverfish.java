@@ -25,7 +25,6 @@ public class EnderSilverfish extends EnderMobsTP implements Listener {
     private final Random random = new Random();
     private final NamespacedKey projectileKey;
 
-    // Lista de posibles efectos con sus niveles
     private final List<SilverfishEffect> possibleEffects = Arrays.asList(
             new SilverfishEffect("Fuerza", PotionEffectType.STRENGTH, 3),
             new SilverfishEffect("Invisibilidad", PotionEffectType.INVISIBILITY, 0),
@@ -105,7 +104,6 @@ public class EnderSilverfish extends EnderMobsTP implements Listener {
                     return;
                 }
 
-                // Partículas moradas para hacer visible su ubicación
                 silverfish.getWorld().spawnParticle(
                         Particle.PORTAL,
                         silverfish.getLocation().add(0, 0.2, 0),
@@ -143,19 +141,16 @@ public class EnderSilverfish extends EnderMobsTP implements Listener {
                 EntityType.BLOCK_DISPLAY
         );
 
-        // Configurar el proyectil
         projectile.setBlock(Material.END_ROD.createBlockData());
         projectile.setGlowing(true);
         projectile.setGlowColorOverride(Color.PURPLE);
         projectile.setInvulnerable(true);
         projectile.getPersistentDataContainer().set(projectileKey, PersistentDataType.BYTE, (byte) 1);
 
-        // Configurar tamaño pequeño
         Transformation transformation = projectile.getTransformation();
         transformation.getScale().set(0.3f, 0.3f, 0.3f);
         projectile.setTransformation(transformation);
 
-        // Calcular dirección hacia el jugador
         Vector direction = target.getEyeLocation().toVector()
                 .subtract(spawnLoc.toVector())
                 .normalize()
@@ -175,7 +170,6 @@ public class EnderSilverfish extends EnderMobsTP implements Listener {
                     return;
                 }
 
-                // Mover el proyectil
                 currentLoc.add(direction);
                 projectile.teleport(currentLoc);
 
@@ -220,7 +214,7 @@ public class EnderSilverfish extends EnderMobsTP implements Listener {
 
         Location originalLoc = player.getLocation();
         double angle = Math.random() * 2 * Math.PI;
-        double distance = 10 + random.nextDouble() * 20; // Entre 10 y 30 bloques
+        double distance = 10 + random.nextDouble() * 20;
         double x = originalLoc.getX() + distance * Math.cos(angle);
         double z = originalLoc.getZ() + distance * Math.sin(angle);
 
@@ -245,7 +239,6 @@ public class EnderSilverfish extends EnderMobsTP implements Listener {
         if (isCustomMob(event.getEntity())) {
             Silverfish silverfish = (Silverfish) event.getEntity();
 
-            // Limpiar drops
             event.getDrops().clear();
 
             silverfish.getWorld().playSound(silverfish.getLocation(), Sound.ENTITY_SILVERFISH_DEATH, 1.5f, 0.5f);

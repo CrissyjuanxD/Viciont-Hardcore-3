@@ -60,7 +60,6 @@ public class DarkPhantom extends DarkMobSB implements Listener {
         phantom.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.3);
         phantom.setSize(3);
 
-        // Efectos permanentes
         phantom.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, PotionEffect.INFINITE_DURATION, 1));
         phantom.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, PotionEffect.INFINITE_DURATION, 0));
 
@@ -79,7 +78,6 @@ public class DarkPhantom extends DarkMobSB implements Listener {
                     return;
                 }
 
-                // Partículas oscuras
                 phantom.getWorld().spawnParticle(
                         Particle.LARGE_SMOKE,
                         phantom.getLocation(),
@@ -96,11 +94,10 @@ public class DarkPhantom extends DarkMobSB implements Listener {
         }.runTaskTimer(plugin, 0L, 5L);
     }
 
-    // En tu clase DarkPhantom, modifica el startTrackingTask:
     private void startTrackingTask(Phantom phantom) {
         new BukkitRunnable() {
             private long lastSonicBoomTime = 0;
-            private final long COOLDOWN_MS = 10000; // 10 segundos de cooldown
+            private final long COOLDOWN_MS = 10000;
 
             @Override
             public void run() {
@@ -123,9 +120,8 @@ public class DarkPhantom extends DarkMobSB implements Listener {
                 if (nearest != null) {
                     phantom.setTarget(nearest);
 
-                    // Condiciones mejoradas para lanzar Sonic Boom
                     long currentTime = System.currentTimeMillis();
-                    if (nearestDistance <= 40 && // Rango aumentado
+                    if (nearestDistance <= 40 &&
                             currentTime - lastSonicBoomTime > COOLDOWN_MS &&
                             phantom.hasLineOfSight(nearest)) {
 
@@ -134,22 +130,18 @@ public class DarkPhantom extends DarkMobSB implements Listener {
                     }
                 }
             }
-        }.runTaskTimer(plugin, 0L, 20L); // Revisar cada segundo
+        }.runTaskTimer(plugin, 0L, 20L);
     }
 
-    // Nuevo método para manejar la secuencia completa
     private void startSonicBoomSequence(Phantom phantom, Player target) {
-        // 1. Detener el movimiento temporalmente
         phantom.setAI(false);
 
-        // 2. Efectos de carga
         World world = phantom.getWorld();
         Location phantomLoc = phantom.getEyeLocation();
 
         world.playSound(phantomLoc, Sound.ENTITY_WARDEN_SONIC_CHARGE, 2.0f, 0.7f);
         world.spawnParticle(Particle.SONIC_BOOM, phantomLoc, 10, 0.5, 0.5, 0.5, 0);
 
-        // 3. Lanzar después de 2.5 segundos (50 ticks)
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -182,7 +174,6 @@ public class DarkPhantom extends DarkMobSB implements Listener {
         if (isCustomMob(event.getEntity())) {
             Phantom phantom = (Phantom) event.getEntity();
 
-            // Limpiar drops
             event.getDrops().clear();
 
             phantom.getWorld().playSound(phantom.getLocation(), Sound.ENTITY_WARDEN_DEATH, 2.0f, 0.8f);

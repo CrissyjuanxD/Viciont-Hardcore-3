@@ -43,7 +43,6 @@ public class MobSoundManager implements Listener {
                     if (mob instanceof Zombie && mob.hasMetadata("corrupted_zombie")) {
                         playCorruptedZombieSounds((Zombie) mob);
                     }
-                    // Aquí puedes agregar más condiciones para otros tipos de mobs
                     if (mob instanceof Spider && mob.hasMetadata("corruptedspider")) {
                         playCorruptedSpiderSounds((Spider) mob);
                     }
@@ -55,49 +54,45 @@ public class MobSoundManager implements Listener {
     }
 
     private void playCorruptedZombieSounds(Zombie zombie) {
-        // Sonido ambiental (40% de probabilidad)
         if (new Random().nextInt(100) < 40) {
             playSoundForNearbyPlayers(
                     zombie.getLocation(),
                     Sound.ENTITY_ZOMBIE_AMBIENT,
-                    16, // Radio
-                    1.0f, // Volumen
-                    0.6f // Pitch
+                    16,
+                    1.0f,
+                    0.6f
             );
         }
 
-        // Sonido de pasos (si se mueve)
         if (zombie.isOnGround() && hasMoved(zombie)) {
             playSoundForNearbyPlayers(
                     zombie.getLocation(),
                     Sound.ENTITY_ZOMBIE_STEP,
-                    10, // Radio más pequeño para pasos
-                    1.0f, // Volumen más bajo
-                    0.6f // Pitch
+                    10,
+                    1.0f,
+                    0.6f
             );
         }
     }
 
     private void playCorruptedSpiderSounds(Spider spider) {
-        // Sonido ambiental (30% de probabilidad)
         if (new Random().nextInt(100) < 30) {
             playSoundForNearbyPlayers(
                     spider.getLocation(),
                     Sound.ENTITY_SPIDER_AMBIENT,
-                    16, // Radio
-                    1.0f, // Volumen
-                    0.6f // Pitch
+                    16,
+                    1.0f,
+                    0.6f
             );
         }
 
-        // Sonido de pasos (si se mueve)
         if (spider.isOnGround() && hasMoved(spider)) {
             playSoundForNearbyPlayers(
                     spider.getLocation(),
                     Sound.ENTITY_SPIDER_STEP,
-                    10, // Radio más pequeño para pasos
-                    1.0f, // Volumen más bajo
-                    0.6f // Pitch
+                    10,
+                    1.0f,
+                    0.6f
             );
         }
     }
@@ -109,7 +104,6 @@ public class MobSoundManager implements Listener {
 
         if (lastLoc == null) return false;
 
-        // Usar distancia en lugar de comparación exacta
         return currentLoc.distanceSquared(lastLoc) > 0.01;
     }*/
 
@@ -120,7 +114,6 @@ public class MobSoundManager implements Listener {
 
         if (lastLoc == null) return false;
 
-        // Usar distancia en lugar de comparación exacta
         return currentLoc.distanceSquared(lastLoc) > 0.01;
     }
 

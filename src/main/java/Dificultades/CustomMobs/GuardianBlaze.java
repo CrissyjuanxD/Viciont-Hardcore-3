@@ -72,7 +72,6 @@ public class GuardianBlaze implements Listener {
     }
 
     private void startBehavior(Blaze blaze) {
-        // Movimiento y ataque cuerpo a cuerpo
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -83,11 +82,9 @@ public class GuardianBlaze implements Listener {
 
                 Player target = getClosestPlayer(blaze, 25);
                 if (target != null) {
-                    // Movimiento suave hacia el jugador
                     Vector direction = target.getLocation().toVector().subtract(blaze.getLocation().toVector()).normalize();
                     blaze.setVelocity(direction.multiply(0.35));
 
-                    // Ataque cuerpo a cuerpo si está cerca
                     if (blaze.getLocation().distance(target.getLocation()) <= 3) {
                         blaze.attack(target);
                     }
@@ -95,7 +92,6 @@ public class GuardianBlaze implements Listener {
             }
         }.runTaskTimer(plugin, 0L, 10L);
 
-        // Patrón de ataques
         new BukkitRunnable() {
             int attackCycle = 0;
 
@@ -108,7 +104,6 @@ public class GuardianBlaze implements Listener {
 
                 attackCycle++;
 
-                // Ataque especial cada 8 ciclos (8 segundos)
                 if (attackCycle % 8 == 0) {
                     if (random.nextBoolean()) {
                         launchTripleFireballAttack(blaze);
@@ -126,7 +121,6 @@ public class GuardianBlaze implements Listener {
 
         blaze.getWorld().playSound(blaze.getLocation(), Sound.ENTITY_BLAZE_SHOOT, 2.0f, 0.5f);
 
-        // Realizar 3 rondas de disparos
         new BukkitRunnable() {
             int rounds = 0;
 
@@ -137,7 +131,6 @@ public class GuardianBlaze implements Listener {
                     return;
                 }
 
-                // Disparar 3 fireballs en triangulación a cada objetivo
                 for (Player target : targets) {
                     if (target.isValid()) {
                         launchTriangulatedFireballs(blaze, target);
@@ -146,33 +139,30 @@ public class GuardianBlaze implements Listener {
 
                 rounds++;
             }
-        }.runTaskTimer(plugin, 0L, 40L); // 2 segundos entre rondas
+        }.runTaskTimer(plugin, 0L, 40L);
     }
 
     private void launchTriangulatedFireballs(Blaze blaze, Player target) {
         Location adjustedLoc = blaze.getLocation().clone().add(0, 2.5, 0);
         Vector baseDirection = target.getLocation().toVector().subtract(adjustedLoc.toVector()).normalize();
 
-        // Disparar 3 fireballs en patrón triangular
         for (int i = 0; i < 3; i++) {
             Vector direction = baseDirection.clone();
             Location spawnLoc = adjustedLoc.clone();
 
-            // Aplicar desviación triangular y ajustar posición de spawn
             switch (i) {
-                case 0: // Centro
+                case 0:
                     break;
-                case 1: // Izquierda
+                case 1:
                     direction.add(new Vector(-0.3, 0, 0.3));
                     spawnLoc.add(-0.5, 0, 0.5);
                     break;
-                case 2: // Derecha
+                case 2:
                     direction.add(new Vector(0.3, 0, -0.3));
                     spawnLoc.add(0.5, 0, -0.5);
                     break;
             }
 
-            // Crear fireball manualmente para evitar colisión con el blaze
             Fireball fireball = blaze.getWorld().spawn(spawnLoc, Fireball.class);
             fireball.setDirection(direction.normalize());
             fireball.setVelocity(direction.multiply(1.5));
@@ -200,9 +190,8 @@ public class GuardianBlaze implements Listener {
                 }
 
                 radius += 0.5;
-                double increment = Math.PI / 12; // Menos partículas pero más espaciadas
+                double increment = Math.PI / 12;
 
-                // Partículas principales del círculo
                 for (double angle = 0; angle < 2 * Math.PI; angle += increment) {
                     double x = radius * Math.cos(angle);
                     double z = radius * Math.sin(angle);
@@ -210,12 +199,10 @@ public class GuardianBlaze implements Listener {
                     blaze.getWorld().spawnParticle(Particle.FLAME, loc, 1, 0, 0, 0, 0.05);
                 }
 
-                // Partículas adicionales para mejor visibilidad (cada 3 ciclos)
                 if (cycles % 3 == 0) {
                     blaze.getWorld().spawnParticle(Particle.LAVA, blaze.getLocation().add(0, 1, 0), 5, radius, 0.5, radius, 0.1);
                 }
 
-                // Daño a jugadores
                 if (radius >= 2) {
                     for (Entity entity : blaze.getWorld().getNearbyEntities(blaze.getLocation(), radius, 2, radius)) {
                         if (entity instanceof Player player && !damagedPlayers.contains(player)) {
@@ -255,9 +242,8 @@ public class GuardianBlaze implements Listener {
             if (event.getCause() == EntityDamageEvent.DamageCause.PROJECTILE) {
                 event.setCancelled(true);
             } else if (event.getEntity() instanceof Player player) {
-                // Knockback mejorado
                 Vector knockback = player.getLocation().toVector().subtract(blaze.getLocation().toVector()).normalize();
-                knockback.setY(0.5); // Añadir un poco de elevación
+                knockback.setY(0.5);
                 player.setVelocity(knockback.multiply(1.5));
             }
         }
@@ -266,7 +252,6 @@ public class GuardianBlaze implements Listener {
     @EventHandler
     public void onEntityDamage(EntityDamageEvent event) {
         if (event.getEntity() instanceof Blaze blaze && isGuardianBlaze(blaze)) {
-            // Inmunidad a explosiones
             if (event.getCause() == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION ||
                     event.getCause() == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) {
                 event.setCancelled(true);

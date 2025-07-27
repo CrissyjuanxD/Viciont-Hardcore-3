@@ -38,7 +38,6 @@ public class CopperArmor implements Listener {
                 ""
         ));
 
-        // Atributos
         meta.addAttributeModifier(Attribute.GENERIC_ARMOR, new AttributeModifier(
                 UUID.randomUUID(),
                 "armor_modifier",
