@@ -40,10 +40,8 @@ import java.util.*;
 public class DayFourChanges implements Listener {
     private final JavaPlugin plugin;
     private boolean isApplied = false;
-    private final Set<Player> playersInBed = new HashSet<>();
     private final Map<Location, Long> altarCooldowns = new HashMap<>();
     private final Random random = new Random();
-    private final int requiredPlayers = 4;
     private final GuardianBlaze blazespawmer;
     private final GuardianCorruptedSkeleton guardianCorruptedSkeleton;
     private final CorruptedInfernalSpider corruptedInfernalSpider;

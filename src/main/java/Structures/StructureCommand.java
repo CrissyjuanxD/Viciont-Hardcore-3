@@ -20,6 +20,7 @@ public class StructureCommand implements CommandExecutor {
         // Registrar estructuras
         registerStructure(new CorruptedVillage(plugin));
         registerStructure(new EndRing(plugin));
+        registerStructure(new GuardianBlazeZone(plugin));
     }
 
     private void registerStructure(Structure structure) {

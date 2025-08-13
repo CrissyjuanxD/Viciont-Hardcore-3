@@ -10,6 +10,7 @@ import Dificultades.CustomMobs.QueenBeeHandler;
 import Dificultades.DayFourChanges;
 import Dificultades.DayOneChanges;
 import Enchants.EnhancedEnchantmentTable;
+import Events.UltraWitherBattle.UltraWitherCompass;
 import items.*;
 import Armors.NightVisionHelmet;
 import org.bukkit.Bukkit;
@@ -455,6 +456,14 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
                 item = CorruptedGoldenApple.createApilateGoldBlock();
                 item.setAmount(cantidad);
                 break;
+            case "orbe_de_vida":
+                item = ReviveItems.createResurrectOrb();
+                item.setAmount(cantidad);
+                break;
+            case "wither_compass":
+                item = UltraWitherCompass.createUltraWitherCompass();
+                item.setAmount(cantidad);
+                break;
             default:
                 sender.sendMessage("§cEse item no existe.");
                 return true;
@@ -554,6 +563,8 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
             completions.add("yunque_nivel_2");
             completions.add("corrupted_golden_apple");
             completions.add("apilate_gold_block");
+            completions.add("orbe_de_vida");
+            completions.add("wither_compass");
         } else if (args.length == 2) {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 completions.add(player.getName());

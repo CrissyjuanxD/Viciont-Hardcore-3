@@ -236,7 +236,7 @@ public class EventoHandler implements Listener {
                     double x = loc.getX();
                     double y = loc.getY();
                     double z = loc.getZ();
-                    String comando = String.format("magic tp %s %.2f %.2f %.2f", jugador, x, y, z);
+                    String comando = String.format("magictp %s %.2f %.2f %.2f", jugador, x, y, z);
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), comando);
                     i++;
                 }

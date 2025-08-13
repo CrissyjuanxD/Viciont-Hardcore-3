@@ -84,8 +84,6 @@ public class DayNineChanges implements Listener {
 
         Entity entity = event.getEntity();
 
-        // 1. Endermans en el Nether: 50% de probabilidad de ser reemplazados por Creepers
-        handleCreeperNetherConversion(event);
 
         // 2. Modificaciones para Raiders
         if (RAIDERS.contains(entity.getType())) {
@@ -144,23 +142,6 @@ public class DayNineChanges implements Listener {
                 ));
             }
         }
-    }
-
-    private void handleCreeperNetherConversion(CreatureSpawnEvent event) {
-        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NETHER) {
-            return;
-        }
-
-        if (event.getEntityType() != EntityType.ENDERMAN) return;
-
-        if (random.nextInt(2) != 0) return;
-
-        Enderman enderman = (Enderman) event.getEntity();
-        Location loc = enderman.getLocation();
-
-        /*infernalCreeper.spawnInfernalCreeper(loc);*/
-        enderman.getWorld().spawn(loc, Creeper.class);
-        enderman.remove();
     }
 
     @EventHandler

@@ -82,32 +82,6 @@ public class CorruptedSpider implements Listener {
         }
     }
 
-    @EventHandler
-    public void onPlayerMove(PlayerMoveEvent event) {
-        Player player = event.getPlayer();
-        Location from = event.getFrom();
-        Location to = event.getTo();
-
-        if (from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ()) {
-            return;
-        }
-
-        Location playerLocation = player.getLocation();
-        double maxDistanceSquared = 30 * 30;
-
-        for (Entity entity : player.getNearbyEntities(30, 30, 30)) {
-            if (entity instanceof Spider spider &&
-                    spider.getCustomName() != null &&
-                    spider.getCustomName().equals(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Spider") &&
-                    !isCorruptedSpider(spider)) {
-
-                if (playerLocation.distanceSquared(spider.getLocation()) <= maxDistanceSquared) {
-                    transformspawnCorruptedSpider(spider);
-                }
-            }
-        }
-    }
-
     //SONIDOS
     @EventHandler
     public void onCorruptedSpiderHurt(EntityDamageEvent event) {

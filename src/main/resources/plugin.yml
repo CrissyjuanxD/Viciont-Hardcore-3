@@ -1,5 +1,5 @@
 name: Viciont_Hardcore3_Plugin
-version: 1.5.4
+version: 1.5.5
 main: vct.hardcore3.ViciontHardcore3
 author: CrissyJuanXD
 api-version: 1.21
@@ -171,4 +171,14 @@ commands:
     description: Resetea el cooldown del evento Nightmare a un jugador o a todos.
     usage: /resetnightmarecooldown <player|@a>
     permission: viciont_hardcore3.command.resetnightmarecooldown
+    permission-message: No tienes permiso para usar este comando.
+  givespawner:
+    description: Da un spawner personalizado que genera mobs custom.
+    usage: /givespawner <mob> [jugador] | /givespawner vanilla <mob_vanilla> [jugador]
+    permission: viciont_hardcore3.command.givespawner
+    permission-message: No tienes permiso para usar este comando.
+  reloadcustomspawn:
+    description: Recarga todos los spawners custom en el mundo
+    usage: /reloadcustomspawn
+    permission: viciont_hardcore3.command.givespawner
     permission-message: No tienes permiso para usar este comando.

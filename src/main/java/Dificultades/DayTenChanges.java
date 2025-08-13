@@ -105,7 +105,7 @@ public class DayTenChanges implements Listener {
 
         handleIceologerConversion(event);
         handleSpiderConversion(event);
-        handleInfernalCreeperConversion(event);
+        handleInfernalandNormalCreeperConversion(event);
         handleFastRavagerConversion(event);
         /*handleZombieConversion(event);*/
     }
@@ -151,12 +151,12 @@ public class DayTenChanges implements Listener {
         spider.remove();
     }
 
-    private void handleInfernalCreeperConversion(CreatureSpawnEvent event) {
+    private void handleInfernalandNormalCreeperConversion(CreatureSpawnEvent event) {
         if (event.getLocation().getWorld().getEnvironment() != World.Environment.NETHER) {
             return;
         }
 
-        if (event.getEntityType() != EntityType.CREEPER) return;
+        if (event.getEntityType() != EntityType.ENDERMAN) return;
 
         // Verificar que no sea ya una araña corrupta
         if (event.getEntity().getPersistentDataContainer()
@@ -164,14 +164,22 @@ public class DayTenChanges implements Listener {
             return;
         }
 
-        if (random.nextInt(2) != 0) return;
+        Enderman enderman = (Enderman) event.getEntity();
+        Location loc = enderman.getLocation();
 
-        // Convertir Piglin a Spider
-        Creeper creeper = (Creeper) event.getEntity();
-        Location loc = creeper.getLocation();
+        double randomValue = random.nextDouble();
 
-        infernalCreeper.spawnInfernalCreeper(loc);
-        creeper.remove();
+        boolean isinfernalCreeper = random.nextInt(4) == 0;
+        boolean isNormalCreeper = random.nextInt(2) == 0;
+
+        if (isinfernalCreeper) {
+            infernalCreeper.spawnInfernalCreeper(loc);
+        } else if (isNormalCreeper) {
+            enderman.getWorld().spawn(loc, Creeper.class);
+        } else {
+            return;
+        }
+        enderman.remove();
     }
 
     private boolean shouldConvertWhiteEndermanSpawn(CreatureSpawnEvent event) {
@@ -303,7 +311,5 @@ public class DayTenChanges implements Listener {
         Bukkit.addRecipe(CustomInfernalTotem);
         Bukkit.addRecipe(CustomSpiderTotem);
     }
-
-    //SPAWN ULTRA WITHER BOSS
 
 }

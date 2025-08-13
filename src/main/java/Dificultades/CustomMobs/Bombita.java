@@ -73,31 +73,6 @@ public class Bombita implements Listener {
         }
     }
 
-    @EventHandler
-    public void onPlayerMove(PlayerMoveEvent event) {
-        Player player = event.getPlayer();
-        Location from = event.getFrom();
-        Location to = event.getTo();
-
-        if (from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ()) {
-            return;
-        }
-
-        Location playerLocation = player.getLocation();
-        double maxDistanceSquared = 30 * 30;
-
-        for (Entity entity : player.getNearbyEntities(30, 30, 30)) {
-            if (entity instanceof Creeper creeper &&
-                    creeper.getCustomName() != null &&
-                    creeper.getCustomName().equals(ChatColor.RED + "" + ChatColor.BOLD + "Bombita") &&
-                    !isBombita(creeper)) {
-
-                if (playerLocation.distanceSquared(creeper.getLocation()) <= maxDistanceSquared) {
-                    transformToBombita(creeper);
-                }
-            }
-        }
-    }
 
     public NamespacedKey getBombitaKey() {
         return bombitaKey;

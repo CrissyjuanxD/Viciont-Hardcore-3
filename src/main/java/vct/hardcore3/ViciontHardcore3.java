@@ -12,6 +12,7 @@ import Events.AchievementParty.AchievementGUI;
 import Events.AchievementParty.AchievementPartyHandler;
 import Events.DamageLogListener;
 import Events.Skybattle.EventoHandler;
+import Events.UltraWitherBattle.UltraWitherEvent;
 import Handlers.*;
 import Security.PingMonitor.PingMonitor;
 import Structures.StructureCommand;
@@ -46,6 +47,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private DeathStormHandler deathStormHandler;
     private DayHandler dayHandler;
     private SuccessNotification successNotif;
+    private ErrorNotification errorNotif;
     private NightmareMechanic nightmareMechanic;
 
     // Cambios de días
@@ -81,6 +83,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private EconomyItemsFunctions economyItemsFunctions;
     private MobSoundManager mobSoundManager;
     private GameModeTeamHandler gameModeTeamHandler;
+    private CustomSpawnerHandler customSpawnerHandler;
 
     // Manejadores de Estructuras
 
@@ -92,6 +95,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private AchievementPartyHandler achievementPartyHandler;
     private AchievementCommands achievementCommands;
     private AchievementGUI achievementGUI;
+    private UltraWitherEvent ultraWitherEvent;
 
     // Mobs
 
@@ -107,6 +111,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private HellishBeeHandler hellishBeeHandler;
     private InfestedBeeHandler infestedBeeHandler;
     private QueenBeeHandler queenBeeHandler;
+    private UltraWitherBossHandler ultraWitherBossHandler;
 
     // Bloques
 
@@ -209,8 +214,14 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         Objects.requireNonNull(this.getCommand("spawnvct")).setExecutor(new SpawnMobs(this, dayHandler));
         Objects.requireNonNull(this.getCommand("eggvct")).setExecutor(new EggSpawnerCommand(this));
         ItemsCommands itemsCommands = new ItemsCommands(this);
+        customSpawnerHandler = new CustomSpawnerHandler(this, dayHandler);
+        CustomSpawnerHandler spawnerHandler = new CustomSpawnerHandler(this, dayHandler);
+        new GiveSpawnerCommand(this);
+        this.getCommand("reloadcustomspawn").setExecutor(new ReloadCustomSpawnCommand(spawnerHandler));
         getCommand("givevct").setExecutor(itemsCommands);
         getCommand("givevct").setTabCompleter(itemsCommands);
+        getServer().getPluginManager().registerEvents(customSpawnerHandler, this);
+
 
 
         // Registrar el comando para el temporizador;
@@ -243,6 +254,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         MuerteAnimation muerteAnimation = new MuerteAnimation(this);
         BonusAnimation bonusAnimation = new BonusAnimation(this);
         SuccessNotification successNotif = new SuccessNotification(this);
+        ErrorNotification errorNotif = new ErrorNotification(this);
         MuerteHandler muertehandler = new MuerteHandler(this, damageLogListener, deathStormHandler);
         DiscoCommand discoCommand = new DiscoCommand(this);
         this.getCommand("magictp").setExecutor(new MagicTP(this));
@@ -291,10 +303,12 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
         // Inicializar EventoHandler y Eventos Generales
         this.eventoHandler = new EventoHandler(this);
+        this.ultraWitherEvent = new UltraWitherEvent(this, tiempoCommand, successNotif, errorNotif);
         this.achievementPartyHandler = new AchievementPartyHandler(this);
         this.achievementGUI = new AchievementGUI(this, achievementPartyHandler);
         achievementCommands = new AchievementCommands(achievementPartyHandler);
         getServer().getPluginManager().registerEvents(eventoHandler, this);
+        getServer().getPluginManager().registerEvents(ultraWitherEvent, this);
         getServer().getPluginManager().registerEvents(achievementPartyHandler, this);
         getServer().getPluginManager().registerEvents(achievementGUI, this);
 
@@ -396,6 +410,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         infestedBeeHandler = new InfestedBeeHandler(this);
         hellishBeeHandler = new HellishBeeHandler(this);
         queenBeeHandler = new QueenBeeHandler(this);
+        ultraWitherBossHandler = new UltraWitherBossHandler(this);
 
         //Armors
         nightVisionHelmet = new NightVisionHelmet(this);
@@ -456,6 +471,12 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
             Bukkit.getLogger().severe("nightmareMechanic is null, cannot disable nightmare.");
         }
 
+        if (customSpawnerHandler != null) {
+            customSpawnerHandler.shutdown();
+        } else {
+            Bukkit.getLogger().severe("customSpawnerHandler is null, cannot disable nightmare.");
+        }
+
 
         MobCapManager.getInstance(this).shutdown();
         economyItemsFunctions.onDisable();
@@ -497,6 +518,16 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
                 getLogger().warning("Error al limpiar QueenBeeHandler: " + e.getMessage());
             }
             queenBeeHandler = null;
+        }
+
+        if (ultraWitherBossHandler != null) {
+            try {
+                ultraWitherBossHandler.shutdown();
+                getLogger().info("UltraWitherBossHandler limpiado correctamente");
+            } catch (Exception e) {
+                getLogger().warning("Error al limpiar UltraWitherBossHandler: " + e.getMessage());
+            }
+            ultraWitherBossHandler = null;
         }
 
         // Cancelar todas las tareas pendientes del plugin
