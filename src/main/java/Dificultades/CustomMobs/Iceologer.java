@@ -1,5 +1,6 @@
 package Dificultades.CustomMobs;
 
+import items.ItemsTotems;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.data.BlockData;
@@ -7,6 +8,7 @@ import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -270,6 +272,18 @@ public class Iceologer implements Listener {
                     player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 100, 1));
                 }
             }
+        }
+    }
+
+    @EventHandler
+    public void onIceologerDeath(EntityDeathEvent event) {
+        if (event.getEntity() instanceof Illusioner iceologer &&
+                iceologer.getPersistentDataContainer().has(iceologerKey, PersistentDataType.BYTE)) {
+
+            iceologer.getWorld().playSound(iceologer.getLocation(), Sound.ENTITY_ILLUSIONER_DEATH, SoundCategory.HOSTILE, 1.0f, 1.4f);
+            iceologer.getWorld().dropItemNaturally(iceologer.getLocation(), ItemsTotems.createIceCrystal());
+
+            activeIceologers.remove(iceologer);
         }
     }
 

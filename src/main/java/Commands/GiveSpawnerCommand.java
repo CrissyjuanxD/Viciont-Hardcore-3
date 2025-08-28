@@ -230,9 +230,9 @@ public class GiveSpawnerCommand implements CommandExecutor, TabCompleter {
                     description = "Genera Creepers Infernales";
                     customModelData = 1020;
                     break;
-                case "ultracorruptedspider":
-                    displayName = ChatColor.GREEN + "" + ChatColor.BOLD + "Spawner de Ultra Corrupted Spider";
-                    description = "Genera Arañas Ultra Corruptas";
+                case "toxicspider":
+                    displayName = ChatColor.GREEN + "" + ChatColor.BOLD + "Spawner de Toxic Spider";
+                    description = "Genera Arañas Tóxicas";
                     customModelData = 1021;
                     break;
                 case "fastravager":
@@ -294,6 +294,16 @@ public class GiveSpawnerCommand implements CommandExecutor, TabCompleter {
                     displayName = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Spawner de Dark Skeleton";
                     description = "Genera Esqueletos Oscuros";
                     customModelData = 1033;
+                    break;
+                case "infernalbeast":
+                    displayName = ChatColor.DARK_RED + "" + ChatColor.BOLD + "Spawner de Infernal Beast";
+                    description = "Genera Infernal Beasts";
+                    customModelData = 1034;
+                    break;
+                case "corrupteddrowned":
+                    displayName = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Spawner de Corrupted Drowned";
+                    description = "Genera Drowned Corruptos";
+                    customModelData = 1035;
                     break;
                 default:
                     return null;
@@ -363,7 +373,7 @@ public class GiveSpawnerCommand implements CommandExecutor, TabCompleter {
             suggestions.add("ultrawitherboss");
             suggestions.add("whiteenderman");
             suggestions.add("infernalcreeper");
-            suggestions.add("ultracorruptedspider");
+            suggestions.add("toxicspider");
             suggestions.add("fastravager");
             suggestions.add("bruteimperial");
             suggestions.add("batboom");
@@ -376,6 +386,8 @@ public class GiveSpawnerCommand implements CommandExecutor, TabCompleter {
             suggestions.add("darkcreeper");
             suggestions.add("darkvex");
             suggestions.add("darkskeleton");
+            suggestions.add("infernalbeast");
+            suggestions.add("corrupteddrowned");
         } else if (args.length == 2) {
             if (args[0].equalsIgnoreCase("vanilla")) {
                 for (EntityType type : EntityType.values()) {

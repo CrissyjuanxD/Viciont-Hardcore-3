@@ -132,11 +132,6 @@ commands:
     usage: /<command> <mob>
     permission: viciont_hardcore3.command.eggvct
     permission-message: No tienes permiso para usar este comando.
-  customspawner:
-    description: Configura un spawner para generar mobs personalizados
-    usage: /customspawner <mob>
-    permission: viciont_hardcore3.command.spawner
-    permission-message: No tienes permiso para usar este comando.
   addtiempo:
     description: Añade un temporizador en la bossbar.
     usage: /addtiempo [nombre opcional] <tiempo> [on/off]
@@ -181,4 +176,52 @@ commands:
     description: Recarga todos los spawners custom en el mundo
     usage: /reloadcustomspawn
     permission: viciont_hardcore3.command.givespawner
+    permission-message: No tienes permiso para usar este comando.
+  activarmision:
+    description: Activa una misión específica
+    usage: /activarmision <número>
+    permission: viciont_hardcore3.missions.admin
+    permission-message: No tienes permiso para usar este comando.
+  desactivarmision:
+    description: Desactiva una misión específica
+    usage: /desactivarmision <número>
+    permission: viciont_hardcore3.missions.admin
+    permission-message: No tienes permiso para usar este comando.
+  misiones:
+    description: Abre la interfaz del sistema de misiones
+    usage: /misiones
+  addmision:
+    description: Añade una misión completada a un jugador
+    usage: /addmision <jugador> <número>
+    permission: viciont_hardcore3.missions.admin
+    permission-message: No tienes permiso para usar este comando.
+  removemision:
+    description: Remueve una misión completada de un jugador
+    usage: /removemision <jugador> <número>
+    permission: viciont_hardcore3.missions.admin
+    permission-message: No tienes permiso para usar este comando.
+  penalizadosmisiones:
+    description: Muestra la lista de jugadores penalizados por misiones
+    usage: /penalizadosmisiones
+    permission: viciont_hardcore3.missions.admin
+    permission-message: No tienes permiso para usar este comando.
+  spawntienda:
+    description: Spawnea una tienda (aldeano) en las coordenadas especificadas
+    usage: /spawntienda <Monedas|Utilidades|Varios> [x] [y] [z]
+    permission: viciont_hardcore3.shop.admin
+    permission-message: No tienes permiso para usar este comando.
+  shader:
+    description: Aplica un efecto shader a un jugador
+    usage: /shader <efecto> [jugador|@a]
+    permission: viciont_hardcore3.shop.admin
+    permission-message: No tienes permiso para usar este comando.
+  removeshader:
+    description: Remueve un efecto shader de un jugador
+    usage: /removeshader <efecto> [jugador|@a]
+    permission: viciont_hardcore3.shop.admin
+    permission-message: No tienes permiso para usar este comando.
+  shaderinfo:
+    description: Muestra el shader activo de un jugador
+    usage: /shaderinfo [jugador]
+    permission: viciont_hardcore3.shop.admin
     permission-message: No tienes permiso para usar este comando.

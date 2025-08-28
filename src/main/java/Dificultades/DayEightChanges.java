@@ -50,6 +50,7 @@ public class DayEightChanges implements Listener {
     private final CorruptedZombies corruptedZombies;
     private final CorruptedSkeleton corruptedSkeleton;
     private final BruteImperial bruteImperial;
+    private final InfernalBeast infernalBeast;
 
     private final CorruptedSoul corruptedSoul;
     private final CorruptedAncientDebris corruptedAncientDebris;
@@ -72,6 +73,7 @@ public class DayEightChanges implements Listener {
         this.corruptedZombies = new CorruptedZombies(plugin);
         this.corruptedSkeleton = new CorruptedSkeleton(plugin, handler);
         this.bruteImperial = new BruteImperial(plugin);
+        this.infernalBeast = new InfernalBeast(plugin);
         this.corruptedSoul = new CorruptedSoul(plugin);
         this.corruptedAncientDebris = new CorruptedAncientDebris(plugin);
         //Armor
@@ -93,6 +95,7 @@ public class DayEightChanges implements Listener {
             buffBreeze.apply();
             netheriteVexGuardian.apply();
             bruteImperial.apply();
+            infernalBeast.apply();
             CustomCorruptedNetheriteCraft();
             registerCorruptedArmorUpgrades();
             mobCapManager.updateMobCap(2);
@@ -106,6 +109,7 @@ public class DayEightChanges implements Listener {
             buffBreeze.revert();
             netheriteVexGuardian.revert();
             bruteImperial.revert();
+            infernalBeast.revert();
 
             Bukkit.removeRecipe(new NamespacedKey(plugin, "corrupted_netherite_ingot"));
             Bukkit.removeRecipe(new NamespacedKey(plugin, "helmet_netherite_upgrade"));
@@ -135,7 +139,7 @@ public class DayEightChanges implements Listener {
             return;
         }
 
-        handleCorruptedMagmaConversion(event);
+        handleInfernalBeastConversion(event);
         handleBuffBreezeConversion(event);
         handleStraytoCEConversion(event);
         handleBoggedtoCEConversion(event);
@@ -143,29 +147,25 @@ public class DayEightChanges implements Listener {
         handleBruteonversion(event);
     }
 
-    private void handleCorruptedMagmaConversion(CreatureSpawnEvent event) {
+    private void handleInfernalBeastConversion(CreatureSpawnEvent event) {
         if (event.getLocation().getWorld().getEnvironment() != World.Environment.NETHER) {
             return;
         }
 
-        if (event.getLocation().getBlock().getBiome() != Biome.BASALT_DELTAS) {
-            return;
-        }
-
-        if (event.getEntityType() != EntityType.MAGMA_CUBE) return;
+        if (event.getEntityType() != EntityType.HOGLIN) return;
 
         if (event.getEntity().getPersistentDataContainer()
-                .has(corruptedMagmaCube.getMagmaCorruptedKey(), PersistentDataType.BYTE)) {
+                .has(infernalBeast.getInfernalBeastKey(), PersistentDataType.BYTE)) {
             return;
         }
 
         if (random.nextInt(4) != 0) return;
 
-        MagmaCube magmaCube = (MagmaCube) event.getEntity();
-        Location loc = magmaCube.getLocation();
+        Hoglin hoglin = (Hoglin) event.getEntity();
+        Location loc = hoglin.getLocation();
 
-        corruptedMagmaCube.spawnCorruptedMagmaCube(loc);
-        magmaCube.remove();
+        infernalBeast.spawnInfernalBeast(loc);
+        hoglin.remove();
 
     }
 

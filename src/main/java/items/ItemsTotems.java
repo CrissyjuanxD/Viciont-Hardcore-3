@@ -17,12 +17,12 @@ public class ItemsTotems {
         this.plugin = plugin;
     }
 
-    public static ItemStack createUltraCorruptedSpiderEye() {
+    public static ItemStack createToxicSpiderEye() {
         ItemStack spiderEye = new ItemStack(Material.SPIDER_EYE);
         ItemMeta meta = spiderEye.getItemMeta();
 
         if (meta != null) {
-            meta.setDisplayName(ChatColor.of("#cc0099") + "" + ChatColor.BOLD + "Ultra Corrupted Spider Eye");
+            meta.setDisplayName(ChatColor.of("#cc0099") + "" + ChatColor.BOLD + "Toxic Spider Eye");
             meta.setCustomModelData(10);
             meta.setRarity(ItemRarity.EPIC);
 
@@ -76,5 +76,15 @@ public class ItemsTotems {
         }
 
         return totem;
+    }
+
+    public static ItemStack createIceCrystal() {
+        ItemStack item = new ItemStack(Material.AMETHYST_SHARD);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(ChatColor.of("#66ffff") + "Cristal de Hielo");
+        meta.setCustomModelData(100);
+        meta.setRarity(ItemRarity.EPIC);
+        item.setItemMeta(meta);
+        return item;
     }
 }

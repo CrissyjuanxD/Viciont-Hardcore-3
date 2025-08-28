@@ -16,9 +16,7 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.bukkit.event.entity.EntityCombustEvent;
-import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.inventory.PrepareSmithingEvent;
@@ -92,7 +90,6 @@ public class DayFourChanges implements Listener {
         }
     }
 
-    // Definir las capas del altar
     private final Material[][][] altarLayers = {
             // Layer 1
             {
@@ -159,7 +156,6 @@ public class DayFourChanges implements Listener {
         }
     }
 
-    // Devuelve el símbolo representativo para el material
     private String getSymbol(Material material) {
         switch (material) {
             case HONEY_BLOCK -> {
@@ -204,7 +200,6 @@ public class DayFourChanges implements Listener {
                 if (isOnCooldown(block.getLocation())) return;
                 Location altarLocation = block.getLocation();
 
-                // Verificar y enviar el mensaje de error por capas
                 checkAltarLayers(altarLocation, player);
 
                 if (isValidQueenBeeAltar(altarLocation)) {
@@ -294,8 +289,7 @@ public class DayFourChanges implements Listener {
 
                     step++;
                 } else if (step <= totalSteps + 40) {
-                    // Expansión circular de partículas (2 segundos)
-                    double angle = (step - totalSteps) * (Math.PI / 20); // 2 vueltas
+                    double angle = (step - totalSteps) * (Math.PI / 20);
                     for (int i = 0; i < 360; i += 10) {
                         double radians = Math.toRadians(i);
                         double radius = 1.5 + Math.sin(angle) * 1.5;
@@ -349,13 +343,59 @@ public class DayFourChanges implements Listener {
         }
     }
 
+    //-----------------------------------------
+    //Gameplay Nether
+    //-----------------------------------------
+
     @EventHandler
-    public void onEntityCombust(EntityCombustEvent event) {
+    public void onEntityCombust(EntityCombustByBlockEvent event) {
         if (!isApplied) return;
         if (event.getEntity() instanceof Player player) {
             player.setFireTicks(Integer.MAX_VALUE);
         }
     }
+
+    @EventHandler
+    public void onEntityCombust(EntityCombustByEntityEvent event) {
+        if (!isApplied) return;
+        if (event.getEntity() instanceof Player player) {
+            player.setFireTicks(Integer.MAX_VALUE);
+        }
+    }
+
+    @EventHandler
+    public void onEntityDamage(EntityDamageEvent event) {
+        if (!isApplied) return;
+        if (event.getEntity() instanceof Player player) {
+            if (event.getCause() == EntityDamageEvent.DamageCause.FIRE ||
+                    event.getCause() == EntityDamageEvent.DamageCause.FIRE_TICK ||
+                    event.getCause() == EntityDamageEvent.DamageCause.LAVA ||
+                    event.getCause() == EntityDamageEvent.DamageCause.HOT_FLOOR) {
+                player.setFireTicks(Integer.MAX_VALUE);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) {
+        if (!isApplied) return;
+
+        Player player = event.getPlayer();
+        Location loc = player.getLocation();
+
+        Block blockBelow = loc.clone().subtract(0, 0.1, 0).getBlock();
+
+        Block standingBlock = loc.getBlock();
+
+        if (blockBelow.getType() == Material.FIRE ||
+                standingBlock.getType() == Material.FIRE ||
+                blockBelow.getType() == Material.SOUL_FIRE ||
+                standingBlock.getType() == Material.SOUL_FIRE) {
+
+            player.setFireTicks(Integer.MAX_VALUE);
+        }
+    }
+
 
     //-----------------------------------------
     //Gameplay Netherite
@@ -411,7 +451,6 @@ public class DayFourChanges implements Listener {
         }
     }
 
-    // Crear Upgrade de Netherite con UUID
     public ItemStack createNetheriteUpgrade(Player player) {
         ItemStack item = new ItemStack(Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
         ItemMeta meta = item.getItemMeta();
@@ -436,7 +475,6 @@ public class DayFourChanges implements Listener {
                 shaped.getKey().getKey().contains("corrupted");
     }
 
-    // Validar si el jugador puede usar la Upgrade
     public boolean canUseUpgrade(Player player, ItemStack item) {
         if (item == null || !item.hasItemMeta()) return false;
 
@@ -474,7 +512,6 @@ public class DayFourChanges implements Listener {
         CraftingInventory inventory = event.getInventory();
         ItemStack[] matrix = inventory.getMatrix();
         Player player = (Player) event.getView().getPlayer();
-        // Validación por posiciones específicas
         boolean isValid = true;
         ItemStack upgrade = null;
 
@@ -715,7 +752,6 @@ public class DayFourChanges implements Listener {
 
         if (event.getEntityType() != EntityType.ZOMBIFIED_PIGLIN) return;
 
-        // Verificar que no sea ya una araña corrupta
         if (event.getEntity().getPersistentDataContainer()
                 .has(corruptedInfernalSpider.getCorruptedInfernalKey(), PersistentDataType.BYTE)) {
             return;
@@ -723,7 +759,6 @@ public class DayFourChanges implements Listener {
 
         if (random.nextInt(10) != 0) return;
 
-        // Convertir Piglin a Spider
         PigZombie pigZombie = (PigZombie) event.getEntity();
         Location loc = pigZombie.getLocation();
 

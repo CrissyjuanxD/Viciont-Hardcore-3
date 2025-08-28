@@ -46,6 +46,7 @@
                 corruptedSpider.apply();
                 Bukkit.getPluginManager().registerEvents(this, plugin);
                 registerCustomRecipe();
+                disablePhantomSpawning();
                 isApplied = true;
             }
         }
@@ -177,6 +178,12 @@
                     event.setCancelled(true);
                     event.getPlayer().sendMessage(ChatColor.RED + "۞ Las Raids están deshabilitadas hasta el día 2!");
                 }
+            }
+        }
+
+        public void disablePhantomSpawning() {
+            for (World world : Bukkit.getWorlds()) {
+                world.setGameRule(GameRule.DO_INSOMNIA, false);
             }
         }
     }

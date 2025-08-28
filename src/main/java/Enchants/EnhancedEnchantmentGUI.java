@@ -1,5 +1,6 @@
 package Enchants;
 
+import Armors.CorruptedArmor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
@@ -202,7 +203,8 @@ public class EnhancedEnchantmentGUI implements Listener {
                     ItemMeta itemMeta = itemToEnchant.getItemMeta();
                     int existingLevel = itemMeta != null ? itemMeta.getEnchantLevel(selectedEnchantment) : 0;
 
-                    if (existingLevel >= selectedEnchantment.getMaxLevel()) {
+                    int customMaxLevel = getCustomMaxLevel(selectedEnchantment, itemToEnchant);
+                    if (existingLevel >= customMaxLevel) {
                         return;
                     }
 
@@ -231,8 +233,8 @@ public class EnhancedEnchantmentGUI implements Listener {
 
                     // Aumentar el nivel del encantamiento
                     int newLevel = existingLevel + 1;
-                    if (newLevel > selectedEnchantment.getMaxLevel()) {
-                        newLevel = selectedEnchantment.getMaxLevel();
+                    if (newLevel > customMaxLevel) {
+                        newLevel = customMaxLevel;
                     }
                     itemMeta.addEnchant(selectedEnchantment, newLevel, true);
                     itemToEnchant.setItemMeta(itemMeta);
@@ -261,7 +263,6 @@ public class EnhancedEnchantmentGUI implements Listener {
 
 
     private void sendMessageOnce(Player player, String message) {
-        // Método auxiliar para evitar duplicación de mensajes en una sesión de evento
         player.sendMessage(message);
     }
 
@@ -359,13 +360,17 @@ public class EnhancedEnchantmentGUI implements Listener {
 
     private void updateAllMatchingBooks(Inventory gui, Enchantment enchantment, int currentLevel) {
         int[] slots = { 13, 14, 15, 16, 22, 23, 24, 25, 31, 32, 33 };
+        ItemStack itemToEnchant = gui.getItem(36);
 
         for (int slot : slots) {
             ItemStack book = gui.getItem(slot);
             if (book != null && book.getType() == Material.ENCHANTED_BOOK) {
                 EnchantmentStorageMeta meta = (EnchantmentStorageMeta) book.getItemMeta();
                 if (meta != null && meta.hasStoredEnchant(enchantment)) {
-                    updateEnchantmentBook(gui, slot, enchantment, currentLevel);
+                    int maxLevel = getCustomMaxLevel(enchantment, itemToEnchant);
+                    if (currentLevel < maxLevel) {
+                        updateEnchantmentBook(gui, slot, enchantment, currentLevel);
+                    }
                 }
             }
         }
@@ -377,8 +382,12 @@ public class EnhancedEnchantmentGUI implements Listener {
             EnchantmentStorageMeta meta = (EnchantmentStorageMeta) book.getItemMeta();
             if (meta != null) {
                 int newLevel = currentLevel + 1;
-                if (newLevel > enchantment.getMaxLevel()) {
-                    newLevel = enchantment.getMaxLevel();
+
+                ItemStack itemToEnchant = gui.getItem(36);
+                int customMaxLevel = getCustomMaxLevel(enchantment, itemToEnchant);
+
+                if (newLevel > customMaxLevel) {
+                    newLevel = customMaxLevel;
                 }
                 meta.removeStoredEnchant(enchantment);
                 meta.addStoredEnchant(enchantment, newLevel, true);
@@ -610,9 +619,6 @@ public class EnhancedEnchantmentGUI implements Listener {
                     inventory.setItem(slot, null);
                 }
             }
-            if (hasItems) {
-                player.sendMessage(ChatColor.YELLOW + "۞ Los objetos de la mesa mejorada han sido devueltos.");
-            }
         }
 
         for (ItemStack item : player.getInventory().getContents()) {
@@ -622,4 +628,14 @@ public class EnhancedEnchantmentGUI implements Listener {
             }
         }
     }
+
+    //Metodos Auxiliares
+    private int getCustomMaxLevel(Enchantment enchantment, ItemStack item) {
+        if (enchantment.equals(Enchantment.UNBREAKING) &&
+                CorruptedArmor.isCorruptedArmor(item)) {
+            return 7; // Máximo nivel para armadura custom
+        }
+        return enchantment.getMaxLevel(); // Máximo normal
+    }
+
 }

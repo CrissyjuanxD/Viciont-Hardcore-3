@@ -7,7 +7,6 @@ import Handlers.DayHandler;
 import items.*;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.*;
-import org.bukkit.block.Biome;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
@@ -38,7 +37,7 @@ public class DayThirteenChanges implements Listener {
 
     private final Bombita bombita;
     private final CorruptedZombies corruptedZombies;
-    private final UltraCorruptedSpider ultraCorruptedSpider;
+    private final ToxicSpider toxicSpider;
     private final CorruptedSkeleton corruptedSkeleton;
 
     private final SpectralEyeSpawner spectralEyeSpawner;
@@ -59,7 +58,7 @@ public class DayThirteenChanges implements Listener {
 
         this.bombita = new Bombita(plugin);
         this.corruptedZombies = new CorruptedZombies(plugin);
-        this.ultraCorruptedSpider = new UltraCorruptedSpider(plugin);
+        this.toxicSpider = new ToxicSpider(plugin);
         this.corruptedSkeleton = new CorruptedSkeleton(plugin, handler);
 
         this.spectralEyeSpawner = new SpectralEyeSpawner(plugin, spectralEye);
@@ -114,7 +113,7 @@ public class DayThirteenChanges implements Listener {
                 entity.getPersistentDataContainer().has(enderSilverfish.getEnderSilverFishKey(), PersistentDataType.BYTE) ||
                 entity.getPersistentDataContainer().has(bombita.getBombitaKey(), PersistentDataType.BYTE) ||
                 entity.getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE) ||
-                entity.getPersistentDataContainer().has(ultraCorruptedSpider.getUltraCorruptedSpiderKey(), PersistentDataType.BYTE) ||
+                entity.getPersistentDataContainer().has(toxicSpider.getUltraCorruptedSpiderKey(), PersistentDataType.BYTE) ||
                 entity.getPersistentDataContainer().has(corruptedSkeleton.getCorruptedKey(), PersistentDataType.BYTE);
     }
 
@@ -156,7 +155,7 @@ public class DayThirteenChanges implements Listener {
             } else if (otherMobChoice < 0.5) { // Corrupted Zombies
                 corruptedZombies.spawnCorruptedZombie(loc);
             } else if (otherMobChoice < 0.75) { // Ultra Corrupted Spider
-                ultraCorruptedSpider.spawnUltraCorruptedSpider(loc);
+                toxicSpider.spawnToxicSpider(loc);
             } else { // Corrupted Skeleton
                 corruptedSkeleton.spawnCorruptedSkeleton(loc, null);
             }

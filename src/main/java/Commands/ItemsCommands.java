@@ -33,6 +33,8 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
     private final LifeTotem lifeTotem;
     private final SpiderTotem spiderTotem;
     private final InfernalTotem infernalTotem;
+    private final EconomyIceTotem economyIceTotem;
+    private final EconomyFlyTotem economyFlyTotem;
     private final BootNetheriteEssence bootNetheriteEssence;
     private final LegginsNetheriteEssence legginsNetheriteEssence;
     private final ChestplateNetheriteEssence chestplateNetheriteEssence;
@@ -42,6 +44,7 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
     private final CorruptedAncientDebris corruptedAncientDebris;
     private final GuardianShulkerHeart guardianShulkerHeart;
     private final CustomBoat customBoat;
+    private final TridenteEspectral tridenteEspectral;
 
     public ItemsCommands(ViciontHardcore3 plugin) {
         this.plugin = plugin;
@@ -49,6 +52,8 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
         this.lifeTotem = new LifeTotem(plugin);
         this.spiderTotem = new SpiderTotem(plugin);
         this.infernalTotem = new InfernalTotem(plugin);
+        this.economyIceTotem = new EconomyIceTotem(plugin);
+        this.economyFlyTotem = new EconomyFlyTotem(plugin);
         this.bootNetheriteEssence = new BootNetheriteEssence(plugin);
         this.legginsNetheriteEssence = new LegginsNetheriteEssence(plugin);
         this.chestplateNetheriteEssence = new ChestplateNetheriteEssence(plugin);
@@ -58,6 +63,7 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
         this.corruptedAncientDebris = new CorruptedAncientDebris(plugin);
         this.guardianShulkerHeart = new GuardianShulkerHeart(plugin);
         this.customBoat = new CustomBoat(plugin);
+        this.tridenteEspectral = new TridenteEspectral(plugin);
         plugin.getCommand("givevct").setExecutor(this);
         plugin.getCommand("givevct").setTabCompleter(this);
     }
@@ -324,8 +330,8 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
                 break;
 
                 //VARIOS
-            case "ultracorruptedspidereye":
-                item = ItemsTotems.createUltraCorruptedSpiderEye();
+            case "toxicspidereye":
+                item = ItemsTotems.createToxicSpiderEye();
                 item.setAmount(cantidad);
                 break;
             case "infernalcreeperpowder":
@@ -446,6 +452,14 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
                 item = EconomyItems.createYunqueReparadorNivel2();
                 item.setAmount(cantidad);
                 break;
+            case "icetotem":
+                item = economyIceTotem.createIceTotem();
+                item.setAmount(cantidad);
+                break;
+            case "flytotem":
+                item = economyFlyTotem.createFlyTotem();
+                item.setAmount(cantidad);
+                break;
 
                 //Otros Items
             case "corrupted_golden_apple":
@@ -462,6 +476,14 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
                 break;
             case "wither_compass":
                 item = UltraWitherCompass.createUltraWitherCompass();
+                item.setAmount(cantidad);
+                break;
+            case "icecrystal":
+                item = ItemsTotems.createIceCrystal();
+                item.setAmount(cantidad);
+                break;
+            case "tridente_espectral":
+                item = tridenteEspectral.createSpectralTrident();
                 item.setAmount(cantidad);
                 break;
             default:
@@ -530,7 +552,7 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
             completions.add("corrupted_spidereyes");
             completions.add("corrupted_soul");
             completions.add("corrupted_ancient_debris");
-            completions.add("ultracorruptedspidereye");
+            completions.add("toxicspidereye");
             completions.add("infernalcreeperpowder");
             completions.add("whiteenderpearl");
             completions.add("specialtotem");
@@ -565,6 +587,10 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
             completions.add("apilate_gold_block");
             completions.add("orbe_de_vida");
             completions.add("wither_compass");
+            completions.add("icetotem");
+            completions.add("flytotem");
+            completions.add("icecrystal");
+            completions.add("tridente_espectral");
         } else if (args.length == 2) {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 completions.add(player.getName());

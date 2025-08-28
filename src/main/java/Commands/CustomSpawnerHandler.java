@@ -16,7 +16,6 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.SpawnerSpawnEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
@@ -69,7 +68,7 @@ public class CustomSpawnerHandler implements Listener {
     private final UltraWitherBossHandler ultraWitherBossHandler;
     private final WhiteEnderman whiteEnderman;
     private final InfernalCreeper infernalCreeper;
-    private final UltraCorruptedSpider ultraCorruptedSpider;
+    private final ToxicSpider toxicSpider;
     private final FastRavager fastRavager;
     private final BruteImperial bruteImperial;
     private final BatBoom batBoom;
@@ -82,6 +81,8 @@ public class CustomSpawnerHandler implements Listener {
     private final DarkCreeper darkCreeper;
     private final DarkVex darkVex;
     private final DarkSkeleton darkSkeleton;
+    private final InfernalBeast infernalBeast;
+    private final CorruptedDrowned corruptedDrowned;
 
     // Clase interna para almacenar datos del spawner personalizado
     private static class CustomSpawnerData {
@@ -136,7 +137,7 @@ public class CustomSpawnerHandler implements Listener {
         this.ultraWitherBossHandler = new UltraWitherBossHandler(plugin);
         this.whiteEnderman = new WhiteEnderman(plugin);
         this.infernalCreeper = new InfernalCreeper(plugin);
-        this.ultraCorruptedSpider = new UltraCorruptedSpider(plugin);
+        this.toxicSpider = new ToxicSpider(plugin);
         this.fastRavager = new FastRavager(plugin);
         this.bruteImperial = new BruteImperial(plugin);
         this.batBoom = new BatBoom(plugin);
@@ -149,6 +150,8 @@ public class CustomSpawnerHandler implements Listener {
         this.darkCreeper = new DarkCreeper(plugin);
         this.darkVex = new DarkVex(plugin);
         this.darkSkeleton = new DarkSkeleton(plugin);
+        this.infernalBeast = new InfernalBeast(plugin);
+        this.corruptedDrowned = new CorruptedDrowned(plugin);
 
         // Inicializar el sistema de spawn personalizado
         startCustomSpawnTask();
@@ -657,8 +660,8 @@ public class CustomSpawnerHandler implements Listener {
             case "infernalcreeper":
                 infernalCreeper.spawnInfernalCreeper(location);
                 break;
-            case "ultracorruptedspider":
-                ultraCorruptedSpider.spawnUltraCorruptedSpider(location);
+            case "toxicspider":
+                toxicSpider.spawnToxicSpider(location);
                 break;
             case "fastravager":
                 fastRavager.spawnFastRavager(location);
@@ -696,6 +699,12 @@ public class CustomSpawnerHandler implements Listener {
             case "darkskeleton":
                 darkSkeleton.spawnDarkSkeleton(location);
                 break;
+            case "infernalbeast":
+                infernalBeast.spawnInfernalBeast(location);
+                break;
+            case "corrupteddrowned":
+                corruptedDrowned.spawnCorruptedDrowned(location);
+                break;
             default:
                 plugin.getLogger().warning("Tipo de mob desconocido en spawner: " + mobType);
                 break;
@@ -716,8 +725,9 @@ public class CustomSpawnerHandler implements Listener {
                 return EntityType.ZOMBIE;
             case "corruptedspider":
             case "corruptedinfernalspider":
-            case "ultracorruptedspider":
                 return EntityType.SPIDER;
+            case "toxicspider":
+                return EntityType.CAVE_SPIDER;
             case "queenbee":
             case "hellishbee":
             case "infestedbee":
@@ -748,6 +758,8 @@ public class CustomSpawnerHandler implements Listener {
                 return EntityType.RAVAGER;
             case "bruteimperial":
                 return EntityType.PIGLIN_BRUTE;
+            case "infernalbeast":
+                return EntityType.HOGLIN;
             case "batboom":
                 return EntityType.BAT;
             case "endersilverfish":
@@ -757,6 +769,8 @@ public class CustomSpawnerHandler implements Listener {
             case "darkphantom":
             case "spectraleeye":
                 return EntityType.PHANTOM;
+            case "corrupteddrowned":
+                return EntityType.DROWNED;
             default:
                 return null;
         }
@@ -804,8 +818,8 @@ public class CustomSpawnerHandler implements Listener {
                 return "White Enderman";
             case "infernalcreeper":
                 return "Infernal Creeper";
-            case "ultracorruptedspider":
-                return "Ultra Corrupted Spider";
+            case "toxicspider":
+                return "Toxic Spider";
             case "fastravager":
                 return "Fast Ravager";
             case "bruteimperial":
@@ -830,6 +844,10 @@ public class CustomSpawnerHandler implements Listener {
                 return "Dark Vex";
             case "darkskeleton":
                 return "Dark Skeleton";
+            case "infernalbeast":
+                return "Infernal Beast";
+            case "corrupteddrowned":
+                return "Corrupted Drowned";
             default:
                 return null;
         }

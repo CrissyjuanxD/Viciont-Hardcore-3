@@ -2,6 +2,7 @@ package vct.hardcore3;
 
 import Blocks.Endstalactitas;
 import Blocks.GuardianShulkerHeart;
+import Casino.CasinoManager;
 import Commands.*;
 import Dificultades.*;
 import Dificultades.CustomMobs.*;
@@ -11,6 +12,8 @@ import Events.AchievementParty.AchievementCommands;
 import Events.AchievementParty.AchievementGUI;
 import Events.AchievementParty.AchievementPartyHandler;
 import Events.DamageLogListener;
+import Events.MissionSystem.MissionHandler;
+import Events.MissionSystem.MissionRewardHandler;
 import Events.Skybattle.EventoHandler;
 import Events.UltraWitherBattle.UltraWitherEvent;
 import Handlers.*;
@@ -50,6 +53,15 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private ErrorNotification errorNotif;
     private NightmareMechanic nightmareMechanic;
 
+    // Sistema de Misiones
+    private MissionHandler missionHandler;
+    private MissionSystemCommands missionSystemCommands;
+    private MissionRewardHandler missionRewardHandler;
+
+    // Sistema de Tiendas
+    private ShopHandler shopHandler;
+    private ShopCommand shopCommand;
+
     // Cambios de días
 
     private DayOneChanges dayOneChanges;
@@ -75,6 +87,8 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private LifeTotem lifeTotem;
     private SpiderTotem spiderTotem;
     private InfernalTotem infernalTotem;
+    private EconomyIceTotem economyIceTotem;
+    private EconomyFlyTotem economyFlyTotem;
 
     // Otros manejadores y listeners
 
@@ -96,6 +110,9 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private AchievementCommands achievementCommands;
     private AchievementGUI achievementGUI;
     private UltraWitherEvent ultraWitherEvent;
+
+    // Casino
+    private CasinoManager casinoManager;
 
     // Mobs
 
@@ -123,6 +140,8 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private NightVisionHelmet nightVisionHelmet;
     private CorruptedArmor corruptedArmor;
     private EnderiteSwordListener enderiteSwordListener;
+    private TridenteEspectral tridenteEspectral;
+
 
     // Dimension
 
@@ -184,6 +203,8 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         lifeTotem = new LifeTotem(this);
         spiderTotem = new SpiderTotem(this);
         infernalTotem = new InfernalTotem(this);
+        economyIceTotem = new EconomyIceTotem(this);
+        economyFlyTotem = new EconomyFlyTotem(this);
         invulnerableItemProtection = new InvulnerableItemProtection(this);
         economyItemsFunctions = new EconomyItemsFunctions(this);
 
@@ -193,13 +214,15 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(lifeTotem, this);
         getServer().getPluginManager().registerEvents(spiderTotem, this);
         getServer().getPluginManager().registerEvents(infernalTotem, this);
+        getServer().getPluginManager().registerEvents(economyIceTotem, this);
+        getServer().getPluginManager().registerEvents(economyFlyTotem, this);
         getServer().getPluginManager().registerEvents(invulnerableItemProtection, this);
         getServer().getPluginManager().registerEvents(economyItemsFunctions, this);
 
         // Registrar eventos de chat y teams
         chatgeneral chatGeneralHandler = new chatgeneral();
         gameModeTeamHandler = new GameModeTeamHandler(this);
-        FirstJoinHandler firstJoinHandler = new FirstJoinHandler(this);
+        FirstJoinHandler firstJoinHandler = new FirstJoinHandler(this, missionSystemCommands);
         getServer().getPluginManager().registerEvents(chatGeneralHandler, this);
         getServer().getPluginManager().registerEvents(gameModeTeamHandler, this);
         getServer().getPluginManager().registerEvents(firstJoinHandler, this);
@@ -215,9 +238,8 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         Objects.requireNonNull(this.getCommand("eggvct")).setExecutor(new EggSpawnerCommand(this));
         ItemsCommands itemsCommands = new ItemsCommands(this);
         customSpawnerHandler = new CustomSpawnerHandler(this, dayHandler);
-        CustomSpawnerHandler spawnerHandler = new CustomSpawnerHandler(this, dayHandler);
         new GiveSpawnerCommand(this);
-        this.getCommand("reloadcustomspawn").setExecutor(new ReloadCustomSpawnCommand(spawnerHandler));
+        this.getCommand("reloadcustomspawn").setExecutor(new ReloadCustomSpawnCommand(customSpawnerHandler));
         getCommand("givevct").setExecutor(itemsCommands);
         getCommand("givevct").setTabCompleter(itemsCommands);
         getServer().getPluginManager().registerEvents(customSpawnerHandler, this);
@@ -269,7 +291,9 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         getCommand("bonusvct").setExecutor(new BonusCommand(bonusAnimation));
 
         SnowballDamage snowballDamage1 = new SnowballDamage(this);
+        FireResistanceHandler fireResistanceHandler = new FireResistanceHandler(this);
         getServer().getPluginManager().registerEvents(snowballDamage1, this);
+        getServer().getPluginManager().registerEvents(fireResistanceHandler, this);
 
         //Registrar Estructuras
         structureCommand = new StructureCommand(this);
@@ -310,12 +334,26 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(eventoHandler, this);
         getServer().getPluginManager().registerEvents(ultraWitherEvent, this);
         getServer().getPluginManager().registerEvents(achievementPartyHandler, this);
-        getServer().getPluginManager().registerEvents(achievementGUI, this);
 
         this.getCommand("addlogro").setExecutor(achievementCommands);
         this.getCommand("addlogro").setTabCompleter(achievementCommands);
         this.getCommand("removelogro").setExecutor(achievementCommands);
         this.getCommand("removelogro").setTabCompleter(achievementCommands);
+
+        // Sistema de Misiones
+        this.missionHandler = new MissionHandler(this, dayHandler);
+        missionSystemCommands = new MissionSystemCommands(this, dayHandler);
+        missionRewardHandler = new MissionRewardHandler(this, missionSystemCommands.getMissionHandler());
+        getServer().getPluginManager().registerEvents(missionHandler, this);
+
+        // Sistema de Tiendas
+        shopHandler = new ShopHandler(this);
+        shopCommand = new ShopCommand(this, shopHandler);
+        this.getCommand("spawntienda").setExecutor(shopCommand);
+        this.getCommand("spawntienda").setTabCompleter(shopCommand);
+
+        // Sistema de Casino
+        casinoManager = new CasinoManager(this);
 
         this.getCommand("start").setExecutor((sender, command, label, args) -> {
             if (args.length == 1) {
@@ -412,13 +450,15 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         queenBeeHandler = new QueenBeeHandler(this);
         ultraWitherBossHandler = new UltraWitherBossHandler(this);
 
-        //Armors
+        //Armors y herramientas
         nightVisionHelmet = new NightVisionHelmet(this);
         corruptedArmor = new CorruptedArmor(this);
         enderiteSwordListener = new EnderiteSwordListener(this);
+        tridenteEspectral = new TridenteEspectral(this);
         getServer().getPluginManager().registerEvents(nightVisionHelmet,this);
         getServer().getPluginManager().registerEvents(corruptedArmor,this);
         getServer().getPluginManager().registerEvents(enderiteSwordListener, this);
+        getServer().getPluginManager().registerEvents(tridenteEspectral, this);
 
         //Dimensiones Corrupted End
 

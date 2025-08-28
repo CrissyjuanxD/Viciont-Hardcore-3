@@ -159,40 +159,6 @@ public class EggSpawnerCommand implements CommandExecutor, TabCompleter, Listene
         }
     }
 
-    @EventHandler
-    public void onSpawnerSpawn(SpawnerSpawnEvent event) {
-        CreatureSpawner spawner = (CreatureSpawner) event.getSpawner().getBlock().getState();
-        PersistentDataContainer container = spawner.getPersistentDataContainer();
-
-        if (container.has(new NamespacedKey(plugin, "mobName"), PersistentDataType.STRING)) {
-            String mobName = container.get(new NamespacedKey(plugin, "mobName"), PersistentDataType.STRING);
-            Location location = event.getLocation();
-
-            switch (mobName) {
-                case "Bombita":
-                    bombitaSpawner.spawnBombita(location);
-                    break;
-                case "Iceologer":
-                    iceologerSpawner.spawnIceologer(location);
-                    break;
-                case "Corrupted Zombie":
-                    corruptedZombieSpawner.spawnCorruptedZombie(location);
-                    break;
-                case "Corrupted Spider":
-                    corruptedSpider.spawnCorruptedSpider(location);
-                    break;
-                case "Queen Bee":
-                    queenBeeHandler.spawnQueenBee(location);
-                    break;
-                case "Guardian Blaze":
-                    guardianBlaze.spawnGuardianBlaze(location);
-                    break;
-            }
-
-            event.setCancelled(true);
-        }
-    }
-
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> suggestions = new ArrayList<>();

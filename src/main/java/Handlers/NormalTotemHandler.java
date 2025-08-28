@@ -61,6 +61,12 @@ public class NormalTotemHandler implements Listener {
                     case 5:
                         broadcastTotemMessage5(player);
                         break;
+                    case 6:
+                        broadcastTotemMessage6(player);
+                        break;
+                    case 7:
+                        broadcastTotemMessage7(player);
+                        break;
                     default:
                         broadcastNormalTotemMessage(player, 100, 100);
                         break;
@@ -131,8 +137,8 @@ public class NormalTotemHandler implements Listener {
                 "\n"
                 + "\uDBE8\uDCF6"
                 + ChatColor.of("#007EB2") + ChatColor.BOLD + player.getName()
-                + ChatColor.RESET + ChatColor.of("#8EBFEC") + " ha " + ChatColor.BOLD + "disminuido un uso "
-                + ChatColor.RESET + ChatColor.of("#8EBFEC") + "su tótem de doble vida."
+                + ChatColor.RESET + ChatColor.of("#8EBFEC") + " ha " + ChatColor.BOLD + "consumido "
+                + ChatColor.RESET + ChatColor.of("#8EBFEC") + "un tótem de doble vida."
                 + "\n");
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             onlinePlayer.sendMessage(message);
@@ -149,7 +155,7 @@ public class NormalTotemHandler implements Listener {
                 "\n"
                 + "\uDBE8\uDCF6"
                 + ChatColor.of("#F7AD62") + ChatColor.BOLD + player.getName()
-                + ChatColor.RESET + ChatColor.of("#B684E4") + " ha consumido un " + ChatColor.BOLD + "tótem de doble vida."
+                + ChatColor.RESET + ChatColor.of("#B684E4") + " ha gastado su " + ChatColor.BOLD + "tótem de doble vida."
                 + "\n");
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             onlinePlayer.sendMessage(message);
@@ -212,13 +218,47 @@ public class NormalTotemHandler implements Listener {
         }
     }
 
+    private void broadcastTotemMessage6(Player player) {
+        String message = ChatColor.translateAlternateColorCodes('&',
+                "\n"
+                        + "\uDBE8\uDCF6"
+                        + ChatColor.of("#F7AD62") + ChatColor.BOLD + player.getName()
+                        + ChatColor.RESET + ChatColor.of("#B684E4") + " ha consumido un " + ChatColor.of("#00ccff") + ChatColor.BOLD + "Ice Totem."
+                        + "\n");
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            onlinePlayer.sendMessage(message);
+            if (!onlinePlayer.equals(player)) {
+                onlinePlayer.playSound(onlinePlayer, "item.trident.return", SoundCategory.VOICE, 2f, 2f);
+                onlinePlayer.playSound(onlinePlayer, "custom.noti", SoundCategory.VOICE, 2f, 2f);
+                onlinePlayer.playSound(onlinePlayer, "entity.allay.item_thrown", SoundCategory.VOICE, 2f, 0.5f);
+            }
+        }
+    }
+
+    private void broadcastTotemMessage7(Player player) {
+        String message = ChatColor.translateAlternateColorCodes('&',
+                "\n"
+                        + "\uDBE8\uDCF6"
+                        + ChatColor.of("#F7AD62") + ChatColor.BOLD + player.getName()
+                        + ChatColor.RESET + ChatColor.of("#B684E4") + " ha consumido un " + ChatColor.of("#ffcc00") + ChatColor.BOLD + "Fly Totem."
+                        + "\n");
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            onlinePlayer.sendMessage(message);
+            if (!onlinePlayer.equals(player)) {
+                onlinePlayer.playSound(onlinePlayer, "item.trident.return", SoundCategory.VOICE, 2f, 2f);
+                onlinePlayer.playSound(onlinePlayer, "custom.noti", SoundCategory.VOICE, 2f, 2f);
+                onlinePlayer.playSound(onlinePlayer, "entity.allay.item_thrown", SoundCategory.VOICE, 2f, 0.5f);
+            }
+        }
+    }
+
     private void broadcastTotemFail(Player player, int randomValue, int expectedValue) {
         String playerFailed = "\n"
                 + ChatColor.RED + "\uDBE8\uDCF6" + ChatColor.RESET + ChatColor.of("#BE517F") + "El tótem del jugador "
                 + ChatColor.of("#F7AD62") + ChatColor.BOLD + player.getName()
                 + ChatColor.RESET + ChatColor.of("#BE517F") + " ha fallado.";
         String failureNotice = "\n"
-                + ChatColor.of("#F52F6A") + ChatColor.BOLD + " ⚠" // Icono de advertencia
+                + ChatColor.of("#F52F6A") + ChatColor.BOLD + " ⚠"
                 + ChatColor.of("#B228E7") + " Probabilidad de fallo"
                 + ChatColor.GRAY + " ("
                 + ChatColor.of("#F52F6A") + ChatColor.BOLD + randomValue

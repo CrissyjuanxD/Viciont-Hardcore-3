@@ -37,7 +37,7 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
     private final UltraWitherBossHandler ultraWitherBossHandler;
     private final WhiteEnderman whiteEnderman;
     private final InfernalCreeper infernalCreeper;
-    private final UltraCorruptedSpider ultraCorruptedSpider;
+    private final ToxicSpider toxicSpider;
     private final FastRavager fastRavager;
     private final BruteImperial bruteImperial;
     private final BatBoom batBoom;
@@ -52,6 +52,8 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
     private final DarkVex darkVex;
     private final DarkSkeleton darkSkeleton;
     private final InfestedBeeHandler infestedBeeHandler;
+    private final InfernalBeast infernalBeast;
+    private final CorruptedDrowned corruptedDrowned;
     private final DayHandler dayHandler;
 
     private final CustomDolphin customDolphin;
@@ -79,7 +81,7 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
         this.ultraWitherBossHandler = new UltraWitherBossHandler(plugin);
         this.whiteEnderman = new WhiteEnderman(plugin);
         this.infernalCreeper = new InfernalCreeper(plugin);
-        this.ultraCorruptedSpider = new UltraCorruptedSpider(plugin);
+        this.toxicSpider = new ToxicSpider(plugin);
         this.fastRavager = new FastRavager(plugin);
         this.bruteImperial = new BruteImperial(plugin);
         this.batBoom = new BatBoom(plugin);
@@ -94,6 +96,8 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
         this.darkVex = new DarkVex(plugin);
         this.darkSkeleton = new DarkSkeleton(plugin);
         this.infestedBeeHandler = new InfestedBeeHandler(plugin);
+        this.infernalBeast = new InfernalBeast(plugin);
+        this.corruptedDrowned = new CorruptedDrowned(plugin);
         plugin.getCommand("spawnvct").setExecutor(this);
         plugin.getCommand("spawnvct").setTabCompleter(this);
     }
@@ -245,8 +249,8 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
                 sender.sendMessage("¡Infernal Creeper ha sido spawneado en " + locationToString(location) + "!");
                 break;
 
-            case "ultracorruptedspider":
-                ultraCorruptedSpider.spawnUltraCorruptedSpider(location);
+            case "toxicspider":
+                toxicSpider.spawnToxicSpider(location);
                 sender.sendMessage("¡Ultra Corrupted Spider ha sido spawneado en " + locationToString(location) + "!");
                 break;
 
@@ -320,6 +324,16 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
                 sender.sendMessage("¡Infested Bee ha sido spawneada en " + locationToString(location) + "!");
                 break;
 
+            case "infernalbeast":
+                infernalBeast.spawnInfernalBeast(location);
+                sender.sendMessage("¡Infernal Beast ha sido spawneada en " + locationToString(location) + "!");
+                break;
+
+            case "corrupteddrowned":
+                corruptedDrowned.spawnCorruptedDrowned(location);
+                sender.sendMessage("¡Corrupted Drowned ha sido spawneado en " + locationToString(location) + "!");
+                break;
+
             default:
                 sender.sendMessage("Mob no reconocido. Usa /spawnvct <bombita|iceologer|corruptedzombie|corruptedspider|queenbee>");
                 break;
@@ -357,7 +371,7 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
             suggestions.add("ultrawitherboss");
             suggestions.add("whiteenderman");
             suggestions.add("infernalcreeper");
-            suggestions.add("ultracorruptedspider");
+            suggestions.add("toxicspider");
             suggestions.add("fastravager");
             suggestions.add("bruteimperial");
             suggestions.add("batboom");
@@ -372,6 +386,8 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
             suggestions.add("darkvex");
             suggestions.add("darkskeleton");
             suggestions.add("infestedbee");
+            suggestions.add("infernalbeast");
+            suggestions.add("corrupteddrowned");
         } else if (args.length == 2 && args[0].equalsIgnoreCase("corruptedskeleton")) {
             for (CorruptedSkeleton.Variant variant : CorruptedSkeleton.Variant.values()) {
                 suggestions.add(variant.name().toLowerCase());

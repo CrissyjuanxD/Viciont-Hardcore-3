@@ -21,6 +21,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import Handlers.DayHandler;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -50,6 +51,7 @@ public class DaySevenChanges implements Listener {
             corruptedSkeleton.apply();
             invertedGhast.apply();
             piglinGlobo.apply();
+            ennablePhantomSpawning();
             isApplied = true;
 
             new BukkitRunnable() {
@@ -209,14 +211,51 @@ public class DaySevenChanges implements Listener {
         if (entity.getType() == EntityType.PHANTOM) {
             if (entity instanceof Phantom) {
                 Phantom phantom = (Phantom) entity;
-                phantom.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(40.0);
-                phantom.setHealth(40.0);
-                phantom.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, Integer.MAX_VALUE, 2)); // Fuerza III
+
+                // Verificar si el phantom tiene nombre custom
+                if (phantom.getCustomName() == null) {
+                    phantom.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(40.0);
+                    phantom.setHealth(40.0);
+                    phantom.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, Integer.MAX_VALUE, 3));
+                    phantom.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(3.0);
+                }
             }
         }
     }
 
-    //Si te pega un phantom Normal te revuelve el inventatio, no aplica para SpectralEye - SpectralEyeLv2 - DarkPhantom
+    @EventHandler
+    public void onEntityDamage(EntityDamageByEntityEvent event) {
+        if (!isApplied) return;
+
+        if (event.getDamager() instanceof Phantom && event.getEntity() instanceof Player) {
+            Phantom phantom = (Phantom) event.getDamager();
+            Player player = (Player) event.getEntity();
+
+            if (phantom.getCustomName() == null) {
+                scrambleHotbar(player);
+            }
+        }
+    }
+
+    private void scrambleHotbar(Player player) {
+        ItemStack[] hotbar = new ItemStack[9];
+
+        // Copiar la hotbar actual
+        for (int i = 0; i < 9; i++) {
+            hotbar[i] = player.getInventory().getItem(i);
+        }
+
+        // Revolver los items
+        List<ItemStack> shuffled = Arrays.asList(hotbar);
+        Collections.shuffle(shuffled);
+        shuffled.toArray(hotbar);
+
+        // Aplicar la hotbar revuelta
+        for (int i = 0; i < 9; i++) {
+            player.getInventory().setItem(i, hotbar[i]);
+        }
+
+    }
 
 
     @EventHandler
@@ -245,6 +284,12 @@ public class DaySevenChanges implements Listener {
             );
             // Filtrar y eliminar los drops prohibidos
             event.getDrops().removeIf(item -> bannedDrops.contains(item.getType()));
+        }
+    }
+
+    public void ennablePhantomSpawning() {
+        for (World world : Bukkit.getWorlds()) {
+            world.setGameRule(GameRule.DO_INSOMNIA, true);
         }
     }
 }

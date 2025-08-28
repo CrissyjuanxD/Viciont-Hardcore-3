@@ -3,6 +3,9 @@ package Dificultades.CustomMobs;
 import items.ItemsTotems;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -22,12 +25,13 @@ import org.bukkit.util.Vector;
 
 import java.util.*;
 
-public class UltraCorruptedSpider implements Listener {
+public class ToxicSpider implements Listener {
     private final JavaPlugin plugin;
     private final NamespacedKey ultraCorruptedSpiderKey;
     private boolean eventsRegistered = false;
     private final Random random = new Random();
     private final Map<UUID, BukkitRunnable> webTasks = new HashMap<>();
+    private final Map<UUID, BossBar> activeBossBars = new HashMap<>();
 
     private final List<SpiderEffect> possibleEffects = Arrays.asList(
             new SpiderEffect("Velocidad", PotionEffectType.SPEED, 3),
@@ -39,7 +43,7 @@ public class UltraCorruptedSpider implements Listener {
             new SpiderEffect("Resistencia", PotionEffectType.RESISTANCE, 2)
     );
 
-    public UltraCorruptedSpider(JavaPlugin plugin) {
+    public ToxicSpider(JavaPlugin plugin) {
         this.plugin = plugin;
         this.ultraCorruptedSpiderKey = new NamespacedKey(plugin, "ultra_corrupted_spider");
     }
@@ -55,7 +59,7 @@ public class UltraCorruptedSpider implements Listener {
         if (eventsRegistered) {
             for (World world : Bukkit.getWorlds()) {
                 for (Entity entity : world.getEntities()) {
-                    if (entity instanceof Spider spider && isUltraCorruptedSpider(spider)) {
+                    if (entity instanceof CaveSpider spider && isToxicSpider(spider)) {
                         spider.remove();
                     }
                 }
@@ -70,18 +74,18 @@ public class UltraCorruptedSpider implements Listener {
         }
     }
 
-    public Spider spawnUltraCorruptedSpider(Location location) {
-        Spider spider = (Spider) location.getWorld().spawnEntity(location, EntityType.SPIDER);
-        applyUltraCorruptedSpiderAttributes(spider);
+    public CaveSpider spawnToxicSpider(Location location) {
+        CaveSpider spider = (CaveSpider) location.getWorld().spawnEntity(location, EntityType.CAVE_SPIDER);
+        applyToxicSpiderAttributes(spider);
         return spider;
     }
 
-    public void transformspawnUltraCorruptedSpider(Spider spider) {
-        applyUltraCorruptedSpiderAttributes(spider);
+    public void transformspawnToxicSpider(CaveSpider spider) {
+        applyToxicSpiderAttributes(spider);
     }
 
-    private void applyUltraCorruptedSpiderAttributes(Spider spider) {
-        spider.setCustomName(ChatColor.GREEN + "" + ChatColor.BOLD + "Ultra Corrupted Spider");
+    private void applyToxicSpiderAttributes(CaveSpider spider) {
+        spider.setCustomName(ChatColor.GREEN + "" + ChatColor.BOLD + "Toxic Spider");
         spider.setCustomNameVisible(false);
         spider.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(40);
         spider.setHealth(40);
@@ -108,8 +112,8 @@ public class UltraCorruptedSpider implements Listener {
 
     @EventHandler
     public void onSpiderHit(EntityDamageByEntityEvent event) {
-        if (event.getDamager() instanceof Spider spider &&
-                isUltraCorruptedSpider(spider) &&
+        if (event.getDamager() instanceof CaveSpider spider &&
+                isToxicSpider(spider) &&
                 event.getEntity() instanceof LivingEntity target) {
 
             target.addPotionEffect(new PotionEffect(
@@ -131,17 +135,20 @@ public class UltraCorruptedSpider implements Listener {
 
     @EventHandler
     public void onSpiderTarget(EntityTargetLivingEntityEvent event) {
-        if (event.getEntity() instanceof Spider spider &&
-                isUltraCorruptedSpider(spider) &&
+        if (event.getEntity() instanceof CaveSpider spider &&
+                isToxicSpider(spider) &&
                 event.getTarget() != null) {
 
-            if (random.nextDouble() < 0.25) {
+            double chance = random.nextDouble();
+            if (chance < 0.25) {
+                launchPoisonProjectile(spider, event.getTarget());
+            } else if (chance < 0.50) {
                 launchWebProjectiles(spider);
             }
         }
     }
 
-    private void launchWebProjectiles(Spider spider) {
+    private void launchWebProjectiles(CaveSpider spider) {
         List<Player> targets = new ArrayList<>();
         for (Entity entity : spider.getNearbyEntities(20, 20, 20)) {
             if (entity instanceof Player player) {
@@ -216,6 +223,66 @@ public class UltraCorruptedSpider implements Listener {
         }
     }
 
+    private void launchPoisonProjectile(CaveSpider spider, LivingEntity target) {
+        if (!(target instanceof Player player)) return;
+
+        BlockDisplay poisonProjectile = (BlockDisplay) spider.getWorld().spawnEntity(
+                spider.getEyeLocation(),
+                EntityType.BLOCK_DISPLAY
+        );
+        poisonProjectile.setBlock(Material.GREEN_STAINED_GLASS.createBlockData());
+        poisonProjectile.setGlowing(true);
+        poisonProjectile.setGlowColorOverride(Color.LIME);
+        poisonProjectile.setInvulnerable(true);
+
+        Transformation transformation = poisonProjectile.getTransformation();
+        transformation.getScale().set(0.3f, 0.3f, 0.3f);
+        poisonProjectile.setTransformation(transformation);
+
+        Vector direction = target.getEyeLocation().toVector()
+                .subtract(spider.getEyeLocation().toVector())
+                .normalize()
+                .multiply(0.8);
+
+        spider.getWorld().playSound(spider.getLocation(), Sound.ENTITY_WITCH_THROW, 1.0f, 0.7f);
+
+        new BukkitRunnable() {
+            int ticks = 0;
+            Location currentLoc = poisonProjectile.getLocation().clone();
+
+            @Override
+            public void run() {
+                if (poisonProjectile.isDead() || ticks >= 100) {
+                    poisonProjectile.remove();
+                    this.cancel();
+                    return;
+                }
+
+                currentLoc.add(direction);
+                poisonProjectile.teleport(currentLoc);
+
+                poisonProjectile.getWorld().spawnParticle(
+                        Particle.WITCH,
+                        poisonProjectile.getLocation(),
+                        2,
+                        0.1, 0.1, 0.1, 0.01
+                );
+
+                for (Entity nearby : poisonProjectile.getNearbyEntities(1.0, 1.0, 1.0)) {
+                    if (nearby instanceof Player hitPlayer) {
+                        handlePoisonHit(hitPlayer);
+                        poisonProjectile.remove();
+                        this.cancel();
+                        return;
+                    }
+                }
+
+                ticks++;
+            }
+        }.runTaskTimer(plugin, 0L, 1L);
+    }
+
+
     private void handleWebHit(Player player, Location impactLocation) {
         if (player.getGameMode() != GameMode.SURVIVAL && player.getGameMode() != GameMode.ADVENTURE) {
             return;
@@ -242,13 +309,11 @@ public class UltraCorruptedSpider implements Listener {
             return;
         }
 
-
         createWebCube(player.getLocation());
         scheduleWebRemoval(player.getLocation());
     }
 
     private void createWebCube(Location center) {
-        // Asegurarnos de que el centro esté en el bloque exacto
         Location centeredLocation = center.getBlock().getLocation().add(0.5, 0, 0.5);
 
         for (int x = -1; x <= 1; x++) {
@@ -296,9 +361,75 @@ public class UltraCorruptedSpider implements Listener {
         task.runTaskLater(plugin, 1200L);
     }
 
+    private void handlePoisonHit(Player player) {
+        if (player.getGameMode() != GameMode.SURVIVAL && player.getGameMode() != GameMode.ADVENTURE) {
+            return;
+        }
+
+        // Aplicar veneno nivel 6 por 1 minuto
+        player.addPotionEffect(new PotionEffect(
+                PotionEffectType.POISON,
+                1200, // 60 segundos
+                5,     // Nivel 6 (0-based)
+                true,
+                true
+        ));
+
+        // Si ya tiene una bossbar activa, la removemos primero
+        if (activeBossBars.containsKey(player.getUniqueId())) {
+            BossBar existingBar = activeBossBars.get(player.getUniqueId());
+            existingBar.removeAll();
+            activeBossBars.remove(player.getUniqueId());
+        }
+
+        // Crear BossBar
+        BossBar bossBar = Bukkit.createBossBar(
+                "\uEAA7",
+                BarColor.WHITE,
+                BarStyle.SOLID
+        );
+        bossBar.addPlayer(player);
+        bossBar.setVisible(true);
+        bossBar.setProgress(1.0);
+
+        // Sonidos
+        player.getWorld().playSound(player.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1.0f, 1.5f);
+        player.getWorld().playSound(player.getLocation(), Sound.ENTITY_PLAYER_HURT_FREEZE, 0.8f, 0.5f);
+
+        // Animación de BossBar
+        new BukkitRunnable() {
+            double timeLeft = 15.0;
+            final UUID playerUUID = player.getUniqueId();
+
+            @Override
+            public void run() {
+                // Si el jugador se desconectó, cancelamos
+                if (!player.isOnline()) {
+                    bossBar.removeAll();
+                    activeBossBars.remove(playerUUID);
+                    this.cancel();
+                    return;
+                }
+
+                timeLeft -= 1.0; // Reducimos 1 segundo cada iteración
+                double progress = Math.max(0.0, timeLeft / 15.0); // Aseguramos que no sea negativo
+
+                bossBar.setProgress(progress);
+
+                if (timeLeft <= 0) {
+                    bossBar.removeAll();
+                    activeBossBars.remove(playerUUID);
+                    this.cancel();
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 20L); // Ejecutar cada segundo (20 ticks)
+
+        activeBossBars.put(player.getUniqueId(), bossBar);
+    }
+
     @EventHandler
     public void onDeath(EntityDeathEvent event) {
-        if (event.getEntity() instanceof Spider spider && isUltraCorruptedSpider(spider)) {
+        if (event.getEntity() instanceof CaveSpider spider && isToxicSpider(spider)) {
             Location loc = spider.getLocation();
 
             double baseDropChance = 0.50;
@@ -328,7 +459,7 @@ public class UltraCorruptedSpider implements Listener {
             double totalDropChance = baseDropChance + lootingBonus;
 
             if (Math.random() <= totalDropChance) {
-                ItemStack eye = ItemsTotems.createUltraCorruptedSpiderEye();
+                ItemStack eye = ItemsTotems.createToxicSpiderEye();
 
                 if (doubleDropChance > 0 && Math.random() <= doubleDropChance) {
                     eye.setAmount(2);
@@ -343,7 +474,7 @@ public class UltraCorruptedSpider implements Listener {
 
     @EventHandler
     public void onDamage(EntityDamageEvent event) {
-        if (event.getEntity() instanceof Spider spider && isUltraCorruptedSpider(spider)) {
+        if (event.getEntity() instanceof CaveSpider spider && isToxicSpider(spider)) {
             spider.getWorld().playSound(spider.getLocation(), Sound.ENTITY_SPIDER_HURT, 1.5f, 1.8f);
         }
     }
@@ -352,7 +483,7 @@ public class UltraCorruptedSpider implements Listener {
         return ultraCorruptedSpiderKey;
     }
 
-    public boolean isUltraCorruptedSpider(Spider spider) {
+    public boolean isToxicSpider(CaveSpider spider) {
         return spider.getPersistentDataContainer().has(ultraCorruptedSpiderKey, PersistentDataType.BYTE);
     }
 

@@ -71,7 +71,7 @@ public class EssenceFactory {
         List<String> lore = new ArrayList<>();
         lore.add(" ");
         lore.add(ChatColor.DARK_PURPLE + "Con esta Esencia podrás desbloquear");
-        lore.add(ChatColor.DARK_PURPLE + "el encantamiento correspondiente");
+        lore.add(ChatColor.DARK_PURPLE + "su encantamiento correspondiente");
         lore.add(ChatColor.DARK_PURPLE + "en la " + ChatColor.GOLD + "Mesa de Encantamientos Mejorada");
         lore.add(" ");
         lore.add(ChatColor.GRAY + "Usos restantes: " + usos);
@@ -89,15 +89,14 @@ public class EssenceFactory {
     public static ItemStack createVoidEssence() {
         ItemStack essence = new ItemStack(Material.IRON_NUGGET);
         ItemMeta meta = essence.getItemMeta();
-        meta.setDisplayName(ChatColor.DARK_GRAY + "Esencia Vacía");
+        meta.setDisplayName(ChatColor.BLUE + "Esencia Vacía");
         meta.setCustomModelData(20);
 
-        // lore vacía
         List<String> lore = new ArrayList<>();
         lore.add(" ");
-        lore.add(ChatColor.DARK_PURPLE + "Esta esencia vacía que puede");
-        lore.add(ChatColor.DARK_PURPLE + "que puede llegar a alcanzar");
-        lore.add(ChatColor.DARK_PURPLE + "poderes inimaginables");
+        lore.add(ChatColor.DARK_PURPLE + "Esta esencia vacía que");
+        lore.add(ChatColor.DARK_PURPLE + "puede llegar a alcanzar");
+        lore.add(ChatColor.DARK_PURPLE + "poderes " + ChatColor.LIGHT_PURPLE + "inimaginables...");
         lore.add(" ");
         meta.setLore(lore);
         meta.setRarity(ItemRarity.RARE);

@@ -53,8 +53,6 @@ public class NightVisionHelmet implements Listener {
         meta.setUnbreakable(false);
         meta.setRarity(ItemRarity.EPIC);
         item.setItemMeta(meta);
-        item.addUnsafeEnchantment(Enchantment.UNBREAKING, 1);
-
         return item;
     }
 
@@ -128,19 +126,18 @@ public class NightVisionHelmet implements Listener {
 
         if (activeTasks.containsKey(uuid)) {
             deactivateNightVision(player, true);
-            player.sendMessage(ChatColor.RED + "Visión Nocturna desactivada");
         } else {
             activateNightVision(player, helmet);
-            player.sendMessage(ChatColor.GREEN + "Visión Nocturna activada");
         }
     }
 
     private void activateNightVision(Player player, ItemStack helmet) {
         UUID uuid = player.getUniqueId();
 
-        player.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, 20 * 250, 0, false, false));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 20 * 250, 0, false, false));
-        player.playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1.0f, 1.0f);
+        player.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, PotionEffect.INFINITE_DURATION, 0, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, PotionEffect.INFINITE_DURATION, 0, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 20, 0, false, false));
+        player.playSound(player.getLocation(), "custom.vision_nocturna", SoundCategory.VOICE, 1.0f, 1.4f);
 
         BossBar bar = Bukkit.createBossBar(ChatColor.DARK_GREEN + "\uEAA5", BarColor.WHITE, BarStyle.SOLID);
         bar.addPlayer(player);
@@ -163,9 +160,9 @@ public class NightVisionHelmet implements Listener {
                     damageHelmet(player.getInventory().getHelmet(), player);
                 }
 
-                if (ticks >= 20 * 250) {
+    /*            if (ticks >= 20 * 250) {
                     deactivateNightVision(player, false);
-                }
+                }*/
             }
         };
 
@@ -189,7 +186,7 @@ public class NightVisionHelmet implements Listener {
 
         player.removePotionEffect(PotionEffectType.NIGHT_VISION);
         player.removePotionEffect(PotionEffectType.NAUSEA);
-        player.playSound(player.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, 1.0f, 1.0f);
+        player.playSound(player.getLocation(), "custom.vision_nocturna", SoundCategory.VOICE,1.0f, 0.6f);
 
         if (bossBarMap.containsKey(uuid)) {
             bossBarMap.get(uuid).removeAll();
@@ -210,39 +207,12 @@ public class NightVisionHelmet implements Listener {
     public void onEnchant(org.bukkit.event.enchantment.EnchantItemEvent event) {
         ItemStack item = event.getItem();
         if (isValidHelmet(item)) {
-            if (event.getEnchantsToAdd().containsKey(Enchantment.MENDING)
-                    || event.getEnchantsToAdd().containsKey(Enchantment.UNBREAKING)) {
+            if (event.getEnchantsToAdd().containsKey(Enchantment.MENDING)) {
                 event.setCancelled(true);
                 event.getEnchanter().sendMessage(ChatColor.RED + "Este casco no puede recibir esos encantamientos.");
             }
         }
     }
-
-    @EventHandler
-    public void onInventoryOpen(org.bukkit.event.inventory.InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) return;
-
-        Player player = (Player) event.getWhoClicked();
-        ItemStack helmet = player.getInventory().getHelmet();
-
-        if (isValidHelmet(helmet)) {
-            fixHelmetEnchantments(helmet);
-        }
-    }
-
-    private void fixHelmetEnchantments(ItemStack helmet) {
-        if (helmet == null || !helmet.hasItemMeta()) return;
-
-        Map<Enchantment, Integer> enchants = new HashMap<>(helmet.getEnchantments());
-
-        if (enchants.size() != 1 || !enchants.containsKey(Enchantment.UNBREAKING) || enchants.get(Enchantment.UNBREAKING) != 1) {
-            for (Enchantment ench : enchants.keySet()) {
-                helmet.removeEnchantment(ench);
-            }
-            helmet.addUnsafeEnchantment(Enchantment.UNBREAKING, 1);
-        }
-    }
-
 
     @EventHandler
     public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) {

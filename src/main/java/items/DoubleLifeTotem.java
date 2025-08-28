@@ -14,6 +14,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.NamespacedKey;
+import org.bukkit.plugin.java.JavaPlugin;
 import vct.hardcore3.ViciontHardcore3;
 
 import java.util.ArrayList;
@@ -21,10 +22,10 @@ import java.util.List;
 
 public class DoubleLifeTotem implements Listener {
 
-    private final ViciontHardcore3 plugin;
+    private final JavaPlugin plugin;
     private final NamespacedKey usesKey;
 
-    public DoubleLifeTotem(ViciontHardcore3 plugin) {
+    public DoubleLifeTotem(JavaPlugin plugin) {
         this.plugin = plugin;
         this.usesKey = new NamespacedKey(plugin, "double_life_totem_uses");
     }

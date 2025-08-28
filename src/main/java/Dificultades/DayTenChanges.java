@@ -31,7 +31,7 @@ public class DayTenChanges implements Listener {
     private final Random random = new Random();
     private final WhiteEnderman whiteEnderman;
     private final InfernalCreeper infernalCreeper;
-    private final UltraCorruptedSpider ultraCorruptedSpider;
+    private final ToxicSpider toxicSpider;
     private final FastRavager fastRavager;
     private final CorruptedSpider corruptedSpider;
     private final CorruptedZombies corruptedZombies;
@@ -46,7 +46,7 @@ public class DayTenChanges implements Listener {
         this.iceologer = new Iceologer(plugin);
         this.whiteEnderman = new WhiteEnderman(plugin);
         this.infernalCreeper = new InfernalCreeper(plugin);
-        this.ultraCorruptedSpider = new UltraCorruptedSpider(plugin);
+        this.toxicSpider = new ToxicSpider(plugin);
         this.fastRavager = new FastRavager(plugin);
         this.corruptedSpider = new CorruptedSpider(plugin);
         this.corruptedZombies = new CorruptedZombies(plugin);
@@ -62,7 +62,7 @@ public class DayTenChanges implements Listener {
             Bukkit.getPluginManager().registerEvents(this, plugin);
             whiteEnderman.apply();
             infernalCreeper.apply();
-            ultraCorruptedSpider.apply();
+            toxicSpider.apply();
             fastRavager.apply();
             CustomTotemsCraft();
         }
@@ -73,7 +73,7 @@ public class DayTenChanges implements Listener {
             isApplied = false;
             whiteEnderman.revert();
             infernalCreeper.revert();
-            ultraCorruptedSpider.revert();
+            toxicSpider.revert();
             fastRavager.revert();
 
             Bukkit.removeRecipe(new NamespacedKey(plugin, "totem_especial"));
@@ -135,7 +135,7 @@ public class DayTenChanges implements Listener {
         if (event.getEntityType() != EntityType.SPIDER) return;
 
         if (event.getEntity().getPersistentDataContainer().has(corruptedSpider.getCorruptedSpiderKey(), PersistentDataType.BYTE) ||
-                event.getEntity().getPersistentDataContainer().has(ultraCorruptedSpider.getUltraCorruptedSpiderKey(), PersistentDataType.BYTE)) {
+                event.getEntity().getPersistentDataContainer().has(toxicSpider.getUltraCorruptedSpiderKey(), PersistentDataType.BYTE)) {
             return;
         }
 
@@ -146,7 +146,7 @@ public class DayTenChanges implements Listener {
         if (random.nextBoolean()) {
             corruptedSpider.spawnCorruptedSpider(loc);
         } else {
-            ultraCorruptedSpider.spawnUltraCorruptedSpider(loc);
+            toxicSpider.spawnToxicSpider(loc);
         }
         spider.remove();
     }
@@ -303,7 +303,7 @@ public class DayTenChanges implements Listener {
         CustomSpiderTotem.shape("MSM", "UEU", "MSM");
         CustomSpiderTotem.setIngredient('M', Material.EMERALD_BLOCK);
         CustomSpiderTotem.setIngredient('S', new RecipeChoice.ExactChoice(corruptedSoul.createCorruptedSoulEssence()));
-        CustomSpiderTotem.setIngredient('U', new RecipeChoice.ExactChoice(ItemsTotems.createUltraCorruptedSpiderEye()));
+        CustomSpiderTotem.setIngredient('U', new RecipeChoice.ExactChoice(ItemsTotems.createToxicSpiderEye()));
         CustomSpiderTotem.setIngredient('E', new RecipeChoice.ExactChoice(ItemsTotems.createSpecialTotem()));
 
         Bukkit.addRecipe(SpecialTotem);
