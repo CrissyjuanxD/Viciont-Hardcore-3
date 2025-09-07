@@ -1,5 +1,6 @@
 package Events.MissionSystem;
 
+import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -20,11 +21,12 @@ import java.util.List;
 public class Mission10 implements Mission, Listener {
     private final JavaPlugin plugin;
     private final MissionHandler missionHandler;
+    private final SuccessNotification successNotification;
 
     public Mission10(JavaPlugin plugin, MissionHandler missionHandler) {
         this.plugin = plugin;
         this.missionHandler = missionHandler;
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        this.successNotification = new SuccessNotification(plugin);
     }
 
     @Override
@@ -117,7 +119,6 @@ public class Mission10 implements Mission, Listener {
                     data.save(missionHandler.getMissionFile());
 
                     String totemName = totemType.substring(0, 1).toUpperCase() + totemType.substring(1);
-                    player.sendMessage(ChatColor.of("#98FB98") + "¡Has obtenido " + totemName + " Totem!");
 
                     // Verificar si completó todos los totems
                     boolean hasInfernal = data.getBoolean("players." + playerName + ".missions.10.totems.infernal", false);
@@ -125,6 +126,7 @@ public class Mission10 implements Mission, Listener {
                     boolean hasLife = data.getBoolean("players." + playerName + ".missions.10.totems.life", false);
 
                     if (hasInfernal && hasSpider && hasLife) {
+                        successNotification.showSuccess(player);
                         missionHandler.completeMission(playerName, 10);
                     } else {
                         int completed = 0;
@@ -132,8 +134,8 @@ public class Mission10 implements Mission, Listener {
                         if (hasSpider) completed++;
                         if (hasLife) completed++;
 
-                        player.sendMessage(ChatColor.of("#F0E68C") + "Progreso de totems: " +
-                                ChatColor.of("#98FB98") + completed + ChatColor.of("#F0E68C") + "/3");
+                        player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Progreso de totems: " +
+                                ChatColor.of("#FFB6C1") + completed + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "3 " + ChatColor.of("#98FB98") + totemName);
                     }
                 } catch (IOException e) {
                     plugin.getLogger().severe("Error al guardar progreso de Misión 10: " + e.getMessage());

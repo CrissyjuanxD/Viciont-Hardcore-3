@@ -78,7 +78,6 @@ public class InfernalBeast implements Listener {
 
         hoglin.setImmuneToZombification(true);
 
-        hoglin.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, Integer.MAX_VALUE, 0));
         hoglin.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, Integer.MAX_VALUE, 0));
 
         hoglin.getPersistentDataContainer().set(infernalBeastKey, PersistentDataType.BYTE, (byte) 1);

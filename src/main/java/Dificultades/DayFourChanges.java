@@ -38,11 +38,13 @@ import java.util.*;
 public class DayFourChanges implements Listener {
     private final JavaPlugin plugin;
     private boolean isApplied = false;
+    private final MobCapManager mobCapManager;
     private final Map<Location, Long> altarCooldowns = new HashMap<>();
     private final Random random = new Random();
     private final GuardianBlaze blazespawmer;
     private final GuardianCorruptedSkeleton guardianCorruptedSkeleton;
     private final CorruptedInfernalSpider corruptedInfernalSpider;
+    private final QueenBeeHandler queenBeeHandler;
     private final DayHandler dayHandler;
 
     private final NamespacedKey uuidKey;
@@ -54,8 +56,11 @@ public class DayFourChanges implements Listener {
         this.blazespawmer = new GuardianBlaze(plugin);
         this.guardianCorruptedSkeleton = new GuardianCorruptedSkeleton(plugin);
         this.corruptedInfernalSpider = new CorruptedInfernalSpider(plugin);
+        this.queenBeeHandler = new QueenBeeHandler(plugin);
         this.uuidKey = new NamespacedKey(plugin, "creator_uuid");
         this.upgradeKey = new NamespacedKey(plugin, "is_upgrade");
+
+        this.mobCapManager = MobCapManager.getInstance(plugin);
     }
 
     public void apply() {
@@ -67,6 +72,7 @@ public class DayFourChanges implements Listener {
             blazespawmer.apply();
             guardianCorruptedSkeleton.apply();
             corruptedInfernalSpider.apply();
+            mobCapManager.setMobCap(85);
         }
     }
 
@@ -76,6 +82,7 @@ public class DayFourChanges implements Listener {
             blazespawmer.revert();
             guardianCorruptedSkeleton.revert();
             corruptedInfernalSpider.revert();
+            mobCapManager.resetMobCap();
 
             Bukkit.removeRecipe(new NamespacedKey(plugin, "fragment_upgrade"));
             Bukkit.removeRecipe(new NamespacedKey(plugin, "duplicador"));
@@ -310,10 +317,7 @@ public class DayFourChanges implements Listener {
                     world.spawnParticle(Particle.TOTEM_OF_UNDYING, spawnLocation, 100, 0.5, 1, 0.5, 0.1);
                     world.playSound(spawnLocation, Sound.ENTITY_FIREWORK_ROCKET_BLAST, 5.0f, 1.0f);
 
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "spawnvct queenbee " +
-                            spawnLocation.getBlockX() + " " +
-                            spawnLocation.getBlockY() + " " +
-                            spawnLocation.getBlockZ());
+                    queenBeeHandler.spawnQueenBee(spawnLocation);
 
                     destroyAltarStructure(altarLocation);
 
@@ -734,6 +738,17 @@ public class DayFourChanges implements Listener {
     @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (!isApplied) return;
+
+        // Permitir que los creepers spawneen durante el día
+        if (event.getEntityType() == EntityType.CREEPER) {
+            World world = event.getEntity().getWorld();
+            long time = world.getTime();
+
+            if (time >= 0 && time < 12300) {
+                event.setCancelled(false);
+                return;
+            }
+        }
 
         // Primero manejar la lógica de Wither Skeletons (existente)
         if (shouldConvertWitherSpawn(event)) {

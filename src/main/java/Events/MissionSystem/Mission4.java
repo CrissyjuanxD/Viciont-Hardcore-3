@@ -33,7 +33,6 @@ public class Mission4 implements Mission, Listener {
         this.plugin = plugin;
         this.missionHandler = missionHandler;
         this.successNotification = new SuccessNotification(plugin);
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     @Override
@@ -128,8 +127,7 @@ public class Mission4 implements Mission, Listener {
 
                         try {
                             data.save(missionHandler.getMissionFile());
-                            player.sendMessage(ChatColor.of("#98FB98") + "¡Has matado a la Abeja Reina!");
-                            player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "¡Has matado a la Abeja Reina!");
+                            player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Has matado a la Abeja Reina!");
                             successNotification.showSuccess(player);
                             missionHandler.completeMission(playerName, 4);
                         } catch (IOException e) {

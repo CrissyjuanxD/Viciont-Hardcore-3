@@ -22,7 +22,7 @@ public class ItemsTotems {
         ItemMeta meta = spiderEye.getItemMeta();
 
         if (meta != null) {
-            meta.setDisplayName(ChatColor.of("#cc0099") + "" + ChatColor.BOLD + "Toxic Spider Eye");
+            meta.setDisplayName(ChatColor.of("#ACEF8C") + "" + ChatColor.BOLD + "Toxic Spider Eye");
             meta.setCustomModelData(10);
             meta.setRarity(ItemRarity.EPIC);
 
@@ -52,7 +52,7 @@ public class ItemsTotems {
         ItemMeta meta = pearl.getItemMeta();
 
         if (meta != null) {
-            meta.setDisplayName(ChatColor.of("#FFFFFF") + "" + ChatColor.BOLD + "White Ender Pearl");
+            meta.setDisplayName(ChatColor.of("#ECECEC") + "" + ChatColor.BOLD + "White Ender Pearl");
             meta.setCustomModelData(5);
             meta.setRarity(ItemRarity.EPIC);
 

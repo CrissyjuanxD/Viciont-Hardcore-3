@@ -1,4 +1,4 @@
-package Dificultades.Features;
+/*package Dificultades.Features;
 
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.WorldEdit;
@@ -220,7 +220,7 @@ public class CorruptedEnd implements Listener {
         }
     }
 
-/*    private boolean isValidPortalFrame(Location loc) {
+   private boolean isValidPortalFrame(Location loc) {
         for (int y = 0; y < 12; y++) {
             for (int x = 0; x < 7; x++) {
                 Location checkLoc = loc.clone().add(x - 3, y, 0);
@@ -232,7 +232,7 @@ public class CorruptedEnd implements Listener {
             }
         }
         return true;
-    }*/
+    }
 
     private void activatePortal(Location loc) {
         for (int y = 1; y < 11; y++) {
@@ -413,7 +413,7 @@ public class CorruptedEnd implements Listener {
         }
     }
 
-    // Generador de mundo interno para mantener pocas clases
+    // Generador de mundo interno
     public class CorruptedEndGenerator extends ChunkGenerator {
         private static final int HEIGHT = 100;
         private final SplittableRandom random = new SplittableRandom();
@@ -656,4 +656,4 @@ public class CorruptedEnd implements Listener {
             }
         }
     }
-}
+}*/

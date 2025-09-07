@@ -77,8 +77,14 @@ public class CorruptedZombies implements Listener {
         zombie.getAttribute(Attribute.GENERIC_FOLLOW_RANGE).setBaseValue(32);
         Objects.requireNonNull(zombie.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE)).setBaseValue(3.0);
         zombie.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, PotionEffect.INFINITE_DURATION, 0));
+        zombie.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, PotionEffect.INFINITE_DURATION, 0));
         zombie.setSilent(true);
-        soundManager.addCustomMob(zombie);
+
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (zombie.isValid() && !zombie.isDead()) {
+                soundManager.addCustomMob(zombie);
+            }
+        }, 5L);
 
         startSnowballRunnable(zombie);
 
@@ -207,7 +213,6 @@ public class CorruptedZombies implements Listener {
     @EventHandler
     public void onZombieDeath(EntityDeathEvent event) {
         if (event.getEntity() instanceof Zombie zombie && isCorrupted(zombie)) {
-            soundManager.removeCustomMob(zombie);
             zombie.getWorld().playSound(zombie.getLocation(), Sound.ENTITY_ZOMBIE_DEATH, SoundCategory.HOSTILE, 1.0f, 0.6f);
             Integer taskId = zombieTasks.remove(zombie.getUniqueId());
             if (taskId != null) Bukkit.getScheduler().cancelTask(taskId);

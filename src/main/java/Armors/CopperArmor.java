@@ -6,6 +6,7 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemRarity;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -24,7 +25,6 @@ public class CopperArmor implements Listener {
         ItemStack item = new ItemStack(Material.CHAINMAIL_HELMET);
         ItemMeta meta = item.getItemMeta();
 
-        // Nombre y lore
         meta.setDisplayName(ChatColor.of("#b87333") + "" + ChatColor.BOLD + "Casco de Cobre");
         meta.setLore(Arrays.asList(
                 "",
@@ -34,7 +34,7 @@ public class CopperArmor implements Listener {
                 "",
                 ChatColor.GRAY + "El conjunto completo de esta",
                 ChatColor.GRAY + "armadura otorga: " + ChatColor.WHITE,
-                ChatColor.of("#ffcc66") + "" + ChatColor.BOLD + "+25% " + ChatColor.of("#dddddd") + ChatColor.BOLD + "Resistencia contra Rayos",
+                ChatColor.of("#ffcc66") + "" + ChatColor.BOLD + "+10% " + ChatColor.of("#dddddd") + ChatColor.BOLD + "Resistencia contra Rayos",
                 ""
         ));
 
@@ -46,6 +46,7 @@ public class CopperArmor implements Listener {
                 EquipmentSlot.HEAD
         ));
         meta.setCustomModelData(2);
+        meta.setRarity(ItemRarity.EPIC);
         item.setItemMeta(meta);
         return item;
     }
@@ -63,7 +64,7 @@ public class CopperArmor implements Listener {
                 "",
                 ChatColor.GRAY + "El conjunto completo de esta",
                 ChatColor.GRAY + "armadura otorga: " + ChatColor.WHITE,
-                ChatColor.of("#ffcc66") + "" + ChatColor.BOLD + "+25% " + ChatColor.of("#dddddd") + ChatColor.BOLD + "Resistencia contra Rayos",
+                ChatColor.of("#ffcc66") + "" + ChatColor.BOLD + "+15% " + ChatColor.of("#dddddd") + ChatColor.BOLD + "Resistencia contra Rayos",
                 ""
         ));
 
@@ -75,6 +76,7 @@ public class CopperArmor implements Listener {
                 EquipmentSlot.CHEST
         ));
         meta.setCustomModelData(2);
+        meta.setRarity(ItemRarity.EPIC);
         item.setItemMeta(meta);
         return item;
     }
@@ -92,7 +94,7 @@ public class CopperArmor implements Listener {
                 "",
                 ChatColor.GRAY + "El conjunto completo de esta",
                 ChatColor.GRAY + "armadura otorga: " + ChatColor.WHITE,
-                ChatColor.of("#ffcc66") + "" + ChatColor.BOLD + "+25% " + ChatColor.of("#dddddd") + ChatColor.BOLD + "Resistencia contra Rayos",
+                ChatColor.of("#ffcc66") + "" + ChatColor.BOLD + "+15% " + ChatColor.of("#dddddd") + ChatColor.BOLD + "Resistencia contra Rayos",
                 ""
         ));
 
@@ -104,6 +106,7 @@ public class CopperArmor implements Listener {
                 EquipmentSlot.LEGS
         ));
         meta.setCustomModelData(2);
+        meta.setRarity(ItemRarity.EPIC);
         item.setItemMeta(meta);
         return item;
     }
@@ -121,7 +124,7 @@ public class CopperArmor implements Listener {
                 "",
                 ChatColor.GRAY + "El conjunto completo de esta",
                 ChatColor.GRAY + "armadura otorga: " + ChatColor.WHITE,
-                ChatColor.of("#ffcc66") + "" + ChatColor.BOLD + "+25% " + ChatColor.of("#dddddd") + ChatColor.BOLD + "Resistencia contra Rayos",
+                ChatColor.of("#ffcc66") + "" + ChatColor.BOLD + "+10% " + ChatColor.of("#dddddd") + ChatColor.BOLD + "Resistencia contra Rayos",
                 ""
         ));
 
@@ -133,6 +136,7 @@ public class CopperArmor implements Listener {
                 EquipmentSlot.FEET
         ));
         meta.setCustomModelData(2);
+        meta.setRarity(ItemRarity.EPIC);
         item.setItemMeta(meta);
         return item;
     }

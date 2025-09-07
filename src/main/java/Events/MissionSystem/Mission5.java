@@ -1,5 +1,6 @@
 package Events.MissionSystem;
 
+import TitleListener.SuccessNotification;
 import items.DoubleLifeTotem;
 import items.EconomyItems;
 import org.bukkit.Material;
@@ -24,13 +25,14 @@ public class Mission5 implements Mission, Listener {
     private final JavaPlugin plugin;
     private final MissionHandler missionHandler;
     private final DoubleLifeTotem doubleLifeTotem;
+    private final SuccessNotification successNotification;
 
 
     public Mission5(JavaPlugin plugin, MissionHandler missionHandler) {
         this.plugin = plugin;
         this.missionHandler = missionHandler;
         this.doubleLifeTotem = ((ViciontHardcore3) plugin).getDoubleLifeTotemHandler();
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        this.successNotification = new SuccessNotification(plugin);
     }
 
     @Override
@@ -149,28 +151,28 @@ public class Mission5 implements Mission, Listener {
         if (hasHelmet && !data.getBoolean("players." + playerName + ".missions.5.netherite_armor.helmet", false)) {
             data.set("players." + playerName + ".missions.5.netherite_armor.helmet", true);
             data.set("players." + playerName + ".missions.5.protection.helmet", true);
-            player.sendMessage(ChatColor.of("#98FB98") + "¡Casco de netherite con Protección IV equipado!");
+            successNotification.showSuccess(player);
             updated = true;
         }
 
         if (hasChestplate && !data.getBoolean("players." + playerName + ".missions.5.netherite_armor.chestplate", false)) {
             data.set("players." + playerName + ".missions.5.netherite_armor.chestplate", true);
             data.set("players." + playerName + ".missions.5.protection.chestplate", true);
-            player.sendMessage(ChatColor.of("#98FB98") + "¡Peto de netherite con Protección IV equipado!");
+            successNotification.showSuccess(player);
             updated = true;
         }
 
         if (hasLeggings && !data.getBoolean("players." + playerName + ".missions.5.netherite_armor.leggings", false)) {
             data.set("players." + playerName + ".missions.5.netherite_armor.leggings", true);
             data.set("players." + playerName + ".missions.5.protection.leggings", true);
-            player.sendMessage(ChatColor.of("#98FB98") + "¡Pantalones de netherite con Protección IV equipados!");
+            successNotification.showSuccess(player);
             updated = true;
         }
 
         if (hasBoots && !data.getBoolean("players." + playerName + ".missions.5.netherite_armor.boots", false)) {
             data.set("players." + playerName + ".missions.5.netherite_armor.boots", true);
             data.set("players." + playerName + ".missions.5.protection.boots", true);
-            player.sendMessage(ChatColor.of("#98FB98") + "¡Botas de netherite con Protección IV equipadas!");
+            successNotification.showSuccess(player);
             updated = true;
         }
 
@@ -193,7 +195,7 @@ public class Mission5 implements Mission, Listener {
                 if (data.getBoolean("players." + playerName + ".missions.5.netherite_armor.leggings", false)) completed++;
                 if (data.getBoolean("players." + playerName + ".missions.5.netherite_armor.boots", false)) completed++;
 
-                player.sendMessage(ChatColor.of("#F0E68C") + "Progreso de armadura de netherite: " + ChatColor.of("#98FB98") + completed + ChatColor.of("#F0E68C") + "/4");
+                player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Progreso de armadura de netherite: " + ChatColor.of("#FFB6C1") + completed + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "4");
             }
         }
     }

@@ -18,11 +18,13 @@ import Events.Skybattle.EventoHandler;
 import Events.UltraWitherBattle.UltraWitherEvent;
 import Handlers.*;
 import Security.PingMonitor.PingMonitor;
+import SlotMachine.SlotMachineManager;
 import Structures.StructureCommand;
 import TitleListener.*;
 import items.*;
 import Armors.NightVisionHelmet;
 import Armors.CorruptedArmor;
+import CorruptedEnd.CorruptedEnd;
 import list.VHList;
 import org.bukkit.*;
 import org.bukkit.command.PluginCommand;
@@ -36,8 +38,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import chat.chatgeneral;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.Arrays;
-import java.util.Objects;
+import java.util.*;
 
 public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
@@ -113,6 +114,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
     // Casino
     private CasinoManager casinoManager;
+    private SlotMachineManager slotMachineManager;
 
     // Mobs
 
@@ -141,7 +143,6 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private CorruptedArmor corruptedArmor;
     private EnderiteSwordListener enderiteSwordListener;
     private TridenteEspectral tridenteEspectral;
-
 
     // Dimension
 
@@ -245,7 +246,6 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(customSpawnerHandler, this);
 
 
-
         // Registrar el comando para el temporizador;
         TiempoCommand tiempoCommand = new TiempoCommand(this);
         this.getCommand("addtiempo").setExecutor(tiempoCommand);
@@ -344,7 +344,8 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         this.missionHandler = new MissionHandler(this, dayHandler);
         missionSystemCommands = new MissionSystemCommands(this, dayHandler);
         missionRewardHandler = new MissionRewardHandler(this, missionSystemCommands.getMissionHandler());
-        getServer().getPluginManager().registerEvents(missionHandler, this);
+        missionHandler.registerAllMissionListeners();
+        /*getServer().getPluginManager().registerEvents(missionHandler, this);*/
 
         // Sistema de Tiendas
         shopHandler = new ShopHandler(this);
@@ -354,6 +355,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
         // Sistema de Casino
         casinoManager = new CasinoManager(this);
+        slotMachineManager = new SlotMachineManager(this);
 
         this.getCommand("start").setExecutor((sender, command, label, args) -> {
             if (args.length == 1) {
@@ -425,6 +427,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
         // manejador de sonidos
         mobSoundManager = new MobSoundManager(this);
+        /*getServer().getPluginManager().registerEvents(mobSoundManager, this);*/
 
         //Manejador de bloques
         endstalactitas = new Endstalactitas(this);
@@ -455,8 +458,8 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         corruptedArmor = new CorruptedArmor(this);
         enderiteSwordListener = new EnderiteSwordListener(this);
         tridenteEspectral = new TridenteEspectral(this);
-        getServer().getPluginManager().registerEvents(nightVisionHelmet,this);
-        getServer().getPluginManager().registerEvents(corruptedArmor,this);
+        getServer().getPluginManager().registerEvents(nightVisionHelmet, this);
+        getServer().getPluginManager().registerEvents(corruptedArmor, this);
         getServer().getPluginManager().registerEvents(enderiteSwordListener, this);
         getServer().getPluginManager().registerEvents(tridenteEspectral, this);
 
@@ -468,10 +471,12 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         Bukkit.getScheduler().runTaskLater(this, () -> {
             if (Bukkit.getWorld(CorruptedEnd.WORLD_NAME) == null) {
                 corruptedEnd.createCorruptedWorld();
-                corruptedEnd.loadSchematics();
             } else {
                 corruptedEnd.corruptedWorld = Bukkit.getWorld(CorruptedEnd.WORLD_NAME);
             }
+
+            corruptedEnd.initialize();
+
         }, 20L);
 
         new BukkitRunnable() {
@@ -481,7 +486,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
                     corruptedEnd.spawnParticles();
                 }
             }
-        }.runTaskTimer(this, 0L, 20L);
+        }.runTaskTimer(this, 40L, 20L);
 
     }
 
@@ -521,8 +526,22 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         MobCapManager.getInstance(this).shutdown();
         economyItemsFunctions.onDisable();
 
+        // Limpiar SlotMachineManager
+        if (slotMachineManager != null) {
+            slotMachineManager.shutdown();
+        }
+
+        // Limpiar MobSoundManager
+        if (mobSoundManager != null) {
+            mobSoundManager.shutdown();
+        }
+
         // Guardar el estado de los Infested bee
         cleanup();
+
+        // Limpiar Corrupted End
+        if (corruptedEnd != null) {
+        }
 
         shuttingDown = true;
 
@@ -598,5 +617,9 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     public SuccessNotification getSuccessNotifier() {
         return successNotif;
     }
-}
 
+    public SlotMachineManager getSlotMachineManager() {
+        return slotMachineManager;
+    }
+
+}

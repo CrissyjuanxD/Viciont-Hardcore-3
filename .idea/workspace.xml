@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ArtifactsWorkspaceSettings">
+    <artifacts-to-build>
+      <artifact name="VCTHardcore3:jar" />
+    </artifacts-to-build>
+  </component>
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="23b0ad47-a402-4788-8284-bb6d2e5ca004" name="Changes" comment="(VERSION 1.5.6)">
+      <change afterPath="$PROJECT_DIR$/src/main/java/CorruptedEnd/BiomeEffectManager.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/CorruptedEnd/BiomeType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/CorruptedEnd/CorruptedEnd.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/CorruptedEnd/CorruptedEndCommands.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/CorruptedEnd/CorruptedEndGenerator.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/CorruptedEnd/CorruptedTreePopulator.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/CorruptedEnd/LootManager.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/CorruptedEnd/MobSpawnManager.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/CorruptedEnd/PortalManager.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/CorruptedEnd/StructureManager.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/tools/slot_machines.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Armors/CopperArmor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Armors/CopperArmor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Armors/CorruptedArmor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Armors/CorruptedArmor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedInfernalSpider.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedInfernalSpider.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedZombies.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedZombies.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/InfernalBeast.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/InfernalBeast.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayEightChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayEightChanges.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayFourChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayFourChanges.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayOneChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayOneChanges.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayTenChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayTenChanges.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayTwoChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayTwoChanges.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/Features/CorruptedEnd.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/Features/CorruptedEnd.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/Features/MobCapManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/Features/MobCapManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/Features/MobSoundManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/Features/MobSoundManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission1.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission1.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission10.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission10.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission11.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission11.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission12.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission12.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission2.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission2.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission3.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission3.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission4.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission4.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission5.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission5.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission6.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission6.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission7.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission7.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission8.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission8.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission9.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission9.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/MissionGUI.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/MissionGUI.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/MissionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/MissionHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/UltraWitherBattle/UltraWitherEvent.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/UltraWitherBattle/UltraWitherEvent.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Handlers/FireResistanceHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Handlers/FireResistanceHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/items/ItemsTotems.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/items/ItemsTotems.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/vct/hardcore3/ViciontHardcore3.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/vct/hardcore3/ViciontHardcore3.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/plugin.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/plugin.yml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Interface" />
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;CrissyjuanxD&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/CrissyjuanxD/Viciont-Hardcore-3.git&quot;,
+    &quot;accountId&quot;: &quot;cf9ef982-8ab2-418b-b8ab-1b570338dbbd&quot;
+  }
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 0
+}</component>
+  <component name="ProjectId" id="2xFnO4AjZr5j1eJ1jKImIDa93NC" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/pepoa/VCTHardcore3/src/main/java/schem&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Artifacts&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.keymap&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\pepoa\VCTHardcore3\src\main\java\schem" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\pepoa\VCTHardcore3\src\main\resources\tools" />
+      <recent name="C:\Users\pepoa\VCTHardcore3\src\main\java" />
+      <recent name="C:\Users\pepoa\VCTHardcore3\src\main\java\schem" />
+    </key>
+    <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="Handlers" />
+      <recent name="TitleListener" />
+      <recent name="items" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-fbdcb00ec9e3-intellij.indexing.shared.core-IU-251.26927.53" />
+        <option value="bundled-js-predefined-d6986cc7102b-09060db00ec0-JavaScript-IU-251.26927.53" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="23b0ad47-a402-4788-8284-bb6d2e5ca004" name="Changes" comment="" />
+      <created>1747542656759</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1747542656759</updated>
+      <workItem from="1747542682718" duration="7847000" />
+      <workItem from="1747631936995" duration="8587000" />
+      <workItem from="1747677623896" duration="22562000" />
+      <workItem from="1747799164272" duration="10430000" />
+      <workItem from="1747855911466" duration="17154000" />
+      <workItem from="1747935798769" duration="23794000" />
+      <workItem from="1748017903938" duration="9567000" />
+      <workItem from="1748047965418" duration="7704000" />
+      <workItem from="1748112245171" duration="22109000" />
+      <workItem from="1748207745918" duration="18609000" />
+      <workItem from="1748293827848" duration="9689000" />
+      <workItem from="1748376851379" duration="12969000" />
+      <workItem from="1748457792815" duration="18078000" />
+      <workItem from="1748554828420" duration="13530000" />
+      <workItem from="1748639415383" duration="18433000" />
+      <workItem from="1748724346697" duration="10275000" />
+      <workItem from="1748750711541" duration="2237000" />
+      <workItem from="1748818037014" duration="3857000" />
+      <workItem from="1748905488178" duration="8898000" />
+      <workItem from="1748934946200" duration="39000" />
+      <workItem from="1749164486690" duration="1049000" />
+      <workItem from="1749172084308" duration="2653000" />
+      <workItem from="1749275756749" duration="605000" />
+      <workItem from="1749337628811" duration="6907000" />
+      <workItem from="1749424474582" duration="17852000" />
+      <workItem from="1749527233407" duration="6826000" />
+      <workItem from="1749591017505" duration="13949000" />
+      <workItem from="1749670017402" duration="7683000" />
+      <workItem from="1749776094007" duration="6170000" />
+      <workItem from="1749857757639" duration="45000" />
+      <workItem from="1749865447384" duration="9366000" />
+      <workItem from="1749931472036" duration="18138000" />
+      <workItem from="1750016193809" duration="26292000" />
+      <workItem from="1750069871192" duration="7250000" />
+      <workItem from="1750116989899" duration="21685000" />
+      <workItem from="1750190357314" duration="15143000" />
+      <workItem from="1750282355848" duration="12739000" />
+      <workItem from="1750361379447" duration="103000" />
+      <workItem from="1750392981467" duration="7508000" />
+      <workItem from="1750489255031" duration="1981000" />
+      <workItem from="1750491353481" duration="1707000" />
+      <workItem from="1750530511694" duration="6536000" />
+      <workItem from="1750570642928" duration="5139000" />
+      <workItem from="1750637846396" duration="4730000" />
+      <workItem from="1750701585085" duration="32358000" />
+      <workItem from="1750799610151" duration="17420000" />
+      <workItem from="1750899805017" duration="11576000" />
+      <workItem from="1750972746782" duration="11401000" />
+      <workItem from="1750992183181" duration="12973000" />
+      <workItem from="1751050547627" duration="19788000" />
+      <workItem from="1751094815767" duration="2183000" />
+      <workItem from="1751137195490" duration="19283000" />
+      <workItem from="1751236602670" duration="403000" />
+      <workItem from="1751256116878" duration="558000" />
+      <workItem from="1751257740430" duration="1733000" />
+      <workItem from="1751270682074" duration="483000" />
+      <workItem from="1751308575649" duration="13000" />
+      <workItem from="1751310392272" duration="78000" />
+      <workItem from="1751524589703" duration="3994000" />
+      <workItem from="1751529620552" duration="180000" />
+      <workItem from="1751565068311" duration="26046000" />
+      <workItem from="1751615955684" duration="88000" />
+      <workItem from="1751661707336" duration="6767000" />
+      <workItem from="1751763093158" duration="4000" />
+      <workItem from="1751763336676" duration="2032000" />
+      <workItem from="1751765501082" duration="221000" />
+      <workItem from="1751766132426" duration="702000" />
+      <workItem from="1751775818224" duration="644000" />
+      <workItem from="1751850161799" duration="726000" />
+      <workItem from="1751870472445" duration="5501000" />
+      <workItem from="1751920206185" duration="8677000" />
+      <workItem from="1752031768155" duration="11985000" />
+      <workItem from="1752092493466" duration="6763000" />
+      <workItem from="1752205572372" duration="14259000" />
+      <workItem from="1752281083502" duration="2984000" />
+      <workItem from="1752297388185" duration="10470000" />
+      <workItem from="1752350463639" duration="1863000" />
+      <workItem from="1752380128291" duration="7560000" />
+      <workItem from="1752440926729" duration="10989000" />
+      <workItem from="1752481273673" duration="80000" />
+      <workItem from="1752517133163" duration="8821000" />
+      <workItem from="1752605901446" duration="5149000" />
+      <workItem from="1752640574598" duration="86000" />
+      <workItem from="1752692110563" duration="19987000" />
+      <workItem from="1752786100418" duration="4034000" />
+      <workItem from="1752881874369" duration="3647000" />
+      <workItem from="1752913671060" duration="430000" />
+      <workItem from="1753141233440" duration="7337000" />
+      <workItem from="1753160696490" duration="8242000" />
+      <workItem from="1753209987392" duration="16116000" />
+      <workItem from="1753294846597" duration="23695000" />
+      <workItem from="1753493410487" duration="595000" />
+      <workItem from="1753590280857" duration="246000" />
+      <workItem from="1753591971630" duration="4491000" />
+      <workItem from="1753728070684" duration="593000" />
+      <workItem from="1753764902713" duration="4037000" />
+      <workItem from="1753863836532" duration="670000" />
+      <workItem from="1753949650554" duration="4400000" />
+      <workItem from="1753996476482" duration="15810000" />
+      <workItem from="1754112771076" duration="1438000" />
+      <workItem from="1754154727580" duration="1771000" />
+      <workItem from="1754328853082" duration="25270000" />
+      <workItem from="1754409797277" duration="15287000" />
+      <workItem from="1754505144826" duration="2944000" />
+      <workItem from="1754588970678" duration="20471000" />
+      <workItem from="1754672623887" duration="6726000" />
+      <workItem from="1754703629256" duration="2295000" />
+      <workItem from="1754714365388" duration="4198000" />
+      <workItem from="1754763253500" duration="969000" />
+      <workItem from="1754939433609" duration="2315000" />
+      <workItem from="1754970139804" duration="607000" />
+      <workItem from="1755045984779" duration="7420000" />
+      <workItem from="1755109110680" duration="14861000" />
+      <workItem from="1755189198563" duration="22568000" />
+      <workItem from="1755278635451" duration="16348000" />
+      <workItem from="1755363269064" duration="15588000" />
+      <workItem from="1755402429131" duration="2647000" />
+      <workItem from="1755445763283" duration="12800000" />
+      <workItem from="1755557024949" duration="3549000" />
+      <workItem from="1755579746660" duration="2743000" />
+      <workItem from="1755736549566" duration="5558000" />
+      <workItem from="1755811460070" duration="13818000" />
+      <workItem from="1755877653029" duration="24510000" />
+      <workItem from="1755964929435" duration="63000" />
+      <workItem from="1756001077275" duration="758000" />
+      <workItem from="1756105555406" duration="242000" />
+      <workItem from="1756330650444" duration="20611000" />
+      <workItem from="1756404289712" duration="14421000" />
+      <workItem from="1756486824671" duration="2840000" />
+      <workItem from="1756518314309" duration="552000" />
+      <workItem from="1756584892581" duration="3284000" />
+      <workItem from="1756590826575" duration="190000" />
+      <workItem from="1756689592645" duration="110000" />
+      <workItem from="1756755396054" duration="7660000" />
+      <workItem from="1756796692069" duration="233000" />
+      <workItem from="1756835863425" duration="4222000" />
+      <workItem from="1756924607449" duration="6162000" />
+      <workItem from="1756959143935" duration="7822000" />
+      <workItem from="1757013940806" duration="132000" />
+      <workItem from="1757020033702" duration="19564000" />
+      <workItem from="1757118992722" duration="631000" />
+      <workItem from="1757133894514" duration="13345000" />
+      <workItem from="1757204538613" duration="560000" />
+      <workItem from="1757221509776" duration="624000" />
+    </task>
+    <task id="LOCAL-00001" summary="MUCHOS MUCHISIMOS CAMBIOS (vERSION 1.5.2)">
+      <option name="closed" value="true" />
+      <created>1752913938471</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1752913938471</updated>
+    </task>
+    <task id="LOCAL-00002" summary="(vERSION 1.5.3)">
+      <option name="closed" value="true" />
+      <created>1753346687907</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1753346687907</updated>
+    </task>
+    <task id="LOCAL-00003" summary="(vERSION 1.5.4)">
+      <option name="closed" value="true" />
+      <created>1753596600384</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1753596600384</updated>
+    </task>
+    <task id="LOCAL-00004" summary="(vERSION 1.5.5)">
+      <option name="closed" value="true" />
+      <created>1755046250041</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1755046250041</updated>
+    </task>
+    <task id="LOCAL-00005" summary="(VERSION 1.5.6)">
+      <option name="closed" value="true" />
+      <created>1756345899737</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1756345899737</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="MUCHOS MUCHISIMOS CAMBIOS (vERSION 1.5.2)" />
+    <MESSAGE value="(vERSION 1.5.3)" />
+    <MESSAGE value="(vERSION 1.5.4)" />
+    <MESSAGE value="(vERSION 1.5.5)" />
+    <MESSAGE value="(VERSION 1.5.6)" />
+    <option name="LAST_COMMIT_MESSAGE" value="(VERSION 1.5.6)" />
+  </component>
+</project>

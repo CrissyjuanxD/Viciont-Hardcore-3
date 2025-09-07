@@ -1,5 +1,6 @@
 package Events.MissionSystem;
 
+import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
 import org.bukkit.block.Biome;
@@ -27,11 +28,12 @@ public class Mission11 implements Mission, Listener {
     private final Map<UUID, Long> playerStartTimes = new HashMap<>();
     private final Map<UUID, BukkitRunnable> trackingTasks = new HashMap<>();
     private static final long REQUIRED_TIME = 23500; // Tiempo requerido en ticks
+    private final SuccessNotification successNotification;
 
     public Mission11(JavaPlugin plugin, MissionHandler missionHandler) {
         this.plugin = plugin;
         this.missionHandler = missionHandler;
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        this.successNotification = new SuccessNotification(plugin);
     }
 
     @Override
@@ -118,7 +120,7 @@ public class Mission11 implements Mission, Listener {
 
         playerStartTimes.put(playerId, System.currentTimeMillis());
 
-        player.sendMessage(ChatColor.of("#F0E68C") + "¡Comenzando a contar tiempo en Mushroom Island!");
+        player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#F0E68C") + "Comenzando a contar tiempo en Mushroom Island!");
 
         BukkitRunnable task = new BukkitRunnable() {
             @Override
@@ -145,6 +147,7 @@ public class Mission11 implements Mission, Listener {
 
                     // Verificar si completó el tiempo requerido
                     if (currentTime >= REQUIRED_TIME) {
+                        successNotification.showSuccess(player);
                         missionHandler.completeMission(playerName, 11);
                         stopTracking(player);
                     }
@@ -168,6 +171,6 @@ public class Mission11 implements Mission, Listener {
             task.cancel();
         }
 
-        player.sendMessage(ChatColor.of("#FFA07A") + "Has salido de la Mushroom Island. Tiempo pausado.");
+        player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#FFA07A") + "Has salido de la Mushroom Island. Tiempo pausado.");
     }
 }

@@ -11,6 +11,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemRarity;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -73,6 +74,7 @@ public class CorruptedArmor implements Listener {
                 EquipmentSlot.HEAD
         ));
         meta.setCustomModelData(2);
+        meta.setRarity(ItemRarity.EPIC);
         item.setItemMeta(meta);
         return item;
     }
@@ -123,6 +125,7 @@ public class CorruptedArmor implements Listener {
                 EquipmentSlot.CHEST
         ));
         meta.setCustomModelData(2);
+        meta.setRarity(ItemRarity.EPIC);
         item.setItemMeta(meta);
         return item;
     }
@@ -173,6 +176,7 @@ public class CorruptedArmor implements Listener {
                 EquipmentSlot.LEGS
         ));
         meta.setCustomModelData(2);
+        meta.setRarity(ItemRarity.EPIC);
         item.setItemMeta(meta);
         return item;
     }
@@ -223,6 +227,7 @@ public class CorruptedArmor implements Listener {
                 EquipmentSlot.FEET
         ));
         meta.setCustomModelData(2);
+        meta.setRarity(ItemRarity.EPIC);
         item.setItemMeta(meta);
         return item;
     }

@@ -1,5 +1,6 @@
 package Events.MissionSystem;
 
+import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -24,11 +25,12 @@ import java.util.List;
 public class Mission12 implements Mission, Listener {
     private final JavaPlugin plugin;
     private final MissionHandler missionHandler;
+    private final SuccessNotification successNotification;
 
     public Mission12(JavaPlugin plugin, MissionHandler missionHandler) {
         this.plugin = plugin;
         this.missionHandler = missionHandler;
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        this.successNotification = new SuccessNotification(plugin);
     }
 
     @Override
@@ -111,15 +113,15 @@ public class Mission12 implements Mission, Listener {
             bombitasKilled++;
             data.set("players." + playerName + ".missions.12.bombitas_killed", bombitasKilled);
 
-            killer.sendMessage(ChatColor.of("#DDA0DD") + "Bombitas eliminadas: " +
-                    ChatColor.of("#98FB98") + bombitasKilled + ChatColor.of("#D3D3D3") + "/30");
+            killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Bombitas eliminadas: " +
+                    ChatColor.of("#FFB6C1") + bombitasKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "30");
         } else if (isBruteImperial) {
             int brutesKilled = data.getInt("players." + playerName + ".missions.12.brutes_killed", 0);
             brutesKilled++;
             data.set("players." + playerName + ".missions.12.brutes_killed", brutesKilled);
 
-            killer.sendMessage(ChatColor.of("#DDA0DD") + "Brutes Imperiales eliminados: " +
-                    ChatColor.of("#98FB98") + brutesKilled + ChatColor.of("#D3D3D3") + "/20");
+            killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Brutes Imperiales eliminados: " +
+                    ChatColor.of("#FFB6C1") + brutesKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "20");
         } else {
             return;
         }
@@ -132,6 +134,7 @@ public class Mission12 implements Mission, Listener {
             int brutesKilled = data.getInt("players." + playerName + ".missions.12.brutes_killed", 0);
 
             if (bombitasKilled >= 30 && brutesKilled >= 20) {
+                successNotification.showSuccess(killer);
                 missionHandler.completeMission(playerName, 12);
             }
         } catch (IOException e) {

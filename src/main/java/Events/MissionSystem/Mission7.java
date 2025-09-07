@@ -1,5 +1,6 @@
 package Events.MissionSystem;
 
+import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -24,11 +25,12 @@ import java.util.List;
 public class Mission7 implements Mission, Listener {
     private final JavaPlugin plugin;
     private final MissionHandler missionHandler;
+    private final SuccessNotification successNotification;
 
     public Mission7(JavaPlugin plugin, MissionHandler missionHandler) {
         this.plugin = plugin;
         this.missionHandler = missionHandler;
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        this.successNotification = new SuccessNotification(plugin);
     }
 
     @Override
@@ -111,15 +113,15 @@ public class Mission7 implements Mission, Listener {
             skeletonsKilled++;
             data.set("players." + playerName + ".missions.7.corrupted_skeletons_killed", skeletonsKilled);
 
-            killer.sendMessage(ChatColor.of("#DDA0DD") + "Corrupted Skeletons eliminados: " +
-                    ChatColor.of("#98FB98") + skeletonsKilled + ChatColor.of("#D3D3D3") + "/30");
+            killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Corrupted Skeletons eliminados: " +
+                    ChatColor.of("#FFB6C1") + skeletonsKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "30");
         } else if (isCorruptedCreeper) {
             int creepersKilled = data.getInt("players." + playerName + ".missions.7.corrupted_creepers_killed", 0);
             creepersKilled++;
             data.set("players." + playerName + ".missions.7.corrupted_creepers_killed", creepersKilled);
 
-            killer.sendMessage(ChatColor.of("#DDA0DD") + "Corrupted Creepers eliminados: " +
-                    ChatColor.of("#98FB98") + creepersKilled + ChatColor.of("#D3D3D3") + "/30");
+            killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Corrupted Creepers eliminados: " +
+                    ChatColor.of("#FFB6C1") + creepersKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "30");
         } else {
             return;
         }
@@ -132,6 +134,7 @@ public class Mission7 implements Mission, Listener {
             int creepersKilled = data.getInt("players." + playerName + ".missions.7.corrupted_creepers_killed", 0);
 
             if (skeletonsKilled >= 30 && creepersKilled >= 30) {
+                successNotification.showSuccess(killer);
                 missionHandler.completeMission(playerName, 7);
             }
         } catch (IOException e) {

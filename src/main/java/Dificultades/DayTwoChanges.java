@@ -93,12 +93,7 @@
                         for (Entity entity : event.getRaiders()) {
                             if (entity instanceof Pillager) {
                                 Location spawnLocation = entity.getLocation();
-
-                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                                        "spawnvct iceologer " +
-                                                spawnLocation.getBlockX() + " " +
-                                                spawnLocation.getBlockY() + " " +
-                                                spawnLocation.getBlockZ());
+                                iceologerSpawner.spawnIceologer(spawnLocation);
 
                                 break;
                             }

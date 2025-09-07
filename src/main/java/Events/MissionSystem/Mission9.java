@@ -1,5 +1,6 @@
 package Events.MissionSystem;
 
+import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -19,11 +20,12 @@ import java.util.List;
 public class Mission9 implements Mission, Listener {
     private final JavaPlugin plugin;
     private final MissionHandler missionHandler;
+    private final SuccessNotification successNotification;
 
     public Mission9(JavaPlugin plugin, MissionHandler missionHandler) {
         this.plugin = plugin;
         this.missionHandler = missionHandler;
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        this.successNotification = new SuccessNotification(plugin);
     }
 
     @Override
@@ -100,10 +102,11 @@ public class Mission9 implements Mission, Listener {
             try {
                 data.save(missionHandler.getMissionFile());
 
-                player.sendMessage(ChatColor.of("#DDA0DD") + "Raids completadas: " +
-                        ChatColor.of("#98FB98") + raidsCompleted + ChatColor.of("#D3D3D3") + "/5");
+                player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Raids completadas: " +
+                        ChatColor.of("#FFB6C1") + raidsCompleted + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "5");
 
                 if (raidsCompleted >= 5) {
+                    successNotification.showSuccess(player);
                     missionHandler.completeMission(playerName, 9);
                 }
             } catch (IOException e) {

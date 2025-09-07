@@ -3,57 +3,41 @@ package Handlers;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class FireResistanceHandler implements Listener {
 
     private final JavaPlugin plugin;
+    private final Map<UUID, Integer> playerFireTicks;
 
     public FireResistanceHandler(JavaPlugin plugin) {
         this.plugin = plugin;
+        this.playerFireTicks = new HashMap<>();
     }
 
     @EventHandler
-    public void onPlayerMove(PlayerMoveEvent event) {
+    public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
 
-        if (player.hasPotionEffect(PotionEffectType.FIRE_RESISTANCE) && player.getFireTicks() > 0) {
-            player.setFireTicks(0);
+        if (player.getFireTicks() > 0) {
+            playerFireTicks.put(player.getUniqueId(), player.getFireTicks());
         }
     }
 
     @EventHandler
-    public void onEntityDamage(EntityDamageEvent event) {
-        if (event.getEntity() instanceof Player player) {
-            if ((event.getCause() == EntityDamageEvent.DamageCause.FIRE ||
-                    event.getCause() == EntityDamageEvent.DamageCause.FIRE_TICK ||
-                    event.getCause() == EntityDamageEvent.DamageCause.LAVA ||
-                    event.getCause() == EntityDamageEvent.DamageCause.HOT_FLOOR) &&
-                    player.hasPotionEffect(PotionEffectType.FIRE_RESISTANCE)) {
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        UUID playerId = player.getUniqueId();
 
-                event.setCancelled(true);
-
-                if (player.getFireTicks() > 0) {
-                    player.setFireTicks(0);
-                }
-            }
+        if (playerFireTicks.containsKey(playerId)) {
+            int savedFireTicks = playerFireTicks.get(playerId);
+            player.setFireTicks(savedFireTicks);
+            playerFireTicks.remove(playerId);
         }
-    }
-
-    public void startFireCheckTask() {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                for (Player player : plugin.getServer().getOnlinePlayers()) {
-                    if (player.hasPotionEffect(PotionEffectType.FIRE_RESISTANCE) && player.getFireTicks() > 0) {
-                        player.setFireTicks(0);
-                    }
-                }
-            }
-        }.runTaskTimer(plugin, 0L, 20L);
     }
 }

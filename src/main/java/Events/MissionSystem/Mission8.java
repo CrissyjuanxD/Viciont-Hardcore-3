@@ -1,5 +1,6 @@
 package Events.MissionSystem;
 
+import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -20,11 +21,12 @@ import java.util.List;
 public class Mission8 implements Mission, Listener {
     private final JavaPlugin plugin;
     private final MissionHandler missionHandler;
+    private final SuccessNotification successNotification;
 
     public Mission8(JavaPlugin plugin, MissionHandler missionHandler) {
         this.plugin = plugin;
         this.missionHandler = missionHandler;
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        this.successNotification = new SuccessNotification(plugin);
     }
 
     @Override
@@ -139,8 +141,8 @@ public class Mission8 implements Mission, Listener {
                     if (allCompleted) {
                         missionHandler.completeMission(playerName, 8);
                     } else {
-                        player.sendMessage(ChatColor.of("#F0E68C") + "Progreso de armadura corrupta: " +
-                                ChatColor.of("#98FB98") + completed + ChatColor.of("#F0E68C") + "/4");
+                        player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Progreso de armadura corrupta: " + ChatColor.of("#FFB6C1") + completed + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "4");
+                        successNotification.showSuccess(player);
                     }
                 } catch (IOException e) {
                     plugin.getLogger().severe("Error al guardar progreso de Misión 8: " + e.getMessage());

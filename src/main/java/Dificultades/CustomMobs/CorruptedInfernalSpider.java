@@ -73,6 +73,7 @@ public class CorruptedInfernalSpider implements Listener {
     private void applyCorruptedInfernalSpiderAttributes(Spider spider) {
         spider.setCustomName(ChatColor.RED + "" + ChatColor.BOLD + "Corrupted Infernal Spider");
         spider.setCustomNameVisible(true);
+        spider.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, PotionEffect.INFINITE_DURATION, 0));
         spider.getPersistentDataContainer().set(corrupedInfernaltedspiderKey, PersistentDataType.BYTE, (byte) 1);
         Objects.requireNonNull(spider.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE)).setBaseValue(3.0);
 

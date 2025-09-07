@@ -98,7 +98,7 @@ public class DayEightChanges implements Listener {
             infernalBeast.apply();
             CustomCorruptedNetheriteCraft();
             registerCorruptedArmorUpgrades();
-            mobCapManager.updateMobCap(2);
+            mobCapManager.setMobCap(100);
         }
     }
 
@@ -159,7 +159,7 @@ public class DayEightChanges implements Listener {
             return;
         }
 
-        if (random.nextInt(4) != 0) return;
+        if (random.nextInt(6) != 0) return;
 
         Hoglin hoglin = (Hoglin) event.getEntity();
         Location loc = hoglin.getLocation();

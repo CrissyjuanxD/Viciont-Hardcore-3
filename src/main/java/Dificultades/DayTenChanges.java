@@ -139,7 +139,7 @@ public class DayTenChanges implements Listener {
             return;
         }
 
-        if (random.nextInt(2) != 0) return;
+        if (random.nextInt(3) != 0) return;
 
         Spider spider = (Spider) event.getEntity();
         Location loc = spider.getLocation();
@@ -169,8 +169,8 @@ public class DayTenChanges implements Listener {
 
         double randomValue = random.nextDouble();
 
-        boolean isinfernalCreeper = random.nextInt(4) == 0;
-        boolean isNormalCreeper = random.nextInt(2) == 0;
+        boolean isinfernalCreeper = random.nextInt(6) == 0;
+        boolean isNormalCreeper = random.nextInt(3) == 0;
 
         if (isinfernalCreeper) {
             infernalCreeper.spawnInfernalCreeper(loc);

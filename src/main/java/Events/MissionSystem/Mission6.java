@@ -1,5 +1,6 @@
 package Events.MissionSystem;
 
+import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -24,11 +25,12 @@ import java.util.List;
 public class Mission6 implements Mission, Listener {
     private final JavaPlugin plugin;
     private final MissionHandler missionHandler;
+    private final SuccessNotification successNotification;
 
     public Mission6(JavaPlugin plugin, MissionHandler missionHandler) {
         this.plugin = plugin;
         this.missionHandler = missionHandler;
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        this.successNotification = new SuccessNotification(plugin);
     }
 
     @Override
@@ -111,15 +113,15 @@ public class Mission6 implements Mission, Listener {
             zombiesKilled++;
             data.set("players." + playerName + ".missions.6.corrupted_zombies_killed", zombiesKilled);
 
-            killer.sendMessage(ChatColor.of("#DDA0DD") + "Corrupted Zombies eliminados: " +
-                    ChatColor.of("#98FB98") + zombiesKilled + ChatColor.of("#D3D3D3") + "/25");
+            killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Corrupted Zombies eliminados: " +
+                    ChatColor.of("#FFB6C1") + zombiesKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "25");
         } else if (isCorruptedSpider) {
             int spidersKilled = data.getInt("players." + playerName + ".missions.6.corrupted_spiders_killed", 0);
             spidersKilled++;
             data.set("players." + playerName + ".missions.6.corrupted_spiders_killed", spidersKilled);
 
-            killer.sendMessage(ChatColor.of("#DDA0DD") + "Corrupted Spiders eliminadas: " +
-                    ChatColor.of("#98FB98") + spidersKilled + ChatColor.of("#D3D3D3") + "/25");
+            killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Corrupted Spiders eliminadas: " +
+                    ChatColor.of("#FFB6C1") + spidersKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "25");
         } else {
             return;
         }
@@ -132,6 +134,7 @@ public class Mission6 implements Mission, Listener {
             int spidersKilled = data.getInt("players." + playerName + ".missions.6.corrupted_spiders_killed", 0);
 
             if (zombiesKilled >= 25 && spidersKilled >= 25) {
+                successNotification.showSuccess(killer);
                 missionHandler.completeMission(playerName, 6);
             }
         } catch (IOException e) {

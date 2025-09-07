@@ -68,8 +68,9 @@
         public void onCreatureSpawn(CreatureSpawnEvent event) {
             if (!isApplied) return;
 
-            // Si es día 10 o superior, no hacemos nada
-            if (dayHandler.getCurrentDay() >= 10) {
+            int currentDay = dayHandler.getCurrentDay();
+
+            if (currentDay >= 10) {
                 return;
             }
 
@@ -79,26 +80,35 @@
                 return;
             }
 
-            int currentDay = dayHandler.getCurrentDay();
             int zombieProbability;
             int spiderProbability;
 
-            // Asignamos probabilidades según el día
-            if (currentDay >= 10) {
-                zombieProbability = 2;
-                spiderProbability = 2;
-            } else if (currentDay >= 7) {
-                zombieProbability = 5;
-                spiderProbability = 5;
-            } else if (currentDay >= 4) {
-                zombieProbability = 10;
-                spiderProbability = 10;
-            } else { // Días 1-3
-                zombieProbability = 20;
-                spiderProbability = 20;
+            switch (currentDay) {
+                case 1:
+                case 2:
+                case 3:
+                    zombieProbability = 20;
+                    spiderProbability = 20;
+                    break;
+                case 4:
+                case 5:
+                case 6:
+                    zombieProbability = 12;
+                    spiderProbability = 12;
+                    break;
+                case 7:
+                case 8:
+                    zombieProbability = 6;
+                    spiderProbability = 6;
+                    break;
+                case 9:
+                    zombieProbability = 4;
+                    spiderProbability = 4;
+                    break;
+                default:
+                    return;
             }
 
-            // Conversión de zombies (solo días 1-9)
             if (event.getEntityType() == EntityType.ZOMBIE) {
                 if (random.nextInt(zombieProbability) == 0) {
                     Zombie zombie = (Zombie) event.getEntity();
@@ -107,7 +117,6 @@
                 }
             }
 
-            // Conversión de arañas (solo días 1-9 y en mundo normal)
             if (event.getEntityType() == EntityType.SPIDER &&
                     event.getLocation().getWorld().getEnvironment() == World.Environment.NORMAL) {
                 if (random.nextInt(spiderProbability) == 0) {

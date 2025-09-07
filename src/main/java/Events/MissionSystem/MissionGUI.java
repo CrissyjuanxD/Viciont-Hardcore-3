@@ -239,6 +239,15 @@ public class MissionGUI implements Listener {
 
             lore.add(ChatColor.of("#DDA0DD") + "- Bombitas: " + ChatColor.of("#98FB98") + bombitasKilled + ChatColor.of("#D3D3D3") + "/30");
             lore.add(ChatColor.of("#DDA0DD") + "- Brutes Imperiales: " + ChatColor.of("#98FB98") + brutesKilled + ChatColor.of("#D3D3D3") + "/20");
+        } else if (mission instanceof Mission3) {
+            lore.add("");
+            lore.add(ChatColor.of("#F0E68C") + "Progreso de preparación:");
+
+            boolean raidCompleted = data.getBoolean("players." + playerName + ".missions.3.raid_completed", false);
+            int goldenApplesCrafted = data.getInt("players." + playerName + ".missions.3.golden_apples_crafted", 0);
+
+            lore.add((raidCompleted ? ChatColor.of("#98FB98") : ChatColor.of("#D3D3D3")) + "- Raid completada");
+            lore.add(ChatColor.of("#DDA0DD") + "- Manzanas de oro: " + ChatColor.of("#98FB98") + goldenApplesCrafted + ChatColor.of("#D3D3D3") + "/20");
         }
     }
 

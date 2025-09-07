@@ -1,0 +1,174 @@
+enabled: true
+config:
+  max-ticks: 0
+  fade-in: 0
+  stay: 5
+  fade-out: 0
+  message-type: "TITLE"
+  sound: "dtools3:tools.casino.bet"
+slot_machines:
+  default:
+    name: '&eSimple Slot Machine'
+    message-broadcast: false
+    messages:
+      - '&a¡Ganaste x%amount% %name%!'
+    data:
+      model-id: casinod3
+      idle-animation: idle
+      item-required: vithiums_fichas
+      force: 0.3
+    slots:
+      totem:
+        name: "Life Totem"
+        item_reward:
+          id: lifetotem
+          amount: 1
+        probability: 5%
+        animation: totem
+        wait-time: 8.5
+        sound: dtools3:tools.casino.win
+      totem_goldenapple:
+        name: "Manzanas Doradas"
+        item_reward:
+          id: golden_apple
+          amount: 2
+        probability: 30%
+        animation: totem_slot2_1
+        wait-time: 8.5
+        sound: dtools3:tools.casino.win
+      totem_goldencarrot:
+        name: "Zanahorias Doradas"
+        item_reward:
+          id: golden_apple
+          amount: 10
+        probability: 30%
+        animation: totem_slot2_2
+        wait-time: 8.5
+        sound: dtools3:tools.casino.win
+      totem_totemofundying:
+        name: "Totem de la Inmortalidad"
+        item_reward:
+          id: totem_of_undying
+          amount: 1
+        probability: 20%
+        animation: totem_slot2_3
+        wait-time: 8.5
+        sound: dtools3:tools.casino.win
+      dedita:
+        name: "Vithiums"
+        item_reward:
+          id: vithiums
+          amount: 20
+        probability: 10%
+        animation: dedita
+        wait-time: 9.0
+        sound: dtools3:tools.casino.win
+      nutria:
+        name: "Manzana Encantada"
+        item_reward:
+          id: enchanted_golden_apple
+          amount: 1
+        probability: 10%
+        animation: nutria
+        wait-time: 9.6
+        sound: dtools3:tools.casino.win
+      corazon:
+        name: 'Corazon Extra'
+        item_reward:
+          id: orbe_de_vida
+          amount: 1
+        probability: 10%
+        animation: corazon
+        wait-time: 10.5
+        sound: dtools3:tools.casino.win
+      oro:
+        name: "Lingote de Oro"
+        item_reward:
+          id: gold_ingot
+          amount: 5
+        probability: 50%
+        animation: oro
+        wait-time: 10.7
+        sound: dtools3:tools.casino.win
+      no_reward_1:
+        name: "Sin premio 1"
+        probability: 61%
+        animation: 1
+        wait-time: 10.5
+      no_reward_3:
+        name: "Sin premio 3"
+        probability: 50%
+        animation: 3
+        wait-time: 10.5
+      no_reward_4:
+        name: "Sin premio 4"
+        probability: 55%
+        animation: 4
+        wait-time: 10.5
+      no_reward_5:
+        name: "Sin premio 5"
+        probability: 65%
+        animation: 5
+        wait-time: 10.5
+      no_reward_6:
+        name: "Sin premio 6"
+        probability: 60%
+        animation: 6
+        wait-time: 8
+      no_reward_7:
+        name: "Sin premio 7"
+        probability: 70%
+        animation: 6
+        wait-time: 8
+  premium:
+    name: '&ePremium Slot Machine'
+    message-broadcast: true
+    messages:
+      - '&a¡Ganaste x%amount% %name%!'
+    data:
+      model-id: casinod3
+      idle-animation: idle
+      item-required: vithiums
+      force: 0.5
+    slots:
+      oro:
+        name: "Enderite Ingot"
+        item_reward:
+          id: enderite_ingot
+          amount: 1
+        probability: 5%
+        animation: enderite
+        wait-time: 12.0
+        sound: dtools3:tools.casino.win
+      pluma:
+        name: "End Relic"
+        item_reward:
+          id: end_relic
+          amount: 1
+        probability: 3%
+        animation: emblem
+        wait-time: 15.0
+        sound: dtools3:tools.casino.win
+      poción:
+        name: "Corrupted Golden Apple"
+        item_reward:
+          id: corrupted_golden_apple
+          amount: 1
+        probability: 8%
+        animation: corrupted
+        wait-time: 10.0
+        sound: dtools3:tools.casino.win
+      dedita:
+        name: "Vithiums"
+        item_reward:
+          id: vithiums
+          amount: 100
+        probability: 90%
+        animation: vithiums
+        wait-time: 8.0
+        sound: dtools3:tools.casino.win
+      no_reward_6:
+        name: "Sin premio premium"
+        probability: 59%
+        animation: fail
+        wait-time: 5.0

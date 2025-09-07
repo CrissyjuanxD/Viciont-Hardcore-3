@@ -27,7 +27,6 @@ public class Mission1 implements Mission, Listener {
         this.plugin = plugin;
         this.missionHandler = missionHandler;
         this.successNotification = new SuccessNotification(plugin);
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     @Override

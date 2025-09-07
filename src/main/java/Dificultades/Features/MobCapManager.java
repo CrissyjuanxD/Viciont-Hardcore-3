@@ -12,7 +12,7 @@ public class MobCapManager {
     private final JavaPlugin plugin;
     private final Map<String, Integer> originalLimits;
     private final Map<String, Integer> currentLimits;
-    private int currentMultiplier = 1;
+    private int currentMobCap = 70; // Valor por defecto
     private boolean isInitialized = false;
 
     private MobCapManager(JavaPlugin plugin) {
@@ -45,39 +45,55 @@ public class MobCapManager {
         isInitialized = true;
     }
 
-    public synchronized void updateMobCap(int multiplier) {
+    public synchronized void setMobCap(int mobCapValue) {
         if (!isInitialized) {
             initialize();
         }
 
-        if (this.currentMultiplier == multiplier) {
+        if (this.currentMobCap == mobCapValue) {
             return;
         }
 
-        this.currentMultiplier = multiplier;
+        this.currentMobCap = mobCapValue;
 
         if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(plugin, () -> updateMobCap(multiplier));
+            Bukkit.getScheduler().runTask(plugin, () -> setMobCap(mobCapValue));
             return;
         }
 
         for (World world : Bukkit.getWorlds()) {
-            int originalLimit = originalLimits.getOrDefault(world.getName(), 55);
-            int newLimit = originalLimit * multiplier;
-
             Integer currentLimit = currentLimits.get(world.getName());
-            if (currentLimit == null || !currentLimit.equals(newLimit)) {
-                world.setMonsterSpawnLimit(newLimit);
-                currentLimits.put(world.getName(), newLimit);
+            if (currentLimit == null || !currentLimit.equals(mobCapValue)) {
+                world.setMonsterSpawnLimit(mobCapValue);
+                currentLimits.put(world.getName(), mobCapValue);
 
                 plugin.getLogger().info("Updated mob cap for " + world.getName() +
-                        " from " + currentLimit + " to " + newLimit);
+                        " from " + currentLimit + " to " + mobCapValue);
             }
         }
     }
 
+
+    public void updateMobCap(int mobCapValue) {
+        setMobCap(mobCapValue);
+    }
+
     public void resetMobCap() {
-        updateMobCap(1);
+        if (!isInitialized) return;
+
+        if (!Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTask(plugin, this::resetMobCap);
+            return;
+        }
+
+        for (World world : Bukkit.getWorlds()) {
+            Integer originalLimit = originalLimits.get(world.getName());
+            if (originalLimit != null) {
+                world.setMonsterSpawnLimit(originalLimit);
+                currentLimits.put(world.getName(), originalLimit);
+            }
+        }
+        currentMobCap = 70;
     }
 
     public void handleNewWorld(World world) {
@@ -86,17 +102,16 @@ public class MobCapManager {
         int originalLimit = world.getMonsterSpawnLimit();
         originalLimits.put(world.getName(), originalLimit);
 
-        int newLimit = originalLimit * currentMultiplier;
-        world.setMonsterSpawnLimit(newLimit);
-        currentLimits.put(world.getName(), newLimit);
+        world.setMonsterSpawnLimit(currentMobCap);
+        currentLimits.put(world.getName(), currentMobCap);
     }
 
-    public int getCurrentMultiplier() {
-        return currentMultiplier;
+    public int getCurrentMobCap() {
+        return currentMobCap;
     }
 
     public int getOriginalLimit(String worldName) {
-        return originalLimits.getOrDefault(worldName, 55);
+        return originalLimits.getOrDefault(worldName, 70);
     }
 
     public void shutdown() {

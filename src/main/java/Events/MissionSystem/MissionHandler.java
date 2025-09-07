@@ -74,6 +74,18 @@ public class MissionHandler implements Listener {
         missions.put(12, new Mission12(plugin, this));
     }
 
+    public void registerAllMissionListeners() {
+        // Registrar todas las misiones como listeners
+        for (Mission mission : missions.values()) {
+            if (mission instanceof Listener) {
+                plugin.getServer().getPluginManager().registerEvents((Listener) mission, plugin);
+            }
+        }
+
+        // Registrar también el MissionHandler itself
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+    }
+
     private void ensureFileExists() {
         try {
             if (!missionFile.exists()) {
@@ -219,11 +231,11 @@ public class MissionHandler implements Listener {
 
             // Mensaje de completado
             String jsonMessage = String.format(
-                    "[\"\",{\"text\":\"\\n۞ \",\"bold\":true,\"color\":\"#1986DE\"}," +
-                            "{\"text\":\"%s\",\"bold\":true,\"color\":\"#E43185\"}," +
-                            "{\"text\":\" ha completado la misión \",\"color\":\"#1986DE\"}," +
+                    "[\"\",{\"text\":\"\\n۞ \",\"bold\":true,\"color\":\"#ffaa00\"}," +
+                            "{\"text\":\"%s\",\"bold\":true,\"color\":\"#87ceeb\"}," +
+                            "{\"text\":\" ha completado la misión diaria \",\"color\":\"#7eaee4\"}," +
                             "{\"text\":\"[\",\"color\":\"white\"}," +
-                            "{\"text\":\"%s\",\"bold\":true,\"color\":\"#AA66E7\"," +
+                            "{\"text\":\"%s\",\"bold\":true,\"color\":\"#dda0dd\"," +
                             "\"hoverEvent\":{\"action\":\"show_text\",\"value\":{\"text\":\"\",\"extra\":[{\"text\":\"%s\",\"color\":\"green\"}]}}}," +
                             "{\"text\":\"]\\n\",\"color\":\"white\"}]",
                     player.getName(),
