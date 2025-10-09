@@ -75,6 +75,7 @@ public class CorruptedArmor implements Listener {
         ));
         meta.setCustomModelData(2);
         meta.setRarity(ItemRarity.EPIC);
+        meta.setMaxDamage(814);
         item.setItemMeta(meta);
         return item;
     }
@@ -126,6 +127,7 @@ public class CorruptedArmor implements Listener {
         ));
         meta.setCustomModelData(2);
         meta.setRarity(ItemRarity.EPIC);
+        meta.setMaxDamage(1184);
         item.setItemMeta(meta);
         return item;
     }
@@ -177,6 +179,7 @@ public class CorruptedArmor implements Listener {
         ));
         meta.setCustomModelData(2);
         meta.setRarity(ItemRarity.EPIC);
+        meta.setMaxDamage(1110);
         item.setItemMeta(meta);
         return item;
     }
@@ -228,6 +231,7 @@ public class CorruptedArmor implements Listener {
         ));
         meta.setCustomModelData(2);
         meta.setRarity(ItemRarity.EPIC);
+        meta.setMaxDamage(814);
         item.setItemMeta(meta);
         return item;
     }
