@@ -35,6 +35,8 @@ public class DaySevenChanges implements Listener {
     private final InvertedGhast invertedGhast;
     private final PiglinGlobo piglinGlobo;
     private final DayHandler dayHandler;
+    private final Dificultades.CustomMobs.CorruptedZombies corruptedZombies;
+    private final Dificultades.CustomMobs.CorruptedSpider corruptedSpider;
 
     public DaySevenChanges(JavaPlugin plugin, DayHandler handler) {
         this.plugin = plugin;
@@ -43,6 +45,8 @@ public class DaySevenChanges implements Listener {
         this.invertedGhast = new InvertedGhast(plugin);
         this.piglinGlobo = new PiglinGlobo(plugin);
         this.dayHandler = handler;
+        this.corruptedZombies = new Dificultades.CustomMobs.CorruptedZombies(plugin);
+        this.corruptedSpider = new Dificultades.CustomMobs.CorruptedSpider(plugin);
     }
 
     public void apply() {
@@ -118,7 +122,36 @@ public class DaySevenChanges implements Listener {
 
         handleCorruptedSkeletonConversion(event);
         handleGhastTransformations(event);
+        handleCorruptedZombieConversion(event);
+        handleCorruptedSpiderConversion(event);
+    }
 
+    private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
+        if (event.getEntityType() != EntityType.ZOMBIE) return;
+
+        if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE)) {
+            return;
+        }
+
+        if (random.nextInt(6) != 0) return;
+
+        Zombie zombie = (Zombie) event.getEntity();
+        corruptedZombies.transformToCorruptedZombie(zombie);
+    }
+
+    private void handleCorruptedSpiderConversion(CreatureSpawnEvent event) {
+        if (event.getEntityType() != EntityType.SPIDER) return;
+
+        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) return;
+
+        if (event.getEntity().getPersistentDataContainer().has(corruptedSpider.getCorruptedSpiderKey(), PersistentDataType.BYTE)) {
+            return;
+        }
+
+        if (random.nextInt(6) != 0) return;
+
+        Spider spider = (Spider) event.getEntity();
+        corruptedSpider.transformspawnCorruptedSpider(spider);
     }
 
     private void handleCorruptedSkeletonConversion(CreatureSpawnEvent event) {

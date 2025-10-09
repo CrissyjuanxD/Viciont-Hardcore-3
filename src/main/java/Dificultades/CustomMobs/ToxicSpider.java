@@ -84,6 +84,13 @@ public class ToxicSpider implements Listener {
         applyToxicSpiderAttributes(spider);
     }
 
+    public void transformToToxicSpider(Spider spider) {
+        Location loc = spider.getLocation();
+        CaveSpider caveSpider = (CaveSpider) loc.getWorld().spawnEntity(loc, EntityType.CAVE_SPIDER);
+        applyToxicSpiderAttributes(caveSpider);
+        spider.remove();
+    }
+
     private void applyToxicSpiderAttributes(CaveSpider spider) {
         spider.setCustomName(ChatColor.GREEN + "" + ChatColor.BOLD + "Toxic Spider");
         spider.setCustomNameVisible(false);

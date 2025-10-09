@@ -74,57 +74,36 @@
                 return;
             }
 
-            // Si el mob ya es corrupto, lo ignoramos
-            if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE) ||
-                    event.getEntity().getPersistentDataContainer().has(corruptedSpider.getCorruptedSpiderKey(), PersistentDataType.BYTE)) {
+            handleCorruptedZombieConversion(event);
+            handleCorruptedSpiderConversion(event);
+        }
+
+        private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
+            if (event.getEntityType() != EntityType.ZOMBIE) return;
+
+            if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE)) {
                 return;
             }
 
-            int zombieProbability;
-            int spiderProbability;
+            if (random.nextInt(20) != 0) return;
 
-            switch (currentDay) {
-                case 1:
-                case 2:
-                case 3:
-                    zombieProbability = 20;
-                    spiderProbability = 20;
-                    break;
-                case 4:
-                case 5:
-                case 6:
-                    zombieProbability = 12;
-                    spiderProbability = 12;
-                    break;
-                case 7:
-                case 8:
-                    zombieProbability = 6;
-                    spiderProbability = 6;
-                    break;
-                case 9:
-                    zombieProbability = 4;
-                    spiderProbability = 4;
-                    break;
-                default:
-                    return;
+            Zombie zombie = (Zombie) event.getEntity();
+            corruptedZombies.transformToCorruptedZombie(zombie);
+        }
+
+        private void handleCorruptedSpiderConversion(CreatureSpawnEvent event) {
+            if (event.getEntityType() != EntityType.SPIDER) return;
+
+            if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) return;
+
+            if (event.getEntity().getPersistentDataContainer().has(corruptedSpider.getCorruptedSpiderKey(), PersistentDataType.BYTE)) {
+                return;
             }
 
-            if (event.getEntityType() == EntityType.ZOMBIE) {
-                if (random.nextInt(zombieProbability) == 0) {
-                    Zombie zombie = (Zombie) event.getEntity();
-                    corruptedZombies.spawnCorruptedZombie(zombie.getLocation());
-                    zombie.remove();
-                }
-            }
+            if (random.nextInt(20) != 0) return;
 
-            if (event.getEntityType() == EntityType.SPIDER &&
-                    event.getLocation().getWorld().getEnvironment() == World.Environment.NORMAL) {
-                if (random.nextInt(spiderProbability) == 0) {
-                    Spider spider = (Spider) event.getEntity();
-                    corruptedSpider.spawnCorruptedSpider(spider.getLocation());
-                    spider.remove();
-                }
-            }
+            Spider spider = (Spider) event.getEntity();
+            corruptedSpider.transformspawnCorruptedSpider(spider);
         }
 
         public static ItemStack corruptedSteak() {

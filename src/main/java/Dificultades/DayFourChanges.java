@@ -46,6 +46,8 @@ public class DayFourChanges implements Listener {
     private final CorruptedInfernalSpider corruptedInfernalSpider;
     private final QueenBeeHandler queenBeeHandler;
     private final DayHandler dayHandler;
+    private final Dificultades.CustomMobs.CorruptedZombies corruptedZombies;
+    private final Dificultades.CustomMobs.CorruptedSpider corruptedSpider;
 
     private final NamespacedKey uuidKey;
     private final NamespacedKey upgradeKey;
@@ -57,6 +59,8 @@ public class DayFourChanges implements Listener {
         this.guardianCorruptedSkeleton = new GuardianCorruptedSkeleton(plugin);
         this.corruptedInfernalSpider = new CorruptedInfernalSpider(plugin);
         this.queenBeeHandler = new QueenBeeHandler(plugin);
+        this.corruptedZombies = new Dificultades.CustomMobs.CorruptedZombies(plugin);
+        this.corruptedSpider = new Dificultades.CustomMobs.CorruptedSpider(plugin);
         this.uuidKey = new NamespacedKey(plugin, "creator_uuid");
         this.upgradeKey = new NamespacedKey(plugin, "is_upgrade");
 
@@ -758,6 +762,36 @@ public class DayFourChanges implements Listener {
         }
 
         handlePiglinToSpiderConversion(event);
+        handleCorruptedZombieConversion(event);
+        handleCorruptedSpiderConversion(event);
+    }
+
+    private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
+        if (event.getEntityType() != EntityType.ZOMBIE) return;
+
+        if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE)) {
+            return;
+        }
+
+        if (random.nextInt(12) != 0) return;
+
+        Zombie zombie = (Zombie) event.getEntity();
+        corruptedZombies.transformToCorruptedZombie(zombie);
+    }
+
+    private void handleCorruptedSpiderConversion(CreatureSpawnEvent event) {
+        if (event.getEntityType() != EntityType.SPIDER) return;
+
+        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) return;
+
+        if (event.getEntity().getPersistentDataContainer().has(corruptedSpider.getCorruptedSpiderKey(), PersistentDataType.BYTE)) {
+            return;
+        }
+
+        if (random.nextInt(12) != 0) return;
+
+        Spider spider = (Spider) event.getEntity();
+        corruptedSpider.transformspawnCorruptedSpider(spider);
     }
 
     private void handlePiglinToSpiderConversion(CreatureSpawnEvent event) {

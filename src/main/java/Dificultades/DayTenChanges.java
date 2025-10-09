@@ -127,7 +127,6 @@ public class DayTenChanges implements Listener {
     }
 
     private void handleSpiderConversion(CreatureSpawnEvent event) {
-        // Verificar que sea en el Overworld
         if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) {
             return;
         }
@@ -139,16 +138,13 @@ public class DayTenChanges implements Listener {
             return;
         }
 
-        if (random.nextInt(3) != 0) return;
-
         Spider spider = (Spider) event.getEntity();
-        Location loc = spider.getLocation();
-        if (random.nextBoolean()) {
-            corruptedSpider.spawnCorruptedSpider(loc);
+
+        if (random.nextInt(3) == 0) {
+            toxicSpider.transformToToxicSpider(spider);
         } else {
-            toxicSpider.spawnToxicSpider(loc);
+            corruptedSpider.transformspawnCorruptedSpider(spider);
         }
-        spider.remove();
     }
 
     private void handleInfernalandNormalCreeperConversion(CreatureSpawnEvent event) {
