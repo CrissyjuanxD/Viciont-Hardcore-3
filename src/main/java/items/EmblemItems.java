@@ -65,7 +65,7 @@ public class EmblemItems {
     public static ItemStack createcorruptedNetherStar() {
         ItemStack item = new ItemStack(Material.NETHER_STAR);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.RED + "" + ChatColor.BOLD + "Corrupted Nether Star");
+        meta.setDisplayName(ChatColor.of("#890bae") + "" + ChatColor.BOLD + "Corrupted Nether Star");
         meta.setCustomModelData(5);
 
         List<String> lore = new ArrayList<>();

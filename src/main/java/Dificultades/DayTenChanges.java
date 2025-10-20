@@ -91,23 +91,24 @@ public class DayTenChanges implements Listener {
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (!isApplied) return;
 
-        if (shouldConvertCorruptedZombieSpawn(event)) {
+/*        if (shouldConvertCorruptedZombieSpawn(event)) {
             Zombie zombie = (Zombie) event.getEntity();
             convertToCorruptedZombie(zombie);
             return;
-        }
+        }*/
 
-        if (shouldConvertWhiteEndermanSpawn(event)) {
+/*        if (shouldConvertWhiteEndermanSpawn(event)) {
             Enderman enderman = (Enderman) event.getEntity();
             convertToWhiteEnderman(enderman);
             return;
-        }
+        }*/
 
         handleIceologerConversion(event);
         handleSpiderConversion(event);
+        handleCorruptedZombieConversion(event);
         handleInfernalandNormalCreeperConversion(event);
         handleFastRavagerConversion(event);
-        /*handleZombieConversion(event);*/
+        handleEndermantoCreeperConversion(event);
     }
 
     private void handleIceologerConversion(CreatureSpawnEvent event) {
@@ -127,7 +128,6 @@ public class DayTenChanges implements Listener {
     }
 
     private void handleSpiderConversion(CreatureSpawnEvent event) {
-        // Verificar que sea en el Overworld
         if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) {
             return;
         }
@@ -139,50 +139,82 @@ public class DayTenChanges implements Listener {
             return;
         }
 
-        if (random.nextInt(3) != 0) return;
-
         Spider spider = (Spider) event.getEntity();
-        Location loc = spider.getLocation();
-        if (random.nextBoolean()) {
-            corruptedSpider.spawnCorruptedSpider(loc);
+
+        if (random.nextInt(4) == 0) {
+            spider.remove();
+            CaveSpider toxicSpiderEntity = (CaveSpider) spider.getWorld().spawnEntity(spider.getLocation(), EntityType.CAVE_SPIDER);
+            toxicSpider.transformspawnToxicSpider(toxicSpiderEntity);
         } else {
-            toxicSpider.spawnToxicSpider(loc);
+            corruptedSpider.transformspawnCorruptedSpider(spider);
         }
-        spider.remove();
     }
 
-    private void handleInfernalandNormalCreeperConversion(CreatureSpawnEvent event) {
-        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NETHER) {
+    private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
+        if (event.getEntityType() != EntityType.ZOMBIE) return;
+
+        if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE)) {
+            return;
+        }
+
+        Zombie zombie = (Zombie) event.getEntity();
+        corruptedZombies.transformToCorruptedZombie(zombie);
+    }
+
+    private void handleEndermantoCreeperConversion(CreatureSpawnEvent event) {
+        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL &&
+                event.getLocation().getWorld().getEnvironment() != World.Environment.NETHER) {
             return;
         }
 
         if (event.getEntityType() != EntityType.ENDERMAN) return;
 
-        // Verificar que no sea ya una araña corrupta
-        if (event.getEntity().getPersistentDataContainer()
-                .has(infernalCreeper.getInfernalCreeperKey(), PersistentDataType.BYTE)) {
+        // Si ya es un White Enderman, no hacer nada
+        if (event.getEntity().getPersistentDataContainer().has(whiteEnderman.getWhiteEndermanKey(), PersistentDataType.BYTE)) {
             return;
         }
 
         Enderman enderman = (Enderman) event.getEntity();
-        Location loc = enderman.getLocation();
+        World world = event.getLocation().getWorld();
 
-        double randomValue = random.nextDouble();
 
-        boolean isinfernalCreeper = random.nextInt(6) == 0;
-        boolean isNormalCreeper = random.nextInt(3) == 0;
-
-        if (isinfernalCreeper) {
-            infernalCreeper.spawnInfernalCreeper(loc);
-        } else if (isNormalCreeper) {
-            enderman.getWorld().spawn(loc, Creeper.class);
-        } else {
-            return;
+        if (world.getEnvironment() == World.Environment.NETHER) {
+            if (random.nextInt(3) == 0) {
+                event.setCancelled(true);
+                world.spawnEntity(event.getLocation(), EntityType.CREEPER);
+            } else {
+                whiteEnderman.transformToWhiteEnderman(enderman);
+            }
         }
-        enderman.remove();
+        else if (world.getEnvironment() == World.Environment.NORMAL) {
+            whiteEnderman.transformToWhiteEnderman(enderman);
+        }
     }
 
-    private boolean shouldConvertWhiteEndermanSpawn(CreatureSpawnEvent event) {
+    private void handleInfernalandNormalCreeperConversion(CreatureSpawnEvent event) {
+        if (event.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL) {
+            return;
+        }
+
+        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NETHER) {
+            return;
+        }
+
+        if (!(event.getEntity() instanceof Monster)) {
+            return;
+        }
+
+        // 4. Aplicar tu lógica de probabilidad
+        boolean isinfernalCreeper = random.nextInt(14) == 0;
+
+        if (isinfernalCreeper) {
+            event.setCancelled(true);
+            infernalCreeper.spawnInfernalCreeper(event.getLocation());
+        }
+    }
+
+
+/*    private boolean shouldConvertWhiteEndermanSpawn(CreatureSpawnEvent event) {
         return isApplied &&
                 event.getEntityType() == EntityType.ENDERMAN &&
                 !event.getEntity().getPersistentDataContainer()
@@ -197,41 +229,27 @@ public class DayTenChanges implements Listener {
 
         Location loc = enderman.getLocation();
         whiteEnderman.transformToWhiteEnderman(enderman);
-    }
-
-    private boolean shouldConvertCorruptedZombieSpawn(CreatureSpawnEvent event) {
-        return isApplied &&
-                event.getEntityType() == EntityType.ZOMBIE &&
-                !event.getEntity().getPersistentDataContainer()
-                        .has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE);
-    }
-
-    private void convertToCorruptedZombie(Zombie zombie) {
-        Location loc = zombie.getLocation();
-        corruptedZombies.transformToCorruptedZombie(zombie);
-    }
+    }*/
 
     private void handleFastRavagerConversion(CreatureSpawnEvent event) {
+        if (event.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL) {
+            return;
+        }
+
         if (event.getLocation().getWorld().getEnvironment() != World.Environment.NETHER) {
             return;
         }
 
-        if (event.getEntityType() != EntityType.ZOMBIFIED_PIGLIN) return;
-
-        // Verificar que no sea ya una araña corrupta
-        if (event.getEntity().getPersistentDataContainer()
-                .has(fastRavager.getFastRavagerKey(), PersistentDataType.BYTE)) {
+        if (!(event.getEntity() instanceof Monster)) {
             return;
         }
 
-        if (random.nextInt(15) != 0) return;
+        boolean FastRavager = random.nextInt(20) == 0;
 
-        // Convertir Piglin a Spider
-        PigZombie pigZombie = (PigZombie) event.getEntity();
-        Location loc = pigZombie.getLocation();
-
-        fastRavager.spawnFastRavager(loc);
-        pigZombie.remove();
+        if (FastRavager) {
+            event.setCancelled(true);
+            fastRavager.spawnFastRavager(event.getLocation());
+        }
     }
 
     //LOGROS (SE MANEJA EN OTRA CLASE) ACHIEVEMENTPARTYHANDLER

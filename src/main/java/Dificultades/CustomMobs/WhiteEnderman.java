@@ -139,7 +139,7 @@ public class WhiteEnderman implements Listener {
             Location loc = enderman.getLocation();
             enderman.setAI(false);
 
-            double baseDropChance = 0.50;
+            double baseDropChance = 0.40;
             double lootingBonus = 0;
             double doubleDropChance = 0;
 

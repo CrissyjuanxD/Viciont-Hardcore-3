@@ -108,10 +108,28 @@ public class CorruptedSkeleton implements Listener {
         return skeleton;
     }
 
+    public void transformToCorruptedSkeleton(Skeleton skeleton,String variantName) {
+        Variant variant = null;
+        if (variantName != null) {
+            try {
+                variant = Variant.valueOf(variantName.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                Bukkit.getLogger().warning("Variante no válida: " + variantName);
+            }
+        }
+
+        if (variant == null) {
+            variant = getRandomVariant();
+        }
+
+        applyCorruptedSkeletonAttributes(skeleton, variant);
+        equipSkeleton(skeleton, variant);
+    }
+
     private void applyCorruptedSkeletonAttributes(Skeleton skeleton, Variant variant) {
         ChatColor color = ChatColor.of(variant.getHexColor());
         skeleton.setCustomName(color + variant.getDisplayName() + " " + ChatColor.BOLD + "Corrupted Skeleton");
-        skeleton.setCustomNameVisible(true);
+        skeleton.setCustomNameVisible(false);
 
         double maxHealth = (variant == Variant.ORANGE || variant == Variant.RED) ? 40.0 : 20.0;
         Objects.requireNonNull(skeleton.getAttribute(Attribute.GENERIC_MAX_HEALTH)).setBaseValue(maxHealth);

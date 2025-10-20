@@ -16,6 +16,7 @@ import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.Sound;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -129,16 +130,14 @@ public class SlotMachineManager {
 
         // Crear entidad ArmorStand
         ArmorStand entity = (ArmorStand) location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
-        entity.setVisible(false);
-        entity.setGravity(false);
         entity.setInvulnerable(true);
-        entity.setCanPickupItems(false);
+        entity.setInvisible(true);
+        entity.setGravity(false);
+        entity.setAI(false);
+        entity.setCollidable(true);
+        entity.setSilent(true);
         entity.setCustomName("SlotMachine");
         entity.setCustomNameVisible(false);
-        entity.setSmall(false);
-        entity.setArms(false);
-        entity.setBasePlate(false);
-        entity.setMarker(true);
 
         // Metadata para identificar como slot machine
         entity.setMetadata("slot_machine", new FixedMetadataValue(plugin, slotMachine.getModelId()));
@@ -166,14 +165,32 @@ public class SlotMachineManager {
         activeMachines.put(location, model);
 
         creator.sendMessage(ChatColor.of("#B5EAD7") + "۞ Slot Machine creada exitosamente!");
+
+        // Guardar en archivo para persistencia
+        saveSlotMachineToFile(model);
         return true;
     }
 
     public boolean removeSlotMachine(Location location) {
-        SlotMachineModel model = activeMachines.remove(location);
+        // Buscar la máquina más cercana en un radio de 2 bloques
+        SlotMachineModel model = null;
+        Location foundLocation = null;
+
+        for (Map.Entry<Location, SlotMachineModel> entry : activeMachines.entrySet()) {
+            if (entry.getKey().getWorld().equals(location.getWorld()) &&
+                    entry.getKey().distance(location) <= 2.0) {
+                model = entry.getValue();
+                foundLocation = entry.getKey();
+                break;
+            }
+        }
+
         if (model == null) {
             return false;
         }
+
+        // Remover del mapa
+        activeMachines.remove(foundLocation);
 
         if (model.getEntity() != null) {
             if (useModelEngine4 && modelEngine4 != null) {
@@ -184,11 +201,138 @@ public class SlotMachineManager {
             model.getEntity().remove();
         }
 
+        removeSlotMachineFromFile(foundLocation);
         return true;
     }
 
+    private void saveSlotMachineToFile(SlotMachineModel model) {
+        try {
+            File dataFile = new File(plugin.getDataFolder(), "slotmachines.yml");
+            FileConfiguration config = YamlConfiguration.loadConfiguration(dataFile);
+
+            String key = locationToString(model.getLocation());
+            config.set("machines." + key + ".id", model.getId());
+            config.set("machines." + key + ".location.world", model.getLocation().getWorld().getName());
+            config.set("machines." + key + ".location.x", model.getLocation().getX());
+            config.set("machines." + key + ".location.y", model.getLocation().getY());
+            config.set("machines." + key + ".location.z", model.getLocation().getZ());
+            config.set("machines." + key + ".location.yaw", model.getLocation().getYaw());
+            config.set("machines." + key + ".location.pitch", model.getLocation().getPitch());
+
+            config.save(dataFile);
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error saving slot machine: " + e.getMessage());
+        }
+    }
+
+    private void removeSlotMachineFromFile(Location location) {
+        try {
+            File dataFile = new File(plugin.getDataFolder(), "slotmachines.yml");
+            if (!dataFile.exists()) return;
+
+            FileConfiguration config = YamlConfiguration.loadConfiguration(dataFile);
+            String key = locationToString(location);
+            config.set("machines." + key, null);
+            config.save(dataFile);
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error removing slot machine from file: " + e.getMessage());
+        }
+    }
+
+    private String locationToString(Location loc) {
+        return loc.getWorld().getName() + "_" +
+                (int)loc.getX() + "_" +
+                (int)loc.getY() + "_" +
+                (int)loc.getZ();
+    }
+
+    public void loadSlotMachinesFromFile() {
+        try {
+            File dataFile = new File(plugin.getDataFolder(), "slotmachines.yml");
+            if (!dataFile.exists()) return;
+
+            FileConfiguration config = YamlConfiguration.loadConfiguration(dataFile);
+            if (!config.contains("machines")) return;
+
+            for (String key : config.getConfigurationSection("machines").getKeys(false)) {
+                String worldName = config.getString("machines." + key + ".location.world");
+                double x = config.getDouble("machines." + key + ".location.x");
+                double y = config.getDouble("machines." + key + ".location.y");
+                double z = config.getDouble("machines." + key + ".location.z");
+                float yaw = (float) config.getDouble("machines." + key + ".location.yaw");
+                float pitch = (float) config.getDouble("machines." + key + ".location.pitch");
+                String machineId = config.getString("machines." + key + ".id", "default");
+
+                org.bukkit.World world = plugin.getServer().getWorld(worldName);
+                if (world == null) continue;
+
+                Location location = new Location(world, x, y, z, yaw, pitch);
+
+                // Recrear la máquina
+                recreateSlotMachine(location, machineId);
+            }
+
+            plugin.getLogger().info("Loaded " + activeMachines.size() + " slot machines from file");
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error loading slot machines: " + e.getMessage());
+        }
+    }
+
+    private void recreateSlotMachine(Location location, String machineId) {
+        SlotMachine slotMachine = slotMachineTool.getSlotMachine(machineId);
+        if (slotMachine == null) {
+            slotMachine = slotMachineTool.getDefaultSlotMachine();
+        }
+
+        // Crear entidad ArmorStand
+        ArmorStand entity = (ArmorStand) location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
+        entity.setInvulnerable(true);
+        entity.setInvisible(true);
+        entity.setGravity(false);
+        entity.setAI(false);
+        entity.setCollidable(true);
+        entity.setSilent(true);
+        entity.setCustomName("SlotMachine");
+        entity.setCustomNameVisible(false);
+
+        // Metadata
+        entity.setMetadata("slot_machine", new FixedMetadataValue(plugin, slotMachine.getModelId()));
+
+        // Crear modelo 3D
+        UUID modelUUID = null;
+        if (useModelEngine4 && modelEngine4 != null) {
+            modelUUID = modelEngine4.spawnModel(entity, slotMachine.getModelId());
+        } else if (modelEngine3 != null) {
+            boolean created = modelEngine3.createModel(entity, slotMachine.getModelId());
+            if (created) {
+                modelUUID = entity.getUniqueId();
+            }
+        }
+
+        // Crear modelo de datos
+        SlotMachineModel model = new SlotMachineModel(slotMachine.getId(), location);
+        model.setEntity(entity);
+        model.setModelUUID(modelUUID);
+        activeMachines.put(location, model);
+    }
+
     public void reloadConfiguration() {
+        // Limpiar máquinas existentes antes de recargar
+        for (SlotMachineModel model : activeMachines.values()) {
+            if (model.getEntity() != null) {
+                if (useModelEngine4 && modelEngine4 != null) {
+                    modelEngine4.removeModel(model.getEntity());
+                } else if (modelEngine3 != null) {
+                    modelEngine3.removeModel(model.getEntity());
+                }
+                model.getEntity().remove();
+            }
+        }
+        activeMachines.clear();
+
         loadConfiguration();
+        // Recargar máquinas desde archivo
+        loadSlotMachinesFromFile();
     }
 
     public int getActiveMachinesCount() {
@@ -243,6 +387,9 @@ public class SlotMachineManager {
         // Ejecutar resultado después del tiempo de espera
         long waitTicks = (long) (selectedSlot.getWaitTime() * 20); // Convertir segundos a ticks
 
+        // Reproducir sonido de apuesta
+        playBetSound(player.getLocation());
+
         // Reproducir animación si está disponible
         if (model.getModelUUID() != null && useModelEngine4 && modelEngine4 != null) {
             modelEngine4.playAnimation(model.getModelUUID(), slotMachine.getModelId(), selectedSlot.getAnimation());
@@ -254,6 +401,24 @@ public class SlotMachineManager {
         }, waitTicks);
     }
 
+    private void playBetSound(Location location) {
+        // Reproducir sonido a todos los jugadores cercanos (30 bloques)
+        for (Player nearbyPlayer : location.getWorld().getPlayers()) {
+            if (nearbyPlayer.getLocation().distance(location) <= 30) {
+                try {
+                    // Intentar reproducir el sonido personalizado
+                    nearbyPlayer.playSound(location, "dtools3:tools.casino.bet", 1.0f, 0.8f);
+                } catch (Exception e) {
+                    // Si falla, intentar con formato alternativo
+                    try {
+                        nearbyPlayer.playSound(location, Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.0f);
+                    } catch (Exception ex) {
+                        plugin.getLogger().warning("No se pudo reproducir sonido de apuesta");
+                    }
+                }
+            }
+        }
+    }
     private SlotM calculateSlotResult(Map<String, SlotM> slots) {
         // Calcular probabilidades acumulativas
         double totalProbability = 0.0;
@@ -284,7 +449,7 @@ public class SlotMachineManager {
             if (reward != null) {
                 player.getInventory().addItem(reward);
 
-                String message = ChatColor.of("#B5EAD7") + "۞ ¡Ganaste " + slot.getItemRewardAmount() + "x " + slot.getName() + "!";
+                String message = ChatColor.of("#B5EAD7") + "۞ ¡Ganaste " + slot.getItemRewardAmount() + "x " + ChatColor.BOLD + slot.getName() + "!";
 
                 if (slotMachine.isMessageBroadcast()) {
                     // Broadcast a todos los jugadores
@@ -297,14 +462,41 @@ public class SlotMachineManager {
                 }
 
                 // Reproducir sonido de victoria
-                player.playSound(player.getLocation(), slot.getSound(), 1.0f, 1.0f);
+                if (slot.getSound() != null && !slot.getSound().isEmpty()) {
+                    playSlotMachineSound(player, slot.getSound());
+                }
             } else {
                 player.sendMessage(ChatColor.of("#FF6B6B") + "۞ Error al crear la recompensa.");
             }
         } else {
             // Sin recompensa
             player.sendMessage(ChatColor.of("#FF6B6B") + "۞ ¡No hay suerte esta vez!");
-            player.playSound(player.getLocation(), "dtools3:tools.casino.lose", 1.0f, 1.0f);
+        }
+    }
+
+    private void playSlotMachineSound(Player player, String soundName) {
+        try {
+            if (soundName.startsWith("dtools3:")) {
+                // Sonido personalizado - convertir a formato Bukkit
+                String bukkitSound = soundName.replace("dtools3:", "").replace(".", "_").toUpperCase();
+                try {
+                    Sound sound = Sound.valueOf(bukkitSound);
+                    player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
+                } catch (IllegalArgumentException e) {
+                    // Si no existe el sonido, no reproducir nada
+                    plugin.getLogger().warning("Sonido no encontrado: " + soundName);
+                }
+            } else {
+                // Sonido vanilla
+                try {
+                    Sound sound = Sound.valueOf(soundName.toUpperCase());
+                    player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
+                } catch (IllegalArgumentException e) {
+                    plugin.getLogger().warning("Sonido vanilla no encontrado: " + soundName);
+                }
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Error reproduciendo sonido: " + e.getMessage());
         }
     }
 
@@ -330,6 +522,18 @@ public class SlotMachineManager {
             }
         }
         activeMachines.clear();
+
+        // Guardar estado actual
+        try {
+            File dataFile = new File(plugin.getDataFolder(), "slotmachines.yml");
+            if (dataFile.exists()) {
+                FileConfiguration config = YamlConfiguration.loadConfiguration(dataFile);
+                config.set("machines", null);
+                config.save(dataFile);
+            }
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error saving slot machines on shutdown: " + e.getMessage());
+        }
 
         plugin.getLogger().info("SlotMachine system shutdown completed.");
     }

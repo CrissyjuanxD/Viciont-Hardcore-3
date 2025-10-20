@@ -251,9 +251,51 @@ public class EconomyItemsFunctions implements Listener {
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
         }
 
+        Location playerLocation = player.getLocation();
+
+        crearEsferaParticulas(playerLocation.clone().add(0, 1, 0), 1.0, 30, Particle.CLOUD);
+
+        crearTrailPies(player, 20);
+
         Vector direction = player.getLocation().getDirection().normalize().multiply(1.6);
         player.setVelocity(direction);
         player.playSound(player.getLocation(), Sound.ENTITY_FISHING_BOBBER_RETRIEVE, 1.0f, 1.5f);
+        player.playSound(player.getLocation(), Sound.BLOCK_TRIAL_SPAWNER_SPAWN_MOB, 1.0f, 2.0f);
+    }
+
+    // Método para crear esfera de partículas
+    private void crearEsferaParticulas(Location center, double radius, int particles, Particle tipoParticula) {
+        for (int i = 0; i < particles; i++) {
+            double phi = Math.acos(-1.0 + (2.0 * i) / particles);
+            double theta = Math.sqrt(particles * Math.PI) * phi;
+
+            double x = radius * Math.cos(theta) * Math.sin(phi);
+            double y = radius * Math.sin(theta) * Math.sin(phi);
+            double z = radius * Math.cos(phi);
+
+            Location particleLoc = center.clone().add(x, y, z);
+            center.getWorld().spawnParticle(tipoParticula, particleLoc, 1, 0, 0, 0, 0.05);
+        }
+    }
+
+    // Método para crear trail en los pies del jugador
+    private void crearTrailPies(Player player, int duracionTicks) {
+        new BukkitRunnable() {
+            int tiempo = 0;
+
+            @Override
+            public void run() {
+                if (tiempo >= duracionTicks || !player.isOnline()) {
+                    this.cancel();
+                    return;
+                }
+
+                Location footLocation = player.getLocation().clone().add(0, 0.1, 0);
+                player.getWorld().spawnParticle(Particle.CLOUD, footLocation, 5, 0.2, 0.1, 0.2, 0.02);
+
+                tiempo++;
+            }
+        }.runTaskTimer(plugin, 0, 1);
     }
 
     private void usarYunque(Player player, ItemStack yunque, double porcentaje) {

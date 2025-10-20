@@ -66,6 +66,10 @@ public class CorruptedCreeper implements Listener {
         return creeper;
     }
 
+    public void transformToCorruptedCreeper(Creeper creeper) {
+        applyCorruptedAttributes(creeper);
+    }
+
     private void applyCorruptedAttributes(Creeper creeper) {
         creeper.setCustomName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Creeper");
         creeper.setCustomNameVisible(false);

@@ -9,6 +9,25 @@
         <language minSize="327" name="Java" />
       </Languages>
     </inspection_tool>
+    <inspection_tool class="MarkedForRemoval" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="RawUseOfParameterizedType" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="VulnerableLibrariesLocal" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="isIgnoringEnabled" value="true" />
+      <option name="ignoredModules">
+        <list>
+          <option value="VCTHardcore3" />
+        </list>
+      </option>
+      <option name="ignoredPackages">
+        <list>
+          <option value="org.apache.commons:commons-lang3:3.12.0" />
+        </list>
+      </option>
+      <option name="ignoredReasons">
+        <list>
+          <option value="Not exploitable" />
+        </list>
+      </option>
+    </inspection_tool>
   </profile>
 </component>

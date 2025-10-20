@@ -25,12 +25,19 @@ import items.*;
 import Armors.NightVisionHelmet;
 import Armors.CorruptedArmor;
 import CorruptedEnd.CorruptedEnd;
+import items.Flashlight.FlashlightManager;
 import list.VHList;
+import mobcap.MobCapManager;
+import mobcap.commands.MobCapCommand;
+import mobcap.commands.MobCapTabCompleter;
+import mobcap.config.MobCapConfig;
+import mobcap.spawn.CustomSpawnManager;
 import org.bukkit.*;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -62,6 +69,9 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     // Sistema de Tiendas
     private ShopHandler shopHandler;
     private ShopCommand shopCommand;
+
+    // Sistema de Linterna
+    private FlashlightManager flashlightManager;
 
     // Cambios de días
 
@@ -99,6 +109,11 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private MobSoundManager mobSoundManager;
     private GameModeTeamHandler gameModeTeamHandler;
     private CustomSpawnerHandler customSpawnerHandler;
+
+    //Mobcap
+    private MobCapManager mobCapManager;
+    private MobCapConfig config;
+    private CustomSpawnManager spawnManager;
 
     // Manejadores de Estructuras
 
@@ -357,6 +372,16 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         casinoManager = new CasinoManager(this);
         slotMachineManager = new SlotMachineManager(this);
 
+        getServer().getScheduler().runTaskLater(this, () -> {
+            if (slotMachineManager != null) {
+                slotMachineManager.loadSlotMachinesFromFile();
+            }
+        }, 20L);
+
+        // Sistema de Linterna
+        flashlightManager = new FlashlightManager(this);
+        this.getCommand("flashlight").setExecutor(new Commands.FlashlightCommand(this, flashlightManager));
+
         this.getCommand("start").setExecutor((sender, command, label, args) -> {
             if (args.length == 1) {
                 switch (args[0].toLowerCase()) {
@@ -463,6 +488,22 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(enderiteSwordListener, this);
         getServer().getPluginManager().registerEvents(tridenteEspectral, this);
 
+        //MOBCAP
+        config = new MobCapConfig(this);
+        mobCapManager = MobCapManager.getInstance(this, config);
+        spawnManager = new CustomSpawnManager(this, config);
+
+        MobCapCommand commandExecutor = new MobCapCommand(mobCapManager, config);
+        MobCapTabCompleter tabCompleter = new MobCapTabCompleter();
+
+        Objects.requireNonNull(getCommand("mobcap")).setExecutor(commandExecutor);
+        Objects.requireNonNull(getCommand("mobcap")).setTabCompleter(tabCompleter);
+        Objects.requireNonNull(getCommand("mobcapinfo")).setExecutor(commandExecutor);
+
+        Bukkit.getPluginManager().registerEvents(spawnManager, this);
+
+        getLogger().info("Logica de MobCap habilitada correctamente!");
+
         //Dimensiones Corrupted End
 
         this.corruptedEnd = new CorruptedEnd(this);
@@ -523,7 +564,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         }
 
 
-        MobCapManager.getInstance(this).shutdown();
+        MobCapManager.getInstance(this, config).shutdown();
         economyItemsFunctions.onDisable();
 
         // Limpiar SlotMachineManager
@@ -535,6 +576,15 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         if (mobSoundManager != null) {
             mobSoundManager.shutdown();
         }
+
+        // Limpiar sistema de linterna
+        if (flashlightManager != null) {
+            flashlightManager.shutdown();
+        }
+
+/*        if (mobCapManager != null) {
+            mobCapManager.shutdown();
+        }*/
 
         // Guardar el estado de los Infested bee
         cleanup();
@@ -596,13 +646,13 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        String message = ChatColor.of("#FF009F") + "۞ " + ChatColor.RESET + ChatColor.of("#B83EFF") + ChatColor.BOLD + event.getPlayer().getName() + ChatColor.RESET + ChatColor.of("#FF009F") + " se ha conectado.";
+        String message = ChatColor.WHITE + "\uDB80\uDC65 " + ChatColor.RESET + ChatColor.of("#B83EFF") + ChatColor.BOLD + event.getPlayer().getName() + ChatColor.RESET + ChatColor.of("#FF009F") + " se ha conectado.";
         event.setJoinMessage(message);
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        String message = ChatColor.of("#7C7981") + "۞ " + ChatColor.RESET + ChatColor.of("#B8B8B8") + ChatColor.BOLD + event.getPlayer().getName() + ChatColor.RESET + ChatColor.of("#7C7981") + " se ha desconectado.";
+        String message = ChatColor.WHITE + "\uDB80\uDC63 " + ChatColor.RESET + ChatColor.of("#B8B8B8") + ChatColor.BOLD + event.getPlayer().getName() + ChatColor.RESET + ChatColor.of("#7C7981") + " se ha desconectado.";
         event.setQuitMessage(message);
     }
 
@@ -620,6 +670,27 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
     public SlotMachineManager getSlotMachineManager() {
         return slotMachineManager;
+    }
+
+    @EventHandler
+    public void onWorldLoad(WorldLoadEvent event) {
+        if (mobCapManager != null && mobCapManager.isInitialized()) {
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                mobCapManager.handleNewWorld(event.getWorld());
+            }, 20L);
+        }
+    }
+
+    public MobCapManager getMobCapManager() {
+        return mobCapManager;
+    }
+
+    public MobCapConfig getMobCapConfig() {
+        return config;
+    }
+
+    public CustomSpawnManager getSpawnManager() {
+        return spawnManager;
     }
 
 }

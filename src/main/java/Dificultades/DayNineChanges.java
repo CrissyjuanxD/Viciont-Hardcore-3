@@ -1,5 +1,6 @@
 package Dificultades;
 
+import Dificultades.CustomMobs.*;
 import Handlers.DayHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -28,6 +29,8 @@ public class DayNineChanges implements Listener {
     private final JavaPlugin plugin;
     private boolean isApplied = false;
     private final Random random = new Random();
+    private final CorruptedZombies corruptedZombies;
+    private final CorruptedSpider corruptedSpider;
 
     // Lista de mobs considerados "Raiders"
     private static final List<EntityType> RAIDERS = Arrays.asList(
@@ -42,6 +45,8 @@ public class DayNineChanges implements Listener {
     public DayNineChanges(JavaPlugin plugin, DayHandler handler) {
         this.plugin = plugin;
         this.dayHandler = handler;
+        this.corruptedZombies = new CorruptedZombies(plugin);
+        this.corruptedSpider = new CorruptedSpider(plugin);
     }
 
     public void apply() {
@@ -83,6 +88,9 @@ public class DayNineChanges implements Listener {
         if (!isApplied) return;
 
         Entity entity = event.getEntity();
+
+        handleCorruptedZombieConversion(event);
+        handleCorruptedSpiderConversion(event);
 
 
         // 2. Modificaciones para Raiders
@@ -159,5 +167,33 @@ public class DayNineChanges implements Listener {
                 event.setCancelled(true);
             }
         }
+    }
+
+    private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
+        if (event.getEntityType() != EntityType.ZOMBIE) return;
+
+        if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE)) {
+            return;
+        }
+
+        if (random.nextInt(4) != 0) return;
+
+        Zombie zombie = (Zombie) event.getEntity();
+        corruptedZombies.transformToCorruptedZombie(zombie);
+    }
+
+    private void handleCorruptedSpiderConversion(CreatureSpawnEvent event) {
+        if (event.getEntityType() != EntityType.SPIDER) return;
+
+        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) return;
+
+        if (event.getEntity().getPersistentDataContainer().has(corruptedSpider.getCorruptedSpiderKey(), PersistentDataType.BYTE)) {
+            return;
+        }
+
+        if (random.nextInt(4) != 0) return;
+
+        Spider spider = (Spider) event.getEntity();
+        corruptedSpider.transformspawnCorruptedSpider(spider);
     }
 }

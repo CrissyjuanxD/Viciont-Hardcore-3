@@ -3,7 +3,6 @@ package Dificultades;
 import Armors.CorruptedArmor;
 import Blocks.CorruptedAncientDebris;
 import Dificultades.CustomMobs.*;
-import Dificultades.Features.MobCapManager;
 import Enchants.EssenceFactory;
 import Handlers.DayHandler;
 import items.*;
@@ -39,7 +38,7 @@ import java.util.Set;
 public class DayEightChanges implements Listener {
     private final DayHandler dayHandler;
     private final JavaPlugin plugin;
-    private final MobCapManager mobCapManager;
+    /*private final MobCapManager mobCapManager;*/
     private final Random random = new Random();
     private boolean isApplied = false;
 
@@ -84,7 +83,7 @@ public class DayEightChanges implements Listener {
         this.corruptedUpgrades = new CorruptedUpgrades(plugin);
         this.corruptedArmor = new CorruptedArmor(plugin);
 
-        this.mobCapManager = MobCapManager.getInstance(plugin);
+        /*this.mobCapManager = MobCapManager.getInstance(plugin);*/
     }
 
     public void apply() {
@@ -98,7 +97,7 @@ public class DayEightChanges implements Listener {
             infernalBeast.apply();
             CustomCorruptedNetheriteCraft();
             registerCorruptedArmorUpgrades();
-            mobCapManager.setMobCap(100);
+           /* mobCapManager.setMobCap(110);*/
         }
     }
 
@@ -110,6 +109,7 @@ public class DayEightChanges implements Listener {
             netheriteVexGuardian.revert();
             bruteImperial.revert();
             infernalBeast.revert();
+            /*mobCapManager.setMobCap(90);*/
 
             Bukkit.removeRecipe(new NamespacedKey(plugin, "corrupted_netherite_ingot"));
             Bukkit.removeRecipe(new NamespacedKey(plugin, "helmet_netherite_upgrade"));

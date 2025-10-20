@@ -1,10 +1,6 @@
 package Dificultades;
 
-import Dificultades.CustomMobs.CorruptedInfernalSpider;
-import Dificultades.CustomMobs.GuardianBlaze;
-import Dificultades.CustomMobs.GuardianCorruptedSkeleton;
-import Dificultades.CustomMobs.QueenBeeHandler;
-import Dificultades.Features.MobCapManager;
+import Dificultades.CustomMobs.*;
 import Enchants.EssenceFactory;
 import items.EmblemItems;
 import items.UpgradeNTItems;
@@ -38,12 +34,14 @@ import java.util.*;
 public class DayFourChanges implements Listener {
     private final JavaPlugin plugin;
     private boolean isApplied = false;
-    private final MobCapManager mobCapManager;
+    /*private final MobCapManager mobCapManager;*/
     private final Map<Location, Long> altarCooldowns = new HashMap<>();
     private final Random random = new Random();
     private final GuardianBlaze blazespawmer;
     private final GuardianCorruptedSkeleton guardianCorruptedSkeleton;
     private final CorruptedInfernalSpider corruptedInfernalSpider;
+    private final CorruptedZombies corruptedZombies;
+    private final CorruptedSpider corruptedSpider;
     private final QueenBeeHandler queenBeeHandler;
     private final DayHandler dayHandler;
 
@@ -57,10 +55,12 @@ public class DayFourChanges implements Listener {
         this.guardianCorruptedSkeleton = new GuardianCorruptedSkeleton(plugin);
         this.corruptedInfernalSpider = new CorruptedInfernalSpider(plugin);
         this.queenBeeHandler = new QueenBeeHandler(plugin);
+        this.corruptedZombies = new CorruptedZombies(plugin);
+        this.corruptedSpider = new CorruptedSpider(plugin);
         this.uuidKey = new NamespacedKey(plugin, "creator_uuid");
         this.upgradeKey = new NamespacedKey(plugin, "is_upgrade");
 
-        this.mobCapManager = MobCapManager.getInstance(plugin);
+        /*this.mobCapManager = MobCapManager.getInstance(plugin);*/
     }
 
     public void apply() {
@@ -72,7 +72,7 @@ public class DayFourChanges implements Listener {
             blazespawmer.apply();
             guardianCorruptedSkeleton.apply();
             corruptedInfernalSpider.apply();
-            mobCapManager.setMobCap(85);
+            /*mobCapManager.setMobCap(90);*/
         }
     }
 
@@ -82,7 +82,7 @@ public class DayFourChanges implements Listener {
             blazespawmer.revert();
             guardianCorruptedSkeleton.revert();
             corruptedInfernalSpider.revert();
-            mobCapManager.resetMobCap();
+            /*mobCapManager.resetMobCap();*/
 
             Bukkit.removeRecipe(new NamespacedKey(plugin, "fragment_upgrade"));
             Bukkit.removeRecipe(new NamespacedKey(plugin, "duplicador"));
@@ -739,17 +739,6 @@ public class DayFourChanges implements Listener {
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (!isApplied) return;
 
-        // Permitir que los creepers spawneen durante el día
-        if (event.getEntityType() == EntityType.CREEPER) {
-            World world = event.getEntity().getWorld();
-            long time = world.getTime();
-
-            if (time >= 0 && time < 12300) {
-                event.setCancelled(false);
-                return;
-            }
-        }
-
         // Primero manejar la lógica de Wither Skeletons (existente)
         if (shouldConvertWitherSpawn(event)) {
             WitherSkeleton skeleton = (WitherSkeleton) event.getEntity();
@@ -758,6 +747,36 @@ public class DayFourChanges implements Listener {
         }
 
         handlePiglinToSpiderConversion(event);
+        handleCorruptedZombieConversion(event);
+        handleCorruptedSpiderConversion(event);
+    }
+
+    private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
+        if (event.getEntityType() != EntityType.ZOMBIE) return;
+
+        if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE)) {
+            return;
+        }
+
+        if (random.nextInt(12) != 0) return;
+
+        Zombie zombie = (Zombie) event.getEntity();
+        corruptedZombies.transformToCorruptedZombie(zombie);
+    }
+
+    private void handleCorruptedSpiderConversion(CreatureSpawnEvent event) {
+        if (event.getEntityType() != EntityType.SPIDER) return;
+
+        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) return;
+
+        if (event.getEntity().getPersistentDataContainer().has(corruptedSpider.getCorruptedSpiderKey(), PersistentDataType.BYTE)) {
+            return;
+        }
+
+        if (random.nextInt(12) != 0) return;
+
+        Spider spider = (Spider) event.getEntity();
+        corruptedSpider.transformspawnCorruptedSpider(spider);
     }
 
     private void handlePiglinToSpiderConversion(CreatureSpawnEvent event) {
@@ -808,4 +827,6 @@ public class DayFourChanges implements Listener {
             }
         }
     }
+
+    //Permitir que los creepers puedan spawnear de dia
 }

@@ -17,7 +17,7 @@ public class CorruptedGoldenApple {
 
 
     public static ItemStack createCorruptedGoldenApple() {
-        ItemStack item = new ItemStack(Material.ENCHANTED_GOLDEN_APPLE);
+        ItemStack item = new ItemStack(Material.GOLDEN_APPLE);
         ItemMeta meta = item.getItemMeta();
 
         meta.setDisplayName(ChatColor.of("#ccccff") + "" + ChatColor.BOLD + "Corrupted Golden Apple");
@@ -33,7 +33,9 @@ public class CorruptedGoldenApple {
         lore.add("");
 
         meta.setLore(lore);
-        meta.setCustomModelData(10);
+        meta.setCustomModelData(15);
+        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         item.setItemMeta(meta);
 
         return item;

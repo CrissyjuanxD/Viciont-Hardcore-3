@@ -167,20 +167,37 @@ public class DayThirteenChanges implements Listener {
     }
 
     private void handleSpectralEyeConversion(CreatureSpawnEvent event) {
-        if (event.getEntityType() != EntityType.PHANTOM) return;
-
-        if (event.getEntity().getPersistentDataContainer()
-                .has(spectralEye.getSpectralEyeKey(), PersistentDataType.BYTE)) {
+        if (event.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL) {
             return;
         }
 
-        if (random.nextInt(5) != 0) return;
+        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL &&
+                event.getLocation().getWorld().getEnvironment() != World.Environment.NETHER &&
+                     event.getLocation().getWorld().getEnvironment() != World.Environment.THE_END) {
+            return;
+        }
 
-        Phantom phantom = (Phantom) event.getEntity();
+        if (!(event.getEntity() instanceof Monster)) {
+            return;
+        }
+
+/*        if (event.getEntity().getPersistentDataContainer()
+                .has(spectralEye.getSpectralEyeKey(), PersistentDataType.BYTE)) {
+            return;
+        }*/
+
+        boolean isSpectralEye = random.nextInt(25) == 0;
+
+/*        Phantom phantom = (Phantom) event.getEntity();
         Location loc = phantom.getLocation();
 
         spectralEye.spawnSpectralEye(loc);
-        phantom.remove();
+        phantom.remove();*/
+
+        if (isSpectralEye) {
+            event.setCancelled(true);
+            spectralEye.spawnSpectralEye(event.getLocation());
+        }
     }
 
     //CRAFTEOS

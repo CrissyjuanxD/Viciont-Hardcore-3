@@ -13,6 +13,7 @@ import Enchants.EnhancedEnchantmentTable;
 import Events.UltraWitherBattle.UltraWitherCompass;
 import items.*;
 import Armors.NightVisionHelmet;
+import items.Flashlight.FlashlightItem;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -46,6 +47,9 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
     private final CustomBoat customBoat;
     private final TridenteEspectral tridenteEspectral;
 
+    //Items No configurados en las demas clases de items
+    private final FlashlightItem flashlightItem;
+
     public ItemsCommands(ViciontHardcore3 plugin) {
         this.plugin = plugin;
         this.doubleLifeTotem = new DoubleLifeTotem(plugin);
@@ -64,6 +68,7 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
         this.guardianShulkerHeart = new GuardianShulkerHeart(plugin);
         this.customBoat = new CustomBoat(plugin);
         this.tridenteEspectral = new TridenteEspectral(plugin);
+        this.flashlightItem = new FlashlightItem(plugin);
         plugin.getCommand("givevct").setExecutor(this);
         plugin.getCommand("givevct").setTabCompleter(this);
     }
@@ -486,6 +491,10 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
                 item = tridenteEspectral.createSpectralTrident();
                 item.setAmount(cantidad);
                 break;
+            case "linterna":
+                item = flashlightItem.createFlashlight();
+                item.setAmount(cantidad);
+                break;
             default:
                 sender.sendMessage("§cEse item no existe.");
                 return true;
@@ -591,6 +600,7 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
             completions.add("flytotem");
             completions.add("icecrystal");
             completions.add("tridente_espectral");
+            completions.add("linterna");
         } else if (args.length == 2) {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 completions.add(player.getName());

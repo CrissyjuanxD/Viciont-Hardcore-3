@@ -2,8 +2,10 @@ package Armors;
 
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -26,7 +28,6 @@ public class CorruptedArmor implements Listener {
     public CorruptedArmor(JavaPlugin plugin) {
         this.plugin = plugin;
     }
-
 
     public static ItemStack createCorruptedHelmet() {
         ItemStack item = new ItemStack(Material.NETHERITE_HELMET);
@@ -75,6 +76,7 @@ public class CorruptedArmor implements Listener {
         ));
         meta.setCustomModelData(2);
         meta.setRarity(ItemRarity.EPIC);
+        item.setDurability((short) 814);
         item.setItemMeta(meta);
         return item;
     }

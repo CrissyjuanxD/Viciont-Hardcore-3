@@ -19,7 +19,7 @@ public class EconomyItems {
         ItemMeta meta = item.getItemMeta();
 
         // Nombre del item con formato JSON-like
-        meta.setDisplayName(ChatColor.YELLOW + "Vithiums " + ChatColor.GRAY + "۞");
+        meta.setDisplayName(ChatColor.of("#c941ec") + "Vithiums " + ChatColor.GRAY + "۞");
         meta.setCustomModelData(2000);
 
         List<String> lore = new ArrayList<>();
@@ -40,7 +40,7 @@ public class EconomyItems {
         ItemMeta meta = item.getItemMeta();
 
         // Nombre del item con formato JSON-like
-        meta.setDisplayName(ChatColor.GOLD + "Vithiums Fichas " + ChatColor.GRAY + "۞");
+        meta.setDisplayName(ChatColor.of("#3a86b6") + "Vithiums Fichas " + ChatColor.GRAY + "۞");
         meta.setCustomModelData(2010);
 
         List<String> lore = new ArrayList<>();

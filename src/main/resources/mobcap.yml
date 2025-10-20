@@ -1,0 +1,117 @@
+# ===============================================
+#           MOBCAP MANAGER - CONFIGURACIÓN
+# ===============================================
+# Plugin avanzado de gestión de MobCap
+# Basado en la lógica de Permadeath con mejoras
+
+# ===============================================
+#              CONFIGURACIÓN GENERAL
+# ===============================================
+
+# ¿Está habilitado el sistema de MobCap?
+enabled: true
+
+# MobCap base para todos los mundos
+base-mobcap: 70
+
+# Multiplicador de MobCap
+# Opciones: NORMAL (x1), DOUBLE (x2), TRIPLE (x3)
+multiplier: NORMAL
+
+# ===============================================
+#                 OPTIMIZACIÓN
+# ===============================================
+
+optimization:
+  # ¿Habilitar optimización automática?
+  enabled: true
+
+  # Umbral de jugadores para activar optimización
+  player-threshold: 20
+
+  # Umbral de MobCap para activar optimización
+  mobcap-threshold: 140
+
+  # Factor de reducción cuando se optimiza (0.75 = 75% del valor original)
+  reduction-factor: 0.75
+
+  # Porcentaje mínimo del valor original (0.6 = nunca menos del 60%)
+  minimum-percentage: 0.6
+
+  # Distancia para limpiar mobs (en bloques)
+  cleanup-distance: 32
+
+  # Máximo de mobs a limpiar por ciclo
+  max-cleanup-per-cycle: 50
+
+# ===============================================
+#              SPAWN PERSONALIZADO
+# ===============================================
+
+custom-spawn:
+  # ¿Habilitar sistema de spawn personalizado?
+  enabled: false
+
+  # ¿Usar patrón oval en lugar de circular?
+  oval-pattern: true
+
+  # ¿Spawnear más cerca del jugador?
+  closer-to-player: true
+
+  # Multiplicador de radio de spawn (0.8 = 80% del radio normal)
+  radius-multiplier: 0.8
+
+# ===============================================
+#         CONFIGURACIÓN DE MOBS INDIVIDUALES
+# ===============================================
+# vanilla: Spawn normal de Minecraft (solo de noche)
+# custom: Spawn personalizado (día y noche)
+
+mob-spawn-settings:
+  zombie: vanilla
+  skeleton: vanilla
+  creeper: vanilla
+  spider: vanilla
+  cave_spider: vanilla
+  enderman: vanilla
+  witch: vanilla
+  slime: vanilla
+  magma_cube: vanilla
+  ghast: vanilla
+  blaze: vanilla
+  wither_skeleton: vanilla
+  zombified_piglin: vanilla
+  piglin: vanilla
+  piglin_brute: vanilla
+  hoglin: vanilla
+  zoglin: vanilla
+  drowned: vanilla
+  husk: vanilla
+  stray: vanilla
+  phantom: vanilla
+  shulker: vanilla
+  guardian: vanilla
+  elder_guardian: vanilla
+  silverfish: vanilla
+  endermite: vanilla
+  vex: vanilla
+  vindicator: vanilla
+  pillager: vanilla
+  ravager: vanilla
+  evoker: vanilla
+  illusioner: vanilla
+
+# ===============================================
+#                   EJEMPLOS
+# ===============================================
+# Para hacer que los zombies spawnen de día y noche:
+# zombie: custom
+#
+# Para triplicar la mobcap:
+# multiplier: TRIPLE
+#
+# Para un servidor con muchos jugadores:
+# base-mobcap: 100
+# multiplier: DOUBLE
+# optimization.enabled: true
+# optimization.player-threshold: 30

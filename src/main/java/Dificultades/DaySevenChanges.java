@@ -1,9 +1,6 @@
 package Dificultades;
 
-import Dificultades.CustomMobs.CorruptedCreeper;
-import Dificultades.CustomMobs.CorruptedSkeleton;
-import Dificultades.CustomMobs.InvertedGhast;
-import Dificultades.CustomMobs.PiglinGlobo;
+import Dificultades.CustomMobs.*;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
@@ -34,6 +31,8 @@ public class DaySevenChanges implements Listener {
     private final CorruptedCreeper corruptedCreeper;
     private final InvertedGhast invertedGhast;
     private final PiglinGlobo piglinGlobo;
+    private final CorruptedZombies corruptedZombies;
+    private final CorruptedSpider corruptedSpider;
     private final DayHandler dayHandler;
 
     public DaySevenChanges(JavaPlugin plugin, DayHandler handler) {
@@ -42,6 +41,8 @@ public class DaySevenChanges implements Listener {
         this.corruptedCreeper = new CorruptedCreeper(plugin);
         this.invertedGhast = new InvertedGhast(plugin);
         this.piglinGlobo = new PiglinGlobo(plugin);
+        this.corruptedZombies = new CorruptedZombies(plugin);
+        this.corruptedSpider = new CorruptedSpider(plugin);
         this.dayHandler = handler;
     }
 
@@ -118,7 +119,37 @@ public class DaySevenChanges implements Listener {
 
         handleCorruptedSkeletonConversion(event);
         handleGhastTransformations(event);
+        handleCorruptedZombieConversion(event);
+        handleCorruptedSpiderConversion(event);
 
+    }
+
+    private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
+        if (event.getEntityType() != EntityType.ZOMBIE) return;
+
+        if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE)) {
+            return;
+        }
+
+        if (random.nextInt(6) != 0) return;
+
+        Zombie zombie = (Zombie) event.getEntity();
+        corruptedZombies.transformToCorruptedZombie(zombie);
+    }
+
+    private void handleCorruptedSpiderConversion(CreatureSpawnEvent event) {
+        if (event.getEntityType() != EntityType.SPIDER) return;
+
+        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) return;
+
+        if (event.getEntity().getPersistentDataContainer().has(corruptedSpider.getCorruptedSpiderKey(), PersistentDataType.BYTE)) {
+            return;
+        }
+
+        if (random.nextInt(6) != 0) return;
+
+        Spider spider = (Spider) event.getEntity();
+        corruptedSpider.transformspawnCorruptedSpider(spider);
     }
 
     private void handleCorruptedSkeletonConversion(CreatureSpawnEvent event) {
@@ -140,17 +171,16 @@ public class DaySevenChanges implements Listener {
             int chance;
 
             if (day >= 10) {
-                chance = 4;
+                chance = 3;
             } else if (day >= 7) {
-                chance = 5;
+                chance = 4;
             } else {
                 return;
             }
 
             if (random.nextInt(chance) == 0) {
                 Skeleton skeleton = (Skeleton) entity;
-                corruptedSkeleton.spawnCorruptedSkeleton(skeleton.getLocation(), null);
-                skeleton.remove();
+                corruptedSkeleton.transformToCorruptedSkeleton(skeleton, null);
             }
         }
     }

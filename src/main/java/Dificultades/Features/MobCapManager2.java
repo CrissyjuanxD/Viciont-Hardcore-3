@@ -1,3 +1,4 @@
+/*
 package Dificultades.Features;
 
 import org.bukkit.Bukkit;
@@ -13,7 +14,7 @@ public class MobCapManager {
     private final Map<String, Integer> originalLimits;
     private final Map<String, Integer> currentLimits;
     private int currentMobCap = 70; // Valor por defecto
-    private boolean isInitialized = false;
+    public boolean isInitialized = false;
 
     private MobCapManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -118,4 +119,8 @@ public class MobCapManager {
         resetMobCap();
         instance = null;
     }
-}
+
+    public boolean isInitialized() {
+        return isInitialized;
+    }
+}*/

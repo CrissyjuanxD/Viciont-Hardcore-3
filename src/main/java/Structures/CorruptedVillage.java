@@ -10,7 +10,7 @@ import java.util.Arrays;
 
 public class CorruptedVillage extends BaseStructure {
     public CorruptedVillage(JavaPlugin plugin) {
-        super(plugin, Arrays.asList("CorruptedVillageFV1.schem", "CorruptedVillageFV2.schem"));
+        super(plugin, Arrays.asList("CorruptedVillageFV1.schem", "CorruptedVillageFV2.schem", "CorruptedVillageFV3.schem", "CorruptedVillageFV4.schem"));
     }
 
     @Override
@@ -55,7 +55,7 @@ public class CorruptedVillage extends BaseStructure {
         for (int attempts = 0; attempts < 50; attempts++) {
             int x = generateRandomCoordinate();
             int z = generateRandomCoordinate();
-            int y = 175;
+            int y = 145;
 
             Location baseLocation = new Location(world, x, y, z);
 
@@ -92,6 +92,10 @@ public class CorruptedVillage extends BaseStructure {
     }
 
     private int generateRandomCoordinate() {
-        return random.nextInt(5000) - 1000;
+        int coordinate;
+        do {
+            coordinate = random.nextInt(6001) - 3000; // -3000 a 3000
+        } while (coordinate >= -300 && coordinate <= 300); // Excluir -300 a 300
+        return coordinate;
     }
 }

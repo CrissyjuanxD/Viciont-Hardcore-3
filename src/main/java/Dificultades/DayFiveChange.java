@@ -1,7 +1,6 @@
 package Dificultades;
 
 import Dificultades.CustomMobs.*;
-import Dificultades.Features.MobCapManager;
 import Handlers.DayHandler;
 import Handlers.DeathStormHandler;
 import items.TridenteEspectral;
@@ -64,7 +63,7 @@ public class DayFiveChange implements Listener {
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (!isApplied) return;
 
-        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) {
+/*        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) {
             return;
         }
 
@@ -80,12 +79,12 @@ public class DayFiveChange implements Listener {
                         (byte)1
                 );
 
-                corruptedCreeper.spawnCorruptedCreeper(creeper.getLocation());
-                creeper.remove();
+                corruptedCreeper.transformToCorruptedCreeper(creeper);
             }
-        }
+        }*/
 
         handleCorruptedDrownedsConversion(event);
+        handleICreepertoCorruptedCreepersConversion(event);
         /*handleSquidstoCorruptedDrownedsConversion(event);*/
     }
 
@@ -111,6 +110,28 @@ public class DayFiveChange implements Listener {
         corruptedDrowned.spawnCorruptedDrowned(loc);
         drowned.remove();
 
+    }
+
+    private void handleICreepertoCorruptedCreepersConversion(CreatureSpawnEvent event) {
+        if (event.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL) {
+            return;
+        }
+
+        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) {
+            return;
+        }
+
+        if (event.getEntityType() != EntityType.CREEPER) {
+            return;
+        }
+
+        // 4. Aplicar tu lógica de probabilidad
+        boolean isCorruptedCreeper = random.nextInt(3) == 0;
+
+        if (isCorruptedCreeper) {
+            event.setCancelled(true);
+            corruptedCreeper.spawnCorruptedCreeper(event.getLocation());
+        }
     }
 
 /*    private void handleSquidstoCorruptedDrownedsConversion(CreatureSpawnEvent event) {

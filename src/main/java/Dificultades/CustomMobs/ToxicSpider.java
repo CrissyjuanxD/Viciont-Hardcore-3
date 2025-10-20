@@ -35,7 +35,7 @@ public class ToxicSpider implements Listener {
 
     private final List<SpiderEffect> possibleEffects = Arrays.asList(
             new SpiderEffect("Velocidad", PotionEffectType.SPEED, 3),
-            new SpiderEffect("Regeneración", PotionEffectType.REGENERATION, 3),
+            new SpiderEffect("Regeneración", PotionEffectType.REGENERATION, 2),
             new SpiderEffect("Fuerza", PotionEffectType.STRENGTH, 3),
             new SpiderEffect("Salto", PotionEffectType.JUMP_BOOST, 3),
             new SpiderEffect("Brillo", PotionEffectType.GLOWING, 1),
@@ -432,7 +432,7 @@ public class ToxicSpider implements Listener {
         if (event.getEntity() instanceof CaveSpider spider && isToxicSpider(spider)) {
             Location loc = spider.getLocation();
 
-            double baseDropChance = 0.50;
+            double baseDropChance = 0.40;
             double lootingBonus = 0;
             double doubleDropChance = 0;
 

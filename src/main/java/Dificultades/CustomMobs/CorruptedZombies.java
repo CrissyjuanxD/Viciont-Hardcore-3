@@ -131,7 +131,8 @@ public class CorruptedZombies implements Listener {
     }
 
     private void lanzarSnowball(Zombie zombie, Player player) {
-        Snowball snowball = zombie.launchProjectile(Snowball.class);
+        /*Snowball snowball = zombie.launchProjectile(Snowball.class);*/
+        WindCharge snowball = zombie.launchProjectile(WindCharge.class);
 
         Vector direction = player.getLocation().toVector().subtract(zombie.getLocation().toVector());
 
@@ -141,9 +142,10 @@ public class CorruptedZombies implements Listener {
             direction = direction.normalize().multiply(1.5);
         }
 
+        direction.setY(direction.getY() - 0.3);
+
         snowball.setVelocity(direction);
-        snowball.setCustomName("Corrupted Zombie Snowball");
-        snowball.setMetadata("knockback", new FixedMetadataValue(plugin, 2));
+        snowball.setCustomName("Corrupted Zombie WindCharge");
 
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (snowball.isValid()) {
@@ -162,19 +164,13 @@ public class CorruptedZombies implements Listener {
 
     @EventHandler
     public void onSnowballHit(EntityDamageByEntityEvent event) {
-        if (event.getDamager() instanceof Snowball snowball &&
-                "Corrupted Zombie Snowball".equals(snowball.getCustomName())) {
+        if (event.getDamager() instanceof WindCharge snowball &&
+                "Corrupted Zombie WindCharge".equals(snowball.getCustomName())) {
 
             if (event.getEntity() instanceof Player player) {
                 event.setDamage(2);
                 player.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 50, 0));
                 player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 100, 0));
-
-                int knockbackLevel = snowball.getMetadata("knockback").stream()
-                        .findFirst().map(MetadataValue::asInt).orElse(0);
-                Vector knockback = player.getLocation().toVector()
-                        .subtract(snowball.getLocation().toVector()).normalize().multiply(knockbackLevel);
-                player.setVelocity(knockback);
             } else {
                 event.setCancelled(true);
             }
@@ -182,23 +178,11 @@ public class CorruptedZombies implements Listener {
     }
 
     @EventHandler
-    public void onProjectileHit(ProjectileHitEvent event) {
-        if (event.getEntity() instanceof Snowball snowball &&
-                "Corrupted Zombie Snowball".equals(snowball.getCustomName())) {
+    public void onCorruptedZombieBurn(EntityCombustEvent event) {
+        if (!(event.getEntity() instanceof Zombie zombie)) return;
 
-            Location impactLocation = snowball.getLocation();
-
-            List<Player> nearbyPlayers = snowball.getWorld().getPlayers().stream()
-                    .filter(player -> player.getLocation().distance(impactLocation) <= 4)
-                    .toList();
-
-            for (Player player : nearbyPlayers) {
-                Vector knockback = player.getLocation().toVector()
-                        .subtract(impactLocation.toVector()).normalize().multiply(1);
-                player.setVelocity(knockback);
-            }
-            snowball.getWorld().spawnParticle(Particle.EXPLOSION, impactLocation, 8);
-            snowball.getWorld().playSound(impactLocation, Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, 1.0F, 2.0F);
+        if (isCorrupted(zombie)) {
+            event.setCancelled(true);
         }
     }
 

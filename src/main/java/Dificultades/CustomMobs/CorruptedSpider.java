@@ -62,7 +62,7 @@ public class CorruptedSpider implements Listener {
 
     private void applyCorruptedSpiderAttributes(Spider spider) {
         spider.setCustomName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Spider");
-        spider.setCustomNameVisible(true);
+        spider.setCustomNameVisible(false);
         Objects.requireNonNull(spider.getAttribute(Attribute.GENERIC_FOLLOW_RANGE)).setBaseValue(32);
         spider.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 0));
         spider.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, Integer.MAX_VALUE, 0));

@@ -23,7 +23,7 @@ public class ModelEngine4 {
         this.plugin = plugin;
     }
 
-    public UUID spawnModel(LivingEntity entity, String modelId) {
+    public UUID spawnModel(Entity entity, String modelId) {
         try {
             ModelBlueprint modelBlueprint = ModelEngineAPI.getBlueprint(modelId);
             if (modelBlueprint == null) {
@@ -31,16 +31,20 @@ public class ModelEngine4 {
                 return null;
             }
 
-            Location location = entity.getLocation();
+            // Crear ModeledEntity correctamente
             ModeledEntity modeledEntity = ModelEngineAPI.createModeledEntity(entity);
-
-            // Configurar rotación del modelo
-            modeledEntity.getBase().getBodyRotationController().setYHeadRot(location.getYaw());
-            modeledEntity.getBase().getBodyRotationController().setYBodyRot(location.getYaw());
-            modeledEntity.getBase().getBodyRotationController().setXHeadRot(location.getPitch());
+            if (modeledEntity == null) {
+                plugin.getLogger().warning("Failed to create ModeledEntity for: " + entity.getUniqueId());
+                return null;
+            }
 
             // Crear y añadir modelo activo
             ActiveModel activeModel = ModelEngineAPI.createActiveModel(modelBlueprint);
+            if (activeModel == null) {
+                plugin.getLogger().warning("Failed to create ActiveModel for: " + modelId);
+                return null;
+            }
+
             modeledEntity.addModel(activeModel, false);
 
             plugin.getLogger().info("Created ModelEngine 4 model: " + modelId + " on entity: " + entity.getUniqueId());

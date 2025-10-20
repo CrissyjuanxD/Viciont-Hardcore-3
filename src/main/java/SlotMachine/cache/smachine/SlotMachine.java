@@ -1,6 +1,7 @@
 package SlotMachine.cache.smachine;
 
 import SlotMachine.api.SlotMachineModel;
+import SlotMachine.cache.tools.smachine.SlotMachineFrame;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -23,6 +24,7 @@ public class SlotMachine {
     private final boolean messageBroadcast;
     private final List<String> messages;
     private final Map<String, SlotM> slots;
+    private final SlotMachineFrame config;
 
     // Máquinas activas
     private final Map<Location, SlotMachineModel> activeMachines = new ConcurrentHashMap<>();
@@ -36,6 +38,9 @@ public class SlotMachine {
         this.force = section.getDouble("data.force", 0.3);
         this.messageBroadcast = section.getBoolean("message-broadcast", false);
         this.messages = section.getStringList("messages");
+
+        // Cargar configuración
+        this.config = new SlotMachineFrame(section.getConfigurationSection("config"));
 
         // Cargar slots
         this.slots = new ConcurrentHashMap<>();
@@ -66,4 +71,5 @@ public class SlotMachine {
     public List<String> getMessages() { return messages; }
     public Map<String, SlotM> getSlots() { return slots; }
     public Map<Location, SlotMachineModel> getActiveMachines() { return activeMachines; }
+    public SlotMachineFrame getConfig() { return config; }
 }

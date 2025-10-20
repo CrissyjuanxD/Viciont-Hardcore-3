@@ -104,7 +104,7 @@ public class EndRing extends BaseStructure {
     }
 
     private int generateRandomEndCoordinate() {
-        int base = random.nextBoolean() ? 1000 : -1000;
-        return base + (random.nextBoolean() ? random.nextInt(9000) : -random.nextInt(9000));
+        int base = random.nextBoolean() ? 700 : -700;
+        return base + (random.nextBoolean() ? random.nextInt(7000) : -random.nextInt(7000));
     }
 }

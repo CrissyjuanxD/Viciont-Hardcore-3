@@ -74,8 +74,7 @@ public class DayTwelveChanges implements Listener {
                         (byte)1
                 );
 
-                bombita.spawnBombita(creeper.getLocation());
-                creeper.remove();
+                bombita.transformToBombita(creeper);
             }
         }
     }

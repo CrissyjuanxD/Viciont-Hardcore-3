@@ -2,6 +2,8 @@
 
     import Dificultades.CustomMobs.CorruptedSpider;
     import Dificultades.CustomMobs.CorruptedZombies;
+    import items.CorruptedMobItems;
+    import items.CorruptedNetheriteItems;
     import org.bukkit.*;
     import org.bukkit.entity.*;
     import org.bukkit.event.EventHandler;
@@ -13,6 +15,7 @@
     import org.bukkit.event.raid.RaidTriggerEvent;
     import org.bukkit.inventory.ItemRarity;
     import org.bukkit.inventory.ItemStack;
+    import org.bukkit.inventory.RecipeChoice;
     import org.bukkit.inventory.ShapedRecipe;
     import org.bukkit.inventory.meta.ItemMeta;
     import org.bukkit.persistence.PersistentDataType;
@@ -67,64 +70,44 @@
         @EventHandler
         public void onCreatureSpawn(CreatureSpawnEvent event) {
             if (!isApplied) return;
-
             int currentDay = dayHandler.getCurrentDay();
 
-            if (currentDay >= 10) {
+
+
+            if (currentDay >= 4) {
+                return;
+            }
+            handleCorruptedZombieConversion(event);
+            handleCorruptedSpiderConversion(event);
+        }
+
+
+        private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
+            if (event.getEntityType() != EntityType.ZOMBIE) return;
+
+            if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE)) {
                 return;
             }
 
-            // Si el mob ya es corrupto, lo ignoramos
-            if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE) ||
-                    event.getEntity().getPersistentDataContainer().has(corruptedSpider.getCorruptedSpiderKey(), PersistentDataType.BYTE)) {
+            if (random.nextInt(20) != 0) return;
+
+            Zombie zombie = (Zombie) event.getEntity();
+            corruptedZombies.transformToCorruptedZombie(zombie);
+        }
+
+        private void handleCorruptedSpiderConversion(CreatureSpawnEvent event) {
+            if (event.getEntityType() != EntityType.SPIDER) return;
+
+            if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) return;
+
+            if (event.getEntity().getPersistentDataContainer().has(corruptedSpider.getCorruptedSpiderKey(), PersistentDataType.BYTE)) {
                 return;
             }
 
-            int zombieProbability;
-            int spiderProbability;
+            if (random.nextInt(20) != 0) return;
 
-            switch (currentDay) {
-                case 1:
-                case 2:
-                case 3:
-                    zombieProbability = 20;
-                    spiderProbability = 20;
-                    break;
-                case 4:
-                case 5:
-                case 6:
-                    zombieProbability = 12;
-                    spiderProbability = 12;
-                    break;
-                case 7:
-                case 8:
-                    zombieProbability = 6;
-                    spiderProbability = 6;
-                    break;
-                case 9:
-                    zombieProbability = 4;
-                    spiderProbability = 4;
-                    break;
-                default:
-                    return;
-            }
-
-            if (event.getEntityType() == EntityType.ZOMBIE) {
-                if (random.nextInt(zombieProbability) == 0) {
-                    Zombie zombie = (Zombie) event.getEntity();
-                    corruptedZombies.spawnCorruptedZombie(zombie.getLocation());
-                    zombie.remove();
-                }
-            }
-
-            if (event.getEntityType() == EntityType.SPIDER &&
-                    event.getLocation().getWorld().getEnvironment() == World.Environment.NORMAL) {
-                if (random.nextInt(spiderProbability) == 0) {
-                    Spider spider = (Spider) event.getEntity();
-                    corruptedSpider.spawnCorruptedSpider(spider.getLocation());
-                    spider.remove();
-                }
-            }
+            Spider spider = (Spider) event.getEntity();
+            corruptedSpider.transformspawnCorruptedSpider(spider);
         }
 
         public static ItemStack corruptedSteak() {
@@ -145,8 +128,9 @@
             }
 
             ShapedRecipe customRecipe = new ShapedRecipe(key, corruptedSteak());
-            customRecipe.shape(" F ", " F ", " F ");
-            customRecipe.setIngredient('F', Material.ROTTEN_FLESH);
+            customRecipe.shape("CCC", "CSC", "CCC");
+            customRecipe.setIngredient('C', new RecipeChoice.ExactChoice(CorruptedMobItems.createCorruptedMeet()));
+            customRecipe.setIngredient('S' , Material.COOKED_BEEF);
 
             plugin.getServer().addRecipe(customRecipe);
         }
@@ -195,4 +179,23 @@
                 world.setGameRule(GameRule.DO_INSOMNIA, false);
             }
         }
+
+        @EventHandler
+        public void onStrayBurn(EntityCombustEvent event) {
+            if (!isApplied) return;
+
+            if (event.getEntityType() == EntityType.STRAY) {
+                event.setCancelled(true);
+            }
+        }
+
+        @EventHandler
+        public void onZombieVillagerBurn(EntityCombustEvent event) {
+            if (!isApplied) return;
+
+            if (event.getEntityType() == EntityType.ZOMBIE_VILLAGER) {
+                event.setCancelled(true);
+            }
+        }
+
     }

@@ -1,5 +1,5 @@
 name: Viciont_Hardcore3_Plugin
-version: 1.5.7
+version: 1.5.8
 main: vct.hardcore3.ViciontHardcore3
 author: CrissyJuanXD
 api-version: 1.21
@@ -233,6 +233,21 @@ commands:
     usage: /givelootable <tipo> <jugador>
     permission: viciont_hardcore3.giveloot.admin
     permission-message: No tienes permiso para usar este comando.
+  flashlight:
+    description: Recarga la configuración de las linternas
+    usage: /flashlight reload
+    permission: viciont_hardcore3.flashlight.admin
+    permission-message: No tienes permiso para usar este comando.
+  mobcap:
+    description: Comando principal para gestionar MobCap
+    usage: /mobcap <info|setbase|doble|triple|normal|habilitar|deshabilitar|reset|reload|mob>
+    permission: viciont_hardcore3.mobcap.admin
+    aliases: [ mc, mobcapmanager ]
+  mobcapinfo:
+    description: Muestra información detallada del MobCap
+    usage: /mobcapinfo
+    permission: viciont_hardcore3.mobcap.admin
+    aliases: [ mcinfo, mobcapstatus ]
 softdepend:
   - PlaceholderAPI
   - StreamEvents

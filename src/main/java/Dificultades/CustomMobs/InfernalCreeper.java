@@ -165,7 +165,7 @@ public class InfernalCreeper implements Listener {
         if (event.getEntity() instanceof Creeper creeper && isInfernalCreeper(creeper)) {
             Location loc = creeper.getLocation();
 
-            double baseDropChance = 0.50;
+            double baseDropChance = 0.40;
             double lootingBonus = 0;
             double doubleDropChance = 0;
 

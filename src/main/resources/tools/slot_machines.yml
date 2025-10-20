@@ -5,7 +5,6 @@ config:
   stay: 5
   fade-out: 0
   message-type: "TITLE"
-  sound: "dtools3:tools.casino.bet"
 slot_machines:
   default:
     name: '&eSimple Slot Machine'
