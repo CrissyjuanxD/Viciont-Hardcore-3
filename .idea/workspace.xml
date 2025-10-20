@@ -10,71 +10,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="23b0ad47-a402-4788-8284-bb6d2e5ca004" name="Changes" comment="(VERSION 1.5.7) Casino Mejorado y Base de Corrupted End">
-      <change afterPath="$PROJECT_DIR$/src/main/java/Blocks/Vibranium.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/Commands/FlashlightCommand.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/DarkSpider.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/DarkZombie.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/NMSUtils.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/Dificultades/NMS/CustomCreeper.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/items/Flashlight/FlashlightConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/items/Flashlight/FlashlightItem.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/items/Flashlight/FlashlightManager.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/items/IceBow/IceBowItem.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/items/IceBow/IceBowLogic.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/mobcap/MobCapInfo.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/mobcap/MobCapManager.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/mobcap/MobCapMultiplier.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/mobcap/commands/MobCapCommand.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/mobcap/commands/MobCapTabCompleter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/mobcap/config/MobCapConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/mobcap/optimization/MobCapOptimizer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/mobcap/optimization/PerformanceData.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/mobcap/optimization/PerformanceMonitor.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/mobcap/spawn/CustomSpawnManager.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/mobcap/spawn/SpawnMode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/mobcap.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Armors/CorruptedArmor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Armors/CorruptedArmor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Blocks/HeartUltraWither.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Commands/ItemsCommands.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Commands/ItemsCommands.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedCreeper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedCreeper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedSkeleton.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedSkeleton.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedSpider.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedSpider.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedZombies.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedZombies.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/Iceologer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/Iceologer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/InfernalCreeper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/InfernalCreeper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/ToxicSpider.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/ToxicSpider.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/WhiteEnderman.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/WhiteEnderman.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayEightChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayEightChanges.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayFiveChange.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayFiveChange.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayFourChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayFourChanges.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayNineChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayNineChanges.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayOneChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayOneChanges.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DaySevenChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DaySevenChanges.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayTenChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayTenChanges.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayThirteenChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayThirteenChanges.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayTwelveChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayTwelveChanges.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/Features/MobCapManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/Features/MobCapManager2.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Events/DamageLogListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/DamageLogListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/SlotMachine/SlotMachineManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/SlotMachine/SlotMachineManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/SlotMachine/cache/smachine/SlotMachine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/SlotMachine/cache/smachine/SlotMachine.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/SlotMachine/cache/tools/smachine/SlotMachineFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/SlotMachine/cache/tools/smachine/SlotMachineFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/SlotMachine/commands/SlotMachineCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/SlotMachine/commands/SlotMachineCommand.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/SlotMachine/listeners/SlotMachineListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/SlotMachine/listeners/SlotMachineListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/SlotMachine/providers/modelengine/ModelEngine4.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/SlotMachine/providers/modelengine/ModelEngine4.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Structures/CorruptedVillage.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Structures/CorruptedVillage.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Structures/EndRing.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Structures/EndRing.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/TitleListener/DiscoCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/TitleListener/DiscoCommand.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/TitleListener/MuerteHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/TitleListener/MuerteHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/items/CorruptedGoldenApple.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/items/CorruptedGoldenApple.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/items/EconomyItems.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/items/EconomyItems.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/items/EconomyItemsFunctions.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/items/EconomyItemsFunctions.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/items/EmblemItems.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/items/EmblemItems.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/vct/hardcore3/ViciontHardcore3.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/vct/hardcore3/ViciontHardcore3.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/plugin.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/plugin.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/tools/slot_machines.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/tools/slot_machines.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -113,27 +50,27 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/pepoa/VCTHardcore3/src/main/java/schem&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Artifacts&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.keymap&quot;,
-    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "master",
+    "junie.onboarding.icon.badge.shown": "true",
+    "last_opened_file_path": "C:/Users/pepoa/VCTHardcore3/src/main/java/schem",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Artifacts",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
+    "settings.editor.selected.configurable": "preferences.keymap",
+    "to.speed.mode.migration.done": "true",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\pepoa\VCTHardcore3\src\main\java\schem" />

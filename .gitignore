@@ -37,3 +37,7 @@ build/
 ### Mac OS ###
 .DS_Store
 .env
+
+.idealshelf/
+Uncommitted_changes_bfc/
+shelved_patch/
