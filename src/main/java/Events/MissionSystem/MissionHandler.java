@@ -10,6 +10,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -28,6 +29,8 @@ public class MissionHandler implements Listener {
     private final Map<Integer, Mission> missions = new HashMap<>();
     private final Set<Integer> activeMissions = new HashSet<>();
     private final Map<Integer, Long> penaltyDays = new HashMap<>();
+    private final Map<UUID, Integer> pendingPenaltyConfirm = new HashMap<>();
+
 
     public MissionHandler(JavaPlugin plugin, DayHandler dayHandler) {
         this.plugin = plugin;
@@ -536,6 +539,29 @@ public class MissionHandler implements Listener {
         }
     }
 
+    @EventHandler
+    public void onChat(AsyncPlayerChatEvent event) {
+        Player player = event.getPlayer();
+        UUID id = player.getUniqueId();
+
+        if (!pendingPenaltyConfirm.containsKey(id)) return;
+
+        String msg = event.getMessage().toLowerCase();
+        event.setCancelled(true);
+
+        if (msg.equals("confirma")) {
+            int day = pendingPenaltyConfirm.remove(id);
+            Bukkit.getScheduler().runTask(plugin, () -> checkAndApplyPenalties(day));
+            player.sendMessage(ChatColor.of("#55ff55") + "✔ Penalizaciones aplicadas para el día " + day + ".");
+        } else if (msg.equals("cancelar")) {
+            pendingPenaltyConfirm.remove(id);
+            player.sendMessage(ChatColor.of("#ff6666") + "❌ Penalización cancelada.");
+        } else {
+            player.sendMessage(ChatColor.of("#ffcc66") + "Escribe 'confirma' o 'cancelar'.");
+        }
+    }
+
+
     public void saveMissionData() {
         FileConfiguration data = YamlConfiguration.loadConfiguration(missionFile);
         data.set("activeMissions", new ArrayList<>(activeMissions));
@@ -570,4 +596,24 @@ public class MissionHandler implements Listener {
     public boolean isMissionActive(int missionNumber) {
         return activeMissions.contains(missionNumber);
     }
+
+    public Map<UUID, Integer> getPendingPenaltyConfirm() {
+        return pendingPenaltyConfirm;
+    }
+
+    public DayHandler getDayHandler() {
+        return dayHandler;
+    }
+
+    public Map<Integer, Long> getPenaltyDays() {
+        return penaltyDays;
+    }
+
+    public int getNextPenaltyDay(int currentDay) {
+        return penaltyDays.keySet().stream()
+                .filter(d -> d > currentDay)
+                .min(Integer::compare)
+                .orElse(-1);
+    }
+
 }

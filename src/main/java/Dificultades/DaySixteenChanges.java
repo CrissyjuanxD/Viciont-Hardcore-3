@@ -15,7 +15,7 @@ public class DaySixteenChanges implements Listener {
     private boolean isApplied = false;
     private final Random random = new Random();
 
-    private final DarkPhantom darkPhantom;
+    private final DarkPhantom_Descartado darkPhantomDescartado;
     private final DarkCreeper darkCreeper;
     private final DarkVex darkVex;
     private final DarkSkeleton darkSkeleton;
@@ -23,7 +23,7 @@ public class DaySixteenChanges implements Listener {
     public DaySixteenChanges(JavaPlugin plugin, DayHandler handler) {
         this.plugin = plugin;
         this.dayHandler = handler;
-        this.darkPhantom = new DarkPhantom(plugin);
+        this.darkPhantomDescartado = new DarkPhantom_Descartado(plugin);
         this.darkCreeper = new DarkCreeper(plugin);
         this.darkVex = new DarkVex(plugin);
         this.darkSkeleton = new DarkSkeleton(plugin);
@@ -33,7 +33,7 @@ public class DaySixteenChanges implements Listener {
         if (!isApplied) {
             isApplied = true;
             Bukkit.getPluginManager().registerEvents(this, plugin);
-            darkPhantom.apply();
+            darkPhantomDescartado.apply();
             darkCreeper.apply();
             darkVex.apply();
             darkSkeleton.apply();
@@ -43,7 +43,7 @@ public class DaySixteenChanges implements Listener {
     public void revert() {
         if (isApplied) {
             isApplied = false;
-            darkPhantom.revert();
+            darkPhantomDescartado.revert();
             darkCreeper.revert();
             darkVex.revert();
             darkSkeleton.revert();

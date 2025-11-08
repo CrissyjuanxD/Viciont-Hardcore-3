@@ -67,20 +67,6 @@ public class FirstJoinHandler implements Listener {
         }
     }
 
-
-    private void checkPendingPenalty(Player player) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(achievementHandler.getAchievementsFile());
-        if (data.getBoolean("players." + player.getName() + ".penalized", false)) {
-            achievementHandler.applyPenalty(player);
-            data.set("players." + player.getName() + ".penalized", false);
-            try {
-                data.save(achievementHandler.getAchievementsFile());
-            } catch (IOException e) {
-                plugin.getLogger().severe("Error al guardar datos de penalización: " + e.getMessage());
-            }
-        }
-    }
-
     private void giveWelcomeKit(Player player) {
         // Crear los items del kit
         ItemStack cookedBeef = new ItemStack(Material.COOKED_BEEF, 16);

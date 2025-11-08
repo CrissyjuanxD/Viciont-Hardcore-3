@@ -9,7 +9,6 @@ import items.*;
 import org.bukkit.*;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
-import org.bukkit.block.Campfire;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
@@ -28,12 +27,8 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
-import net.md_5.bungee.api.ChatColor;
 
-import java.util.HashSet;
 import java.util.Random;
-import java.util.Set;
 
 public class DayEightChanges implements Listener {
     private final DayHandler dayHandler;
@@ -42,13 +37,13 @@ public class DayEightChanges implements Listener {
     private final Random random = new Random();
     private boolean isApplied = false;
 
-    private final CorruptedMagmaCube corruptedMagmaCube;
+    private final CorruptedMagmaCube_Descartado corruptedMagmaCubeDescartado;
     private final BuffBreeze buffBreeze;
     private final InvertedGhast invertedGhast;
     private final NetheriteVexGuardian netheriteVexGuardian;
     private final CorruptedZombies corruptedZombies;
     private final CorruptedSkeleton corruptedSkeleton;
-    private final BruteImperial bruteImperial;
+    private final ImperialBrute imperialBrute;
     private final InfernalBeast infernalBeast;
 
     private final CorruptedSoul corruptedSoul;
@@ -65,13 +60,13 @@ public class DayEightChanges implements Listener {
     public DayEightChanges(JavaPlugin plugin, DayHandler handler) {
         this.plugin = plugin;
         this.dayHandler = handler;
-        this.corruptedMagmaCube = new CorruptedMagmaCube(plugin);;
+        this.corruptedMagmaCubeDescartado = new CorruptedMagmaCube_Descartado(plugin);;
         this.buffBreeze = new BuffBreeze(plugin);
         this.invertedGhast = new InvertedGhast(plugin);
         this.netheriteVexGuardian = new NetheriteVexGuardian(plugin);
         this.corruptedZombies = new CorruptedZombies(plugin);
         this.corruptedSkeleton = new CorruptedSkeleton(plugin, handler);
-        this.bruteImperial = new BruteImperial(plugin);
+        this.imperialBrute = new ImperialBrute(plugin);
         this.infernalBeast = new InfernalBeast(plugin);
         this.corruptedSoul = new CorruptedSoul(plugin);
         this.corruptedAncientDebris = new CorruptedAncientDebris(plugin);
@@ -90,10 +85,10 @@ public class DayEightChanges implements Listener {
         if (!isApplied) {
             isApplied = true;
             Bukkit.getPluginManager().registerEvents(this, plugin);
-            corruptedMagmaCube.apply();
+            corruptedMagmaCubeDescartado.apply();
             buffBreeze.apply();
             netheriteVexGuardian.apply();
-            bruteImperial.apply();
+            imperialBrute.apply();
             infernalBeast.apply();
             CustomCorruptedNetheriteCraft();
             registerCorruptedArmorUpgrades();
@@ -104,10 +99,10 @@ public class DayEightChanges implements Listener {
     public void revert() {
         if (isApplied) {
             isApplied = false;
-            corruptedMagmaCube.revert();
+            corruptedMagmaCubeDescartado.revert();
             buffBreeze.revert();
             netheriteVexGuardian.revert();
-            bruteImperial.revert();
+            imperialBrute.revert();
             infernalBeast.revert();
             /*mobCapManager.setMobCap(90);*/
 
@@ -246,7 +241,7 @@ public class DayEightChanges implements Listener {
         if (event.getEntityType() != EntityType.PIGLIN) return;
 
         if (event.getEntity().getPersistentDataContainer()
-                .has(bruteImperial.getBruteImperialKey(), PersistentDataType.BYTE)) {
+                .has(imperialBrute.getBruteImperialKey(), PersistentDataType.BYTE)) {
             return;
         }
 
@@ -255,7 +250,7 @@ public class DayEightChanges implements Listener {
         Piglin piglin = (Piglin) event.getEntity();
         Location loc = piglin.getLocation();
 
-        bruteImperial.spawnBruteImperial(loc);
+        imperialBrute.spawnBruteImperial(loc);
         piglin.remove();
     }
 
@@ -263,12 +258,12 @@ public class DayEightChanges implements Listener {
         return isApplied &&
                 event.getEntityType() == EntityType.PIGLIN_BRUTE &&
                 !event.getEntity().getPersistentDataContainer()
-                        .has(bruteImperial.getBruteImperialKey(), PersistentDataType.BYTE);
+                        .has(imperialBrute.getBruteImperialKey(), PersistentDataType.BYTE);
     }
 
     private void convertToImperialBrute(PiglinBrute brute) {
         Location loc = brute.getLocation();
-        bruteImperial.transformToBruteImperial(brute);
+        imperialBrute.transformToBruteImperial(brute);
     }
 
     //Crafteos

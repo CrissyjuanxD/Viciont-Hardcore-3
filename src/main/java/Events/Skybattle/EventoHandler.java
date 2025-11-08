@@ -431,7 +431,6 @@ public class EventoHandler implements Listener {
             addLine(objective, "§r   ", 7);
             addLine(objective, "§r     ", 6);
             addLine(objective, "§r      ", 5);
-
             addLine(objective, "§r       ", 4);
             addLine(objective, "§r        ", 4);
 

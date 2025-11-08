@@ -29,7 +29,7 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
     private final CorruptedSkeleton corruptedSkeleton;
     private final CorruptedInfernalSpider corruptedInfernalSpider;
     private final CorruptedCreeper corruptedCreeper;
-    private final CorruptedMagmaCube corruptedMagmaCube;
+    private final CorruptedMagmaCube_Descartado corruptedMagmaCubeDescartado;
     private final PiglinGlobo piglinGloboSpawner;
     private final BuffBreeze buffBreeze;
     private final InvertedGhast invertedGhast;
@@ -39,15 +39,15 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
     private final InfernalCreeper infernalCreeper;
     private final ToxicSpider toxicSpider;
     private final FastRavager fastRavager;
-    private final BruteImperial bruteImperial;
+    private final ImperialBrute imperialBrute;
     private final BatBoom batBoom;
     private final SpectralEye spectralEye;
     private final CustomBoat customBoat;
-    private final EnderGhast enderGhast;
-    private final EnderCreeper enderCreeper;
-    private final EnderSilverfish enderSilverfish;
-    private final GuardianShulker guardianShulker;
-    private final DarkPhantom darkPhantom;
+    private final EspectralGhast espectralGhast;
+    private final EspectralCreeper espectralCreeper;
+    private final EspectralSilverfish espectralSilverfish;
+    private final GuardianShulker_Descartado guardianShulkerDescartado;
+    private final DarkPhantom_Descartado darkPhantomDescartado;
     private final DarkCreeper darkCreeper;
     private final DarkVex darkVex;
     private final DarkSkeleton darkSkeleton;
@@ -73,7 +73,7 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
         this.customDolphin = new CustomDolphin(plugin);
         this.corruptedInfernalSpider = new CorruptedInfernalSpider(plugin);
         this.corruptedCreeper = new CorruptedCreeper(plugin);
-        this.corruptedMagmaCube = new CorruptedMagmaCube(plugin);
+        this.corruptedMagmaCubeDescartado = new CorruptedMagmaCube_Descartado(plugin);
         this.piglinGloboSpawner = new PiglinGlobo(plugin);
         this.buffBreeze = new BuffBreeze(plugin);
         this.invertedGhast = new InvertedGhast(plugin);
@@ -83,15 +83,15 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
         this.infernalCreeper = new InfernalCreeper(plugin);
         this.toxicSpider = new ToxicSpider(plugin);
         this.fastRavager = new FastRavager(plugin);
-        this.bruteImperial = new BruteImperial(plugin);
+        this.imperialBrute = new ImperialBrute(plugin);
         this.batBoom = new BatBoom(plugin);
         this.spectralEye = new SpectralEye(plugin);
         this.customBoat = new CustomBoat(plugin);
-        this.enderGhast = new EnderGhast(plugin);
-        this.enderCreeper = new EnderCreeper(plugin);
-        this.enderSilverfish = new EnderSilverfish(plugin);
-        this.guardianShulker = new GuardianShulker(plugin);
-        this.darkPhantom = new DarkPhantom(plugin);
+        this.espectralGhast = new EspectralGhast(plugin);
+        this.espectralCreeper = new EspectralCreeper(plugin);
+        this.espectralSilverfish = new EspectralSilverfish(plugin);
+        this.guardianShulkerDescartado = new GuardianShulker_Descartado(plugin);
+        this.darkPhantomDescartado = new DarkPhantom_Descartado(plugin);
         this.darkCreeper = new DarkCreeper(plugin);
         this.darkVex = new DarkVex(plugin);
         this.darkSkeleton = new DarkSkeleton(plugin);
@@ -210,7 +210,7 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
                 break;
 
             case "corruptedmagma":
-                corruptedMagmaCube.spawnCorruptedMagmaCube(location);
+                corruptedMagmaCubeDescartado.spawnCorruptedMagmaCube(location);
                 sender.sendMessage("¡Corrupted Magma Cube ha sido spawneado en " + locationToString(location) + "!");
                 break;
 
@@ -260,7 +260,7 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
                 break;
 
             case "bruteimperial":
-                bruteImperial.spawnBruteImperial(location);
+                imperialBrute.spawnBruteImperial(location);
                 sender.sendMessage("¡Brute Imperial ha sido spawneado en " + locationToString(location) + "!");
                 break;
 
@@ -280,27 +280,27 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
                 break;
 
             case "enderghast":
-                enderGhast.spawnEnderGhast(location);
+                espectralGhast.spawnEnderGhast(location);
                 sender.sendMessage("¡Ender Ghast ha sido spawneado en " + locationToString(location) + "!");
                 break;
 
             case "endercreeper":
-                enderCreeper.spawnEnderCreeper(location);
+                espectralCreeper.spawnEnderCreeper(location);
                 sender.sendMessage("¡Ender Creeper ha sido spawneado en " + locationToString(location) + "!");
                 break;
 
             case "endersilverfish":
-                enderSilverfish.spawnEnderSilverfish(location);
+                espectralSilverfish.spawnEnderSilverfish(location);
                 sender.sendMessage("¡Ender Silverfish ha sido spawneado en " + locationToString(location) + "!");
                 break;
 
             case "guardianshulker":
-                guardianShulker.spawnGuardianShulker(location);
+                guardianShulkerDescartado.spawnGuardianShulker(location);
                 sender.sendMessage("¡Guardian Shulker ha sido spawneado en " + locationToString(location) + "!");
                 break;
 
             case "darkphantom":
-                darkPhantom.spawnDarkPhantom(location);
+                darkPhantomDescartado.spawnDarkPhantom(location);
                 sender.sendMessage("¡Dark Phantom ha sido spawneado en " + locationToString(location) + "!");
                 break;
 

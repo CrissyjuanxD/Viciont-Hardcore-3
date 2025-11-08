@@ -145,11 +145,16 @@ public class AchievementPartyHandler implements Listener {
             if (completed < requiredAchievements) {
                 penalizedPlayers.add(playerName);
                 data.set("players." + playerName + ".penalized", true);
-                data.set("players." + playerName + ".apply_penalized", false);
 
+                // CAMBIO IMPORTANTE: Solo marcar apply_penalized como false si el jugador NO está en línea
                 Player onlinePlayer = Bukkit.getPlayer(UUID.fromString(uuid));
                 if (onlinePlayer != null) {
+                    // Si está en línea, aplicar penalización inmediatamente y marcar como aplicada
                     applyPenalty(onlinePlayer);
+                    data.set("players." + playerName + ".apply_penalized", true);
+                } else {
+                    // Si NO está en línea, marcar para aplicar cuando se conecte
+                    data.set("players." + playerName + ".apply_penalized", false);
                 }
             } else {
                 rewardedPlayers.add(playerName);
@@ -178,14 +183,27 @@ public class AchievementPartyHandler implements Listener {
             return;
         }
 
-        // Aplicar penalización
-        double maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue();
-        player.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(Math.max(2, maxHealth - 8));
-        player.sendMessage("§c¡No completaste todos los logros! Has perdido 4 corazones permanentes.");
+        double currentMaxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue();
 
-        // Marcar como penalizado y que ya se aplicó
-        data.set(penalizedPath, true);
-        data.set(appliedPath, true);
+        // Si el jugador tiene 4 corazones o menos (8 de vida o menos)
+        if (currentMaxHealth <= 8) {
+            // En lugar de penalizar, matar al jugador
+            player.setHealth(0);
+            player.sendMessage("§c¡No completaste todos los logros! Has sido ejecutado por no cumplir con el Evento de Logros.");
+            Bukkit.broadcastMessage("§c" + player.getName() + " ha sido ejecutado por no completar el Evento de Logros.");
+
+            // Marcar como penalizado y que ya se aplicó
+            data.set(penalizedPath, true);
+            data.set(appliedPath, true);
+        } else {
+            // Aplicar penalización normal (quitar 4 corazones)
+            player.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(Math.max(2, currentMaxHealth - 8));
+            player.sendMessage("§c¡No completaste todos los logros! Has perdido 4 corazones permanentes.");
+
+            // Marcar como penalizado y que ya se aplicó
+            data.set(penalizedPath, true);
+            data.set(appliedPath, true);
+        }
 
         try {
             data.save(achievementsFile);
@@ -201,10 +219,16 @@ public class AchievementPartyHandler implements Listener {
         String penalizedPath = "players." + player.getName() + ".penalized";
         String appliedPath = "players." + player.getName() + ".apply_penalized";
 
-        // Verificar si el jugador debe ser penalizado pero no se ha aplicado aún
         if (data.getBoolean(penalizedPath, false) && !data.getBoolean(appliedPath, false)) {
             double currentMaxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue();
-            if (currentMaxHealth > 12) { // 12 = 20 - 8 (6 corazones)
+
+            if (currentMaxHealth > 12) {
+                applyPenalty(player);
+            }
+            else if (currentMaxHealth > 8) {
+                applyPenalty(player);
+            }
+            else {
                 applyPenalty(player);
             }
         }

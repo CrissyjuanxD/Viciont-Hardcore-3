@@ -11,6 +11,7 @@ import Dificultades.DayFourChanges;
 import Dificultades.DayOneChanges;
 import Enchants.EnhancedEnchantmentTable;
 import Events.UltraWitherBattle.UltraWitherCompass;
+import Habilidades.HabilidadesBook;
 import items.*;
 import Armors.NightVisionHelmet;
 import items.Flashlight.FlashlightItem;
@@ -495,6 +496,10 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
                 item = flashlightItem.createFlashlight();
                 item.setAmount(cantidad);
                 break;
+            case "libro_habilidades":
+                item = HabilidadesBook.createHabilidadesBook();
+                item.setAmount(cantidad);
+                break;
             default:
                 sender.sendMessage("§cEse item no existe.");
                 return true;
@@ -601,6 +606,7 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
             completions.add("icecrystal");
             completions.add("tridente_espectral");
             completions.add("linterna");
+            completions.add("libro_habilidades");
         } else if (args.length == 2) {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 completions.add(player.getName());

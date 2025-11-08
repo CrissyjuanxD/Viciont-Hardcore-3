@@ -12,10 +12,12 @@ import Events.AchievementParty.AchievementCommands;
 import Events.AchievementParty.AchievementGUI;
 import Events.AchievementParty.AchievementPartyHandler;
 import Events.DamageLogListener;
+import Events.ItemParty.ItemPartyHandler;
 import Events.MissionSystem.MissionHandler;
 import Events.MissionSystem.MissionRewardHandler;
 import Events.Skybattle.EventoHandler;
 import Events.UltraWitherBattle.UltraWitherEvent;
+import Habilidades.*;
 import Handlers.*;
 import Security.PingMonitor.PingMonitor;
 import SlotMachine.SlotMachineManager;
@@ -109,11 +111,18 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private MobSoundManager mobSoundManager;
     private GameModeTeamHandler gameModeTeamHandler;
     private CustomSpawnerHandler customSpawnerHandler;
+    private ViciontCommands viciontCommands;
 
     //Mobcap
     private MobCapManager mobCapManager;
     private MobCapConfig config;
     private CustomSpawnManager spawnManager;
+
+    // Habilidades
+    private HabilidadesManager habilidadesManager;
+    private HabilidadesGUI habilidadesGUI;
+    private HabilidadesListener habilidadesListener;
+    private HabilidadesEffects habilidadesEffects;
 
     // Manejadores de Estructuras
 
@@ -126,6 +135,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private AchievementCommands achievementCommands;
     private AchievementGUI achievementGUI;
     private UltraWitherEvent ultraWitherEvent;
+    private ItemPartyHandler itemPartyHandler;
 
     // Casino
     private CasinoManager casinoManager;
@@ -182,21 +192,19 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         PluginCommand resetCommand = getCommand("resetdeathstorm");
         PluginCommand addCommand = getCommand("adddeathstorm");
         PluginCommand removeCommand = getCommand("removedeathstorm");
+        PluginCommand stopDeathStorm = getCommand("stopdeathstorm");
 
         DeathStormCommand deathStormCommand = new DeathStormCommand(deathStormHandler);
         if (resetCommand != null) resetCommand.setExecutor(deathStormCommand);
         if (addCommand != null) addCommand.setExecutor(deathStormCommand);
         if (removeCommand != null) removeCommand.setExecutor(deathStormCommand);
+        if (stopDeathStorm != null) stopDeathStorm.setExecutor(deathStormCommand);
 
         // Comandos de días
         PluginCommand changeDayCommand = getCommand("cambiardia");
-        PluginCommand dayCommand = getCommand("dia");
 
         if (changeDayCommand != null) {
             changeDayCommand.setExecutor(new DayCommandHandler(dayHandler));
-        }
-        if (dayCommand != null) {
-            dayCommand.setExecutor(new DayCommandHandler(dayHandler));
         }
 
         // Cargar datos de DeathStorm al iniciar
@@ -243,8 +251,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(gameModeTeamHandler, this);
         getServer().getPluginManager().registerEvents(firstJoinHandler, this);
 
-        // Registrar el comando /ping
-        Objects.requireNonNull(this.getCommand("ping")).setExecutor(new PingCommand(this));
+        // Registrar el Ping Monitor
         pingMonitor = new PingMonitor(this);
         pingMonitor.startMonitoring();
         getLogger().info("PingMonitor activado.");
@@ -274,7 +281,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         new VHList(this).runTaskTimer(this, 0, 10);
 
         // Damage Log Listener
-        damageLogListener = new DamageLogListener(this, deathStormHandler);
+        damageLogListener = new DamageLogListener(this);
         getServer().getPluginManager().registerEvents(damageLogListener, this);
 
         // Registrar el comando "giveessence"
@@ -292,7 +299,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         BonusAnimation bonusAnimation = new BonusAnimation(this);
         SuccessNotification successNotif = new SuccessNotification(this);
         ErrorNotification errorNotif = new ErrorNotification(this);
-        MuerteHandler muertehandler = new MuerteHandler(this, damageLogListener, deathStormHandler);
+        MuerteHandler muertehandler = new MuerteHandler(this, damageLogListener, deathStormHandler, dayHandler);
         DiscoCommand discoCommand = new DiscoCommand(this);
         this.getCommand("magictp").setExecutor(new MagicTP(this));
         this.getCommand("playdisco").setExecutor(discoCommand);
@@ -346,9 +353,11 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         this.achievementPartyHandler = new AchievementPartyHandler(this);
         this.achievementGUI = new AchievementGUI(this, achievementPartyHandler);
         achievementCommands = new AchievementCommands(achievementPartyHandler);
+        this.itemPartyHandler = new Events.ItemParty.ItemPartyHandler(this, tiempoCommand);
         getServer().getPluginManager().registerEvents(eventoHandler, this);
         getServer().getPluginManager().registerEvents(ultraWitherEvent, this);
         getServer().getPluginManager().registerEvents(achievementPartyHandler, this);
+        getServer().getPluginManager().registerEvents(itemPartyHandler, this);
 
         this.getCommand("addlogro").setExecutor(achievementCommands);
         this.getCommand("addlogro").setTabCompleter(achievementCommands);
@@ -403,11 +412,14 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
                     case "logros":
                         achievementPartyHandler.startEvent(sender);
                         break;
+                    case "itemparty":
+                        itemPartyHandler.iniciarEvento();
+                        break;
                     default:
-                        sender.sendMessage("Uso incorrecto del comando. Usa /start <evento1|skybattle|force>");
+                        sender.sendMessage("Uso incorrecto del comando. Usa /start <evento1|skybattle|force|reglas|resetpurple|logros|itemparty>");
                 }
             } else {
-                sender.sendMessage("Uso incorrecto del comando. Usa /start <evento1|skybattle|force>");
+                sender.sendMessage("Uso incorrecto del comando. Usa /start <evento1|skybattle|force|reglas|resetpurple|logros|itemparty>");
             }
             return true;
         });
@@ -417,8 +429,10 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
                 eventoHandler.terminarEvento();
             } else if (args.length == 1 && args[0].equalsIgnoreCase("logros")) {
                 achievementPartyHandler.endEvent(sender);
+            } else if (args.length == 1 && args[0].equalsIgnoreCase("itemparty")) {
+                itemPartyHandler.terminarEvento();
             } else {
-                sender.sendMessage("Uso incorrecto del comando. Usa /end <evento1>");
+                sender.sendMessage("Uso incorrecto del comando. Usa /end <evento1|logros|itemparty>");
             }
             return true;
         });
@@ -437,6 +451,9 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
             if (args.length == 1 && args[0].equalsIgnoreCase("logros")) {
                 achievementPartyHandler.resetEvent(sender);
                 return true;
+            } else if (args.length == 1 && args[0].equalsIgnoreCase("itempartyplayers")) {
+                itemPartyHandler.resetPlayersFile();
+                return true;
             }
             return false;
         });
@@ -445,6 +462,15 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
             if (sender instanceof Player) {
                 Player player = (Player) sender;
                 achievementGUI.openAchievementGUI(player);
+                return true;
+            }
+            return false;
+        });
+
+        this.getCommand("reloadevent").setExecutor((sender, command, label, args) -> {
+            if (args.length == 1 && args[0].equalsIgnoreCase("itempartyconfig")) {
+                itemPartyHandler.reloadConfig();
+                sender.sendMessage("§aConfiguración de ItemParty recargada correctamente.");
                 return true;
             }
             return false;
@@ -503,6 +529,27 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         Bukkit.getPluginManager().registerEvents(spawnManager, this);
 
         getLogger().info("Logica de MobCap habilitada correctamente!");
+
+        //Habilidades System
+        habilidadesManager = new HabilidadesManager(this);
+        habilidadesEffects = new HabilidadesEffects(this);
+        habilidadesGUI = new HabilidadesGUI(this, habilidadesManager, dayHandler);
+        habilidadesListener = new HabilidadesListener(this, habilidadesManager, habilidadesEffects);
+
+        getServer().getPluginManager().registerEvents(habilidadesGUI, this);
+        getServer().getPluginManager().registerEvents(habilidadesListener, this);
+
+
+        HabilidadesCommand habilidadesCommand = new HabilidadesCommand(habilidadesManager);
+        Objects.requireNonNull(getCommand("habilidades")).setExecutor(habilidadesCommand);
+        Objects.requireNonNull(getCommand("habilidades")).setTabCompleter(habilidadesCommand);
+
+        getLogger().info("Sistema de Habilidades habilitado correctamente!");
+
+        //Comando Publico
+        viciontCommands = new ViciontCommands(this, deathStormHandler, dayHandler);
+        getCommand("viciont").setExecutor(viciontCommands);
+        getCommand("viciont").setTabCompleter(viciontCommands);
 
         //Dimensiones Corrupted End
 

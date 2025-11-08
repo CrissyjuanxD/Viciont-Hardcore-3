@@ -27,11 +27,6 @@ public class DayCommandHandler implements CommandExecutor {
             } else {
                 sender.sendMessage(ChatColor.RED + "No tienes permiso para usar este comando.");
             }
-        } else if (label.equalsIgnoreCase("dia")) {
-            int currentDay = dayHandler.getCurrentDay();
-            sender.sendMessage(ChatColor.GOLD + "Estamos en el día " + currentDay + " de Viciont Hardcore 3.");
-        } else {
-            return false;
         }
         return true;
     }

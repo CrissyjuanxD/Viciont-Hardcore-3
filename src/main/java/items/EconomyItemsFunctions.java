@@ -329,8 +329,14 @@ public class EconomyItemsFunctions implements Listener {
             if (item == null || item.getType() == Material.AIR) continue;
 
             if (item.getDurability() > 0) {
-                short nuevaDurabilidad = (short) (item.getDurability() - (item.getType().getMaxDurability() * porcentaje));
-                item.setDurability((short) Math.max(0, nuevaDurabilidad));
+                int maxDurabilidad = item.getType().getMaxDurability();
+                int durabilidadActual = item.getDurability();
+
+                int reparacion = (int) (maxDurabilidad * porcentaje);
+
+                int nuevaDurabilidad = Math.max(0, durabilidadActual - reparacion);
+
+                item.setDurability((short) nuevaDurabilidad);
             }
         }
 

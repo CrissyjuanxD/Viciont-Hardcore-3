@@ -6,6 +6,9 @@ import items.EmblemItems;
 import items.UpgradeNTItems;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
@@ -13,9 +16,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.*;
-import org.bukkit.event.inventory.CraftItemEvent;
-import org.bukkit.event.inventory.PrepareItemCraftEvent;
-import org.bukkit.event.inventory.PrepareSmithingEvent;
+import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -60,19 +61,19 @@ public class DayFourChanges implements Listener {
         this.uuidKey = new NamespacedKey(plugin, "creator_uuid");
         this.upgradeKey = new NamespacedKey(plugin, "is_upgrade");
 
-        /*this.mobCapManager = MobCapManager.getInstance(plugin);*/
     }
 
     public void apply() {
         if (!isApplied) {
             Bukkit.getPluginManager().registerEvents(this, plugin);
             isApplied = true;
+            removeVanillaNetheriteUpgradeRecipe();
             registerUpgradeRecipes();
             registerEmblemRecipes();
             blazespawmer.apply();
             guardianCorruptedSkeleton.apply();
             corruptedInfernalSpider.apply();
-            /*mobCapManager.setMobCap(90);*/
+
         }
     }
 
@@ -82,7 +83,6 @@ public class DayFourChanges implements Listener {
             blazespawmer.revert();
             guardianCorruptedSkeleton.revert();
             corruptedInfernalSpider.revert();
-            /*mobCapManager.resetMobCap();*/
 
             Bukkit.removeRecipe(new NamespacedKey(plugin, "fragment_upgrade"));
             Bukkit.removeRecipe(new NamespacedKey(plugin, "duplicador"));
@@ -426,16 +426,16 @@ public class DayFourChanges implements Listener {
         ItemStack netheriteUpgrade = new ItemStack(Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
         ShapedRecipe netheriteRecipe = new ShapedRecipe(new NamespacedKey(plugin, "netherite_upgrade"), netheriteUpgrade);
         netheriteRecipe.shape("FNF", "FUF", "FFF");
-        netheriteRecipe.setIngredient('F', new RecipeChoice.ExactChoice(UpgradeNTItems.createFragmentoUpgrade())); // CMD 101
-        netheriteRecipe.setIngredient('U', new RecipeChoice.ExactChoice(UpgradeNTItems.createUpgradeVacio()));// CMD 100
+        netheriteRecipe.setIngredient('F', new RecipeChoice.ExactChoice(UpgradeNTItems.createFragmentoUpgrade()));
+        netheriteRecipe.setIngredient('U', new RecipeChoice.ExactChoice(UpgradeNTItems.createUpgradeVacio()));
         netheriteRecipe.setIngredient('N', Material.NETHERRACK);
         Bukkit.addRecipe(netheriteRecipe);
 
         ItemStack netheriteDuplicado = new ItemStack(Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
         ShapedRecipe netheriteDuplicadoRecipe = new ShapedRecipe(new NamespacedKey(plugin, "netherite_duplicado"), netheriteDuplicado);
         netheriteDuplicadoRecipe.shape("DPD", "PUP", "NPN");
-        netheriteDuplicadoRecipe.setIngredient('P', new RecipeChoice.ExactChoice(UpgradeNTItems.createDuplicador())); // CMD 102
-        netheriteDuplicadoRecipe.setIngredient('U', new RecipeChoice.ExactChoice(netheriteUpgrade));// CMD 101
+        netheriteDuplicadoRecipe.setIngredient('P', new RecipeChoice.ExactChoice(UpgradeNTItems.createDuplicador()));
+        netheriteDuplicadoRecipe.setIngredient('U', Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
         netheriteDuplicadoRecipe.setIngredient('N', Material.NETHERRACK);
         netheriteDuplicadoRecipe.setIngredient('D', Material.DIAMOND);
         Bukkit.addRecipe(netheriteDuplicadoRecipe);
@@ -444,16 +444,65 @@ public class DayFourChanges implements Listener {
     @EventHandler
     public void onPrepareCraft(PrepareItemCraftEvent event) {
         if (event.getRecipe() == null) return;
-
+        Player player = (Player) event.getView().getPlayer();
+        CraftingInventory inventory = event.getInventory();
+        ItemStack[] matrix = inventory.getMatrix();
         ItemStack result = event.getRecipe().getResult();
-        if (result != null && result.getType() == Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE) {
-            if (event.getView().getPlayer() instanceof Player player) {
-                // Crear un nuevo upgrade con nombre personalizado
-                ItemStack netheriteUpgrade = createNetheriteUpgrade(player);
-                event.getInventory().setResult(netheriteUpgrade);
+
+        // ===== CASO 1: Crear la Upgrade original =====
+        if (result.getType() == Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE &&
+                event.getRecipe() instanceof ShapedRecipe shaped &&
+                shaped.getKey().getKey().equals("netherite_upgrade")) {
+
+            ItemStack netheriteUpgrade = createNetheriteUpgrade(player);
+            inventory.setResult(netheriteUpgrade);
+            return;
+        }
+
+        // ===== CASO 2: Duplicar Upgrade =====
+        if (result.getType() == Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE &&
+                event.getRecipe() instanceof ShapedRecipe shaped &&
+                shaped.getKey().getKey().equals("netherite_duplicado")) {
+
+            boolean isValid = true;
+            ItemStack upgrade = null;
+
+            for (int i = 0; i < matrix.length; i++) {
+                ItemStack item = matrix[i];
+                switch (i) {
+                    case 0, 2 -> {
+                        if (item == null || item.getType() != Material.DIAMOND) isValid = false;
+                    }
+                    case 1, 3, 5, 7 -> {
+                        if (item == null || !item.isSimilar(UpgradeNTItems.createDuplicador())) isValid = false;
+                    }
+                    case 4 -> {
+                        if (item != null && item.getType() == Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE)
+                            upgrade = item;
+                        else isValid = false;
+                    }
+                    case 6, 8 -> {
+                        if (item == null || item.getType() != Material.NETHERRACK) isValid = false;
+                    }
+                }
+                if (!isValid) break;
+            }
+
+            if (isValid && upgrade != null) {
+                if (!canUseUpgrade(player, upgrade)) {
+                    inventory.setResult(null);
+                    player.sendMessage("§c۞ No puedes duplicar esta Upgrade de Netherite!");
+                } else {
+                    ItemStack duplicatedUpgrade = createNetheriteUpgrade(player);
+                    duplicatedUpgrade.setAmount(2);
+                    inventory.setResult(duplicatedUpgrade);
+                }
+            } else {
+                inventory.setResult(null);
             }
         }
     }
+
 
     public ItemStack createNetheriteUpgrade(Player player) {
         ItemStack item = new ItemStack(Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
@@ -471,12 +520,15 @@ public class DayFourChanges implements Listener {
         return item;
     }
 
-    private boolean isCorruptedRecipe(Recipe recipe) {
-        if (!(recipe instanceof ShapedRecipe)) return false;
-
-        ShapedRecipe shaped = (ShapedRecipe) recipe;
-        return shaped.getKey().getNamespace().equals(plugin.getName()) &&
-                shaped.getKey().getKey().contains("corrupted");
+    private void removeVanillaNetheriteUpgradeRecipe() {
+        Iterator<Recipe> it = Bukkit.recipeIterator();
+        while (it.hasNext()) {
+            Recipe recipe = it.next();
+            ItemStack result = recipe.getResult();
+            if (result != null && result.getType() == Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE) {
+                it.remove();
+            }
+        }
     }
 
     public boolean canUseUpgrade(Player player, ItemStack item) {
@@ -491,122 +543,116 @@ public class DayFourChanges implements Listener {
         return uuid != null && uuid.equals(player.getUniqueId().toString());
     }
 
+
     @EventHandler
-    public void onSmithingPrepare(PrepareSmithingEvent event) {
-        ItemStack upgrade = event.getInventory().getItem(1);
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        Inventory inv = event.getClickedInventory();
+        if (inv == null) return;
 
-        if (upgrade == null || upgrade.getType() != Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE) return;
+        if (event.getView().getTopInventory() instanceof SmithingInventory) {
 
-        Player player = (Player) event.getView().getPlayer();
+            ItemStack current = event.getCurrentItem();
+            if (current == null || current.getType() != Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE) return;
 
-        if (!canUseUpgrade(player, upgrade)) {
-            event.setResult(null);
-            player.sendMessage("§c۞ No puedes usar una plantilla que no te pertenece!");
+            if (!canUseUpgrade(player, current)) {
+                event.setCancelled(true);
+                player.sendMessage(ChatColor.RED + "۞ No puedes manipular una Upgrade que no te pertenece dentro de la mesa de herrería!");
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 0.8f);
+            }
         }
     }
 
     @EventHandler
-    public void onCraftPrepare(PrepareItemCraftEvent event) {
-        if (event.getRecipe() == null ||
-                !(event.getRecipe() instanceof ShapedRecipe) ||
-                !((ShapedRecipe)event.getRecipe()).getKey().equals(new NamespacedKey(plugin, "netherite_duplicado"))) {
-            return;
-        }
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!(event.getView().getTopInventory() instanceof SmithingInventory)) return;
 
-        CraftingInventory inventory = event.getInventory();
-        ItemStack[] matrix = inventory.getMatrix();
+        for (ItemStack item : event.getNewItems().values()) {
+            if (item != null && item.getType() == Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE && !canUseUpgrade(player, item)) {
+                event.setCancelled(true);
+                player.sendMessage(ChatColor.RED + "۞ No puedes arrastrar una Upgrade no legítima dentro de la mesa de herrería!");
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 0.8f);
+                break;
+            }
+        }
+    }
+
+    @EventHandler
+    public void onSmithingPrepare(PrepareSmithingEvent event) {
         Player player = (Player) event.getView().getPlayer();
-        boolean isValid = true;
-        ItemStack upgrade = null;
+        ItemStack upgrade = event.getInventory().getItem(1);
 
-        for (int i = 0; i < matrix.length; i++) {
-            ItemStack item = matrix[i];
+        if (upgrade == null || upgrade.getType() != Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE) return;
 
-            switch (i) {
-                case 0: case 2:
-                    if (item == null || item.getType() != Material.DIAMOND) {
-                        isValid = false;
-                    }
-                    break;
-
-                case 1: case 3: case 5: case 7:
-                    if (item == null || !item.hasItemMeta() ||
-                            item.getItemMeta().getCustomModelData() != 102) {
-                        isValid = false;
-                    }
-                    break;
-
-                case 4:
-                    if (item != null && item.getType() == Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE) {
-                        upgrade = item;
-                    } else {
-                        isValid = false;
-                    }
-                    break;
-
-                case 6: case 8:
-                    if (item == null || item.getType() != Material.NETHERRACK) {
-                        isValid = false;
-                    }
-                    break;
-
-                default:
-                    break;
-            }
-
-            if (!isValid) break;
-        }
-
-        if (isValid && upgrade != null) {
-            if (!canUseUpgrade(player, upgrade)) {
-                inventory.setResult(null);
-                player.sendMessage("§c۞ No puedes duplicar esta Upgrade de Netherite!");
-            } else {
-                ItemStack duplicatedUpgrade = createNetheriteUpgrade(player);
-                duplicatedUpgrade.setAmount(2);
-                inventory.setResult(duplicatedUpgrade);
-            }
-        } else {
-            inventory.setResult(null);
+        if (!canUseUpgrade(player, upgrade)) {
+            event.setResult(null);
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.6f);
         }
     }
 
     @EventHandler
     public void onCraftItem(CraftItemEvent event) {
-        if (!(event.getRecipe() instanceof ShapedRecipe) ||
-                !((ShapedRecipe)event.getRecipe()).getKey().equals(new NamespacedKey(plugin, "netherite_duplicado"))) {
-            return;
-        }
-
-        event.setCancelled(true);
-
-        CraftingInventory inv = event.getInventory();
         Player player = (Player) event.getWhoClicked();
+        CraftingInventory inv = event.getInventory();
+        ItemStack[] matrix = inv.getMatrix();
 
-        ItemStack upgrade = inv.getMatrix()[4];
-        if (upgrade == null || !canUseUpgrade(player, upgrade)) {
-            player.sendMessage("§c۞ No puedes duplicar esta Upgrade de Netherite!");
-            return;
-        }
+        // Buscar si hay alguna plantilla de netherite en el crafteo
+        boolean hasInvalidUpgrade = false;
+        for (ItemStack item : matrix) {
+            if (item == null || item.getType() != Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE) continue;
 
-        int amountToCraft = event.isShiftClick() ? calculateMaxCrafts(inv) : 1;
-
-        if (amountToCraft <= 0) return;
-
-        ItemStack result = createNetheriteUpgrade(player);
-        result.setAmount(2 * amountToCraft);
-
-        consumeIngredients(inv, amountToCraft);
-
-        HashMap<Integer, ItemStack> remaining = player.getInventory().addItem(result);
-        if (!remaining.isEmpty()) {
-            for (ItemStack item : remaining.values()) {
-                player.getWorld().dropItemNaturally(player.getLocation(), item);
+            // Si la plantilla no pertenece al jugador, marcamos el crafteo como inválido
+            if (!canUseUpgrade(player, item)) {
+                hasInvalidUpgrade = true;
+                break;
             }
         }
 
-        player.updateInventory();
+        if (hasInvalidUpgrade) {
+            event.setCancelled(true);
+            inv.setResult(null);
+
+            player.sendMessage(ChatColor.RED + "۞ No puedes usar una plantilla de Netherite que no te pertenece!");
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 0.8f);
+            return;
+        }
+
+        // ==============================
+        // Si llegamos aquí, el crafteo es válido
+        // ==============================
+
+        // 🔸 Si el crafteo es el duplicador, aplicamos la lógica especial
+        if (event.getRecipe() instanceof ShapedRecipe shaped &&
+                shaped.getKey().getKey().equals("netherite_duplicado")) {
+
+            event.setCancelled(true); // manejado manualmente
+
+            ItemStack upgrade = inv.getMatrix()[4];
+            if (upgrade == null || !canUseUpgrade(player, upgrade)) {
+                player.sendMessage(ChatColor.RED + "§c۞ No puedes duplicar esta Upgrade de Netherite!");
+                return;
+            }
+
+            int amountToCraft = event.isShiftClick() ? calculateMaxCrafts(inv) : 1;
+            if (amountToCraft <= 0) return;
+
+            ItemStack result = createNetheriteUpgrade(player);
+            result.setAmount(2 * amountToCraft);
+
+            consumeIngredients(inv, amountToCraft);
+
+            HashMap<Integer, ItemStack> remaining = player.getInventory().addItem(result);
+            if (!remaining.isEmpty()) {
+                for (ItemStack item : remaining.values()) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), item);
+                }
+            }
+
+            player.updateInventory();
+        }
     }
+
 
     private int calculateMaxCrafts(CraftingInventory inv) {
         int max = Integer.MAX_VALUE;
@@ -829,4 +875,5 @@ public class DayFourChanges implements Listener {
     }
 
     //Permitir que los creepers puedan spawnear de dia
+
 }

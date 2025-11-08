@@ -2,18 +2,14 @@ package Dificultades;
 
 import Armors.CorruptedArmor;
 import Blocks.Endstalactitas;
-import Dificultades.CustomMobs.Bombita;
-import Dificultades.CustomMobs.CorruptedCreeper;
-import Dificultades.CustomMobs.GuardianShulker;
+import Dificultades.CustomMobs.GuardianShulker_Descartado;
 import Dificultades.CustomMobs.Iceologer;
 import Handlers.DayHandler;
-import items.BlazeItems;
 import items.CorruptedNetheriteItems;
 import items.EndItems;
 import items.EnderiteTools;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.*;
-import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -22,19 +18,15 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.bukkit.event.inventory.FurnaceBurnEvent;
 import org.bukkit.event.inventory.FurnaceSmeltEvent;
 import org.bukkit.event.inventory.FurnaceStartSmeltEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.inventory.*;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -44,7 +36,7 @@ public class DayFourteenChanges implements Listener {
     private final JavaPlugin plugin;
     private boolean isApplied = false;
     private final DayHandler dayHandler;
-    private final GuardianShulker guardianShulker;
+    private final GuardianShulker_Descartado guardianShulkerDescartado;
     private final Iceologer iceologer;
     private final Random random = new Random();
     private final Map<Location, Long> altarCooldowns = new HashMap<>();
@@ -52,7 +44,7 @@ public class DayFourteenChanges implements Listener {
     public DayFourteenChanges(JavaPlugin plugin, DayHandler handler) {
         this.plugin = plugin;
         this.dayHandler = handler;
-        this.guardianShulker = new GuardianShulker(plugin);
+        this.guardianShulkerDescartado = new GuardianShulker_Descartado(plugin);
         this.iceologer = new Iceologer(plugin);
     }
 
@@ -60,7 +52,7 @@ public class DayFourteenChanges implements Listener {
         if (!isApplied) {
             isApplied = true;
             Bukkit.getPluginManager().registerEvents(this, plugin);
-            guardianShulker.apply();
+            guardianShulkerDescartado.apply();
             registerEndRecipes();
             registerEnderiteToolsUpgrades();
 
@@ -92,7 +84,7 @@ public class DayFourteenChanges implements Listener {
     public void revert() {
         if (isApplied) {
             isApplied = false;
-            guardianShulker.revert();
+            guardianShulkerDescartado.revert();
 
             //remover crafteos
             Bukkit.removeRecipe(new NamespacedKey(plugin, "endstalactita_item"));
@@ -132,7 +124,7 @@ public class DayFourteenChanges implements Listener {
         if (event.getEntityType() != EntityType.SHULKER) return;
 
         if (event.getEntity().getPersistentDataContainer()
-                .has(guardianShulker.getGuardianShulkerKey(), PersistentDataType.BYTE)) {
+                .has(guardianShulkerDescartado.getGuardianShulkerKey(), PersistentDataType.BYTE)) {
             return;
         }
 
@@ -141,7 +133,7 @@ public class DayFourteenChanges implements Listener {
         Shulker shulker = (Shulker) event.getEntity();
         Location loc = shulker.getLocation();
 
-        guardianShulker.spawnGuardianShulker(loc);
+        guardianShulkerDescartado.spawnGuardianShulker(loc);
         shulker.remove();
 
     }
@@ -517,7 +509,7 @@ public class DayFourteenChanges implements Listener {
                     world.spawnParticle(Particle.TOTEM_OF_UNDYING, spawnLocation, 100, 0.5, 1, 0.5, 0.1);
                     world.playSound(spawnLocation, Sound.ENTITY_FIREWORK_ROCKET_BLAST, 5.0f, 1.0f);
 
-                    guardianShulker.spawnGuardianShulker(spawnLocation);
+                    guardianShulkerDescartado.spawnGuardianShulker(spawnLocation);
 
                     destroyAltarStructure(altarLocation);
 

@@ -1,0 +1,3 @@
+# Configuración de Habilidades
+# Este archivo almacena las habilidades desbloqueadas de cada jugador
+# Formato: <UUID>.<TIPO_HABILIDAD>.<NIVEL>: true/false

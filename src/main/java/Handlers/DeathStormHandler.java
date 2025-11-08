@@ -1,9 +1,15 @@
 package Handlers;
 
-import Events.DamageLogListener;
 import TitleListener.MuerteHandler;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
+import net.md_5.bungee.api.ChatColor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -11,13 +17,12 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,64 +30,98 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.bukkit.event.player.PlayerBedEnterEvent;
-
 public class DeathStormHandler implements Listener {
     private final JavaPlugin plugin;
     private final DayHandler dayHandler;
-    private final DamageLogListener damageLogListener;
 
     // Thread-safe collections para concurrencia
-    private final Map<UUID, Integer> deathCount = new ConcurrentHashMap<>();
-    private final Map<UUID, Long> lastLightningCheck = new ConcurrentHashMap<>();
-    private final Set<UUID> pausedActionBars = ConcurrentHashMap.newKeySet();
     private final Set<Chunk> recentlyStruckChunks = ConcurrentHashMap.newKeySet();
+    private final Map<Integer, Integer> deathsToday = new ConcurrentHashMap<>();
+    private final Set<UUID> hiddenPlayers = ConcurrentHashMap.newKeySet();
 
     // Variables de estado optimizadas
     private volatile int remainingStormSeconds = 0;
     private volatile boolean isDeathStormActive = false;
+    private volatile boolean isDeathStormStopped = false;
+    private int totalStormSeconds = 1;
 
     // Caché para optimizar cálculos repetitivos
     private final Map<Integer, String> timeFormatCache = new ConcurrentHashMap<>();
-    private final Map<UUID, Boolean> actionBarEligibilityCache = new ConcurrentHashMap<>();
-    private long lastCacheClean = System.currentTimeMillis();
 
     // Constantes optimizadas
     private static final long CHUNK_COOLDOWN = 5000; // 5 segundos
-    private static final long CACHE_CLEAN_INTERVAL = 30000; // 30 segundos
-    private static final long LIGHTNING_CHECK_COOLDOWN = 5 * 60 * 1000; // 5 minutos
-    private static final int CACHE_MAX_SIZE = 1000;
 
     // Objetos reutilizables para reducir GC
     private BukkitRunnable stormTask;
     private final ThreadLocalRandom random = ThreadLocalRandom.current();
 
-    // Colores como constantes para evitar recreación
-    private static final net.md_5.bungee.api.ChatColor COLOR_PRIMARIO = net.md_5.bungee.api.ChatColor.of("#9179D4");
-    private static final net.md_5.bungee.api.ChatColor COLOR_TIEMPO = net.md_5.bungee.api.ChatColor.of("#7700A0");
-    private static final net.md_5.bungee.api.ChatColor COLOR_GRIS = net.md_5.bungee.api.ChatColor.GRAY;
+    private BossBar progressBar; // Rosada
+    private BossBar timeBar;     // Blanca
+    private double bossbarProgress = 1.0; // Guardable
 
     public DeathStormHandler(JavaPlugin plugin, DayHandler dayHandler) {
         this.plugin = plugin;
         this.dayHandler = dayHandler;
-        this.damageLogListener = new DamageLogListener(plugin, this);
+        this.progressBar = Bukkit.createBossBar("\uEAA9", BarColor.PINK, BarStyle.SOLID);
+        this.timeBar = Bukkit.createBossBar("00:00:00", BarColor.WHITE, BarStyle.SOLID);
+        this.progressBar.setVisible(false);
+        this.timeBar.setVisible(false);
         loadStormData();
-
-        // Tarea asíncrona para limpiar cachés periódicamente
-        startCacheCleanupTask();
     }
 
-    @EventHandler
-    public void onPlayerDeath(PlayerDeathEvent event) {
-        Player player = event.getEntity();
-        UUID playerUUID = player.getUniqueId();
+    public void toggleStopDeathStorm(CommandSender sender) {
+        isDeathStormStopped = !isDeathStormStopped;
+        sender.sendMessage(isDeathStormStopped ?
+                ChatColor.RED + "❌ La DeathStorm ha sido detenida temporalmente." :
+                ChatColor.GREEN + "☁ La DeathStorm se reactivará normalmente.");
+    }
 
-        // Operación atómica thread-safe
-        deathCount.merge(playerUUID, 1, Integer::sum);
+    public void togglePlayerVisibility(Player player) {
+        UUID id = player.getUniqueId();
 
+        if (hiddenPlayers.contains(id)) {
+            // 🔹 Volver a activar el temporizador
+            hiddenPlayers.remove(id);
+            player.sendMessage(ChatColor.of("#d37af0") + "☁ Has vuelto a activar el temporizador de la DeathStorm.");
+
+            // Si hay DeathStorm activa, volver a añadir las bossbars
+            if (isDeathStormActive) {
+                progressBar.addPlayer(player);
+                timeBar.addPlayer(player);
+            }
+
+        } else {
+            // 🔹 Desactivar bossbars
+            hiddenPlayers.add(id);
+            progressBar.removePlayer(player);
+            timeBar.removePlayer(player);
+
+            // Enviar mensaje al ActionBar (no al chat)
+            sendHiddenWarning(player);
+        }
+    }
+
+    private void sendHiddenWarning(Player player) {
+        // 💬 Mensaje con colores hex exactos en formato ActionBar
+        String message =
+                ChatColor.of("#f3687d") + "⊗" +
+                        ChatColor.of("#dfc3c9") + " Tienes" +
+                        ChatColor.of("#fd8698") + " desactivado " +
+                        ChatColor.of("#dfc3c9") + "el timer de la " +
+                        ChatColor.of("#b458d5") + "DeathStorm";
+
+        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(message));
+    }
+
+    public void addDeathStormTime(Player player) {
         int currentDay = dayHandler.getCurrentDay();
-        int increment;
+        deathsToday.keySet().removeIf(day -> day != currentDay);
+        // Registrar muerte del día actual
+        deathsToday.merge(currentDay, 1, Integer::sum);
+        int deathsTodayCount = deathsToday.get(currentDay);
 
+        // Calcular horas según día
+        int increment;
         if (currentDay >= 15 && currentDay < 20) {
             increment = (currentDay - 14);
         } else if (currentDay >= 20) {
@@ -91,24 +130,71 @@ public class DeathStormHandler implements Listener {
             increment = currentDay;
         }
 
-        // Operación atómica para evitar condiciones de carrera
-        synchronized (this) {
-            remainingStormSeconds += 3600 * increment;
+        // Base 1 hora * increment
+        int baseSeconds = 3600 * increment;
+
+        // Por muerte adicional: +10min 30seg
+        int extraSeconds = (deathsTodayCount - 1) * (10 * 60 + 30);
+        int totalAdded = baseSeconds + extraSeconds;
+
+        remainingStormSeconds += totalAdded;
+        totalStormSeconds = remainingStormSeconds;
+
+        if (!isDeathStormStopped) {
             if (!isDeathStormActive) {
                 isDeathStormActive = true;
                 startStorm();
+            } else {
+                bossbarProgress = 1.0;
+                progressBar.setProgress(1.0);
             }
-        }
 
-        // Invalidar caché del jugador
-        invalidatePlayerCache(playerUUID);
+            Bukkit.getOnlinePlayers().forEach(p -> {
+                p.playSound(p.getLocation(), "minecraft:custom.announce_corruptedstorm", 100000.0f, 1.0f);
+                p.playSound(p.getLocation(), Sound.ITEM_TRIDENT_THUNDER, 10000.0f, 0.1f);
+            });
+
+            int hours = totalAdded / 3600;
+            int minutes = (totalAdded % 3600) / 60;
+            int seconds = totalAdded % 60;
+            String formattedTime = String.format("%02dʜ:%02dᴍ:%02ds", hours, minutes, seconds);
+
+            showDeathStormTitle(formattedTime);
+        }
         saveStormDataAsync();
     }
+
+    private void showDeathStormTitle(String formattedTime) {
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            p.sendTitle(
+                    ChatColor.of("#c37ff0") + "\uE085", // título unicode del font personalizado
+                    ChatColor.of("#c37ff0") + "ᴅᴜʀᴀᴄɪóɴ: " + ChatColor.of("#a153d5") + formattedTime,
+                    15, // fadeIn
+                    120, // stay (6 segundos)
+                    15 // fadeOut
+            );
+        }
+    }
+
 
     @EventHandler
     public void onWeatherChange(WeatherChangeEvent event) {
         if (!event.toWeatherState() && isDeathStormActive) {
             event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player p = event.getPlayer();
+        if (isDeathStormActive && !hiddenPlayers.contains(p.getUniqueId())) {
+            progressBar.addPlayer(p);
+            timeBar.addPlayer(p);
+            progressBar.setVisible(true);
+            timeBar.setVisible(true);
+            refreshBossbarOrder();
+        } else if (isDeathStormActive && hiddenPlayers.contains(p.getUniqueId())) {
+            sendHiddenWarning(p);
         }
     }
 
@@ -142,17 +228,23 @@ public class DeathStormHandler implements Listener {
     private void startStorm() {
         World world = Bukkit.getWorlds().get(0);
 
-        if (stormTask != null && !stormTask.isCancelled()) {
-            stormTask.cancel();
-        }
+        if (stormTask != null && !stormTask.isCancelled()) stormTask.cancel();
 
         world.setStorm(true);
         world.setThundering(true);
 
-        stormTask = new BukkitRunnable() {
-            private final List<Player> cachedPlayers = new ArrayList<>();
-            private int tickCounter = 0;
+        // Activar las bossbars
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (!hiddenPlayers.contains(p.getUniqueId())) {
+                progressBar.addPlayer(p);
+                timeBar.addPlayer(p);
+            } else sendHiddenWarning(p);
+        }
+        timeBar.setVisible(true);
+        progressBar.setVisible(true);
+        refreshBossbarOrder();
 
+        stormTask = new BukkitRunnable() {
             @Override
             public void run() {
                 if (remainingStormSeconds <= 0) {
@@ -161,31 +253,19 @@ public class DeathStormHandler implements Listener {
                     return;
                 }
 
-                // Caché la lista de jugadores cada 5 ticks para reducir llamadas a getOnlinePlayers()
-                if (tickCounter % 5 == 0) {
-                    cachedPlayers.clear();
-                    cachedPlayers.addAll(Bukkit.getOnlinePlayers());
-                }
-                tickCounter++;
-
-                // Usar caché para el formato de tiempo
+                // Calcular tiempo
                 String timeFormat = getFormattedTime(remainingStormSeconds);
-                TextComponent message = createStormMessage(timeFormat);
+                timeBar.setTitle(ChatColor.of("#d37af0") + timeFormat);
 
-                // Procesamiento optimizado de jugadores
-                for (Player player : cachedPlayers) {
-                    if (player.isOnline() && shouldShowDeathStormActionBarCached(player)) {
-                        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, message);
-                    }
-                }
+                // Progreso (siempre relativo)
+                bossbarProgress = Math.min(1.0, Math.max(0.0,
+                        (double) remainingStormSeconds / (double) totalStormSeconds));
+                progressBar.setProgress(bossbarProgress);
 
                 remainingStormSeconds--;
-
-                // Ejecutar lightning spawn de forma asíncrona
                 Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> spawnRandomLightning(world));
             }
         };
-
         stormTask.runTaskTimer(plugin, 0, 20);
 
         // Tarea para lightning en jugadores (día 15+)
@@ -196,11 +276,6 @@ public class DeathStormHandler implements Listener {
                     cancel();
                     return;
                 }
-
-                int currentDay = dayHandler.getCurrentDay();
-                if (currentDay >= 15) {
-                    checkPlayerLightningOptimized();
-                }
             }
         }.runTaskTimerAsynchronously(plugin, 0, 20 * 60 * 5);
     }
@@ -210,7 +285,17 @@ public class DeathStormHandler implements Listener {
         world.setStorm(false);
         world.setThundering(false);
         recentlyStruckChunks.clear();
-        clearCaches();
+
+        // Ocultar bossbars
+        progressBar.setVisible(false);
+        timeBar.setVisible(false);
+
+        deathsToday.clear();
+        saveStormDataAsync();
+    }
+
+    private int getTotalStormSeconds() {
+        return Math.max(1, (int) (remainingStormSeconds / bossbarProgress));
     }
 
     private String getFormattedTime(int seconds) {
@@ -222,29 +307,15 @@ public class DeathStormHandler implements Listener {
         });
     }
 
-    private TextComponent createStormMessage(String timeFormat) {
-        TextComponent message = new TextComponent();
-
-        TextComponent quedanText = new TextComponent("Quedan ");
-        quedanText.setColor(COLOR_PRIMARIO);
-        message.addExtra(quedanText);
-
-        TextComponent clockSymbol = new TextComponent("⌚ ");
-        clockSymbol.setColor(COLOR_GRIS);
-        message.addExtra(clockSymbol);
-
-        TextComponent timeComponent = new TextComponent(timeFormat);
-        timeComponent.setColor(COLOR_TIEMPO);
-        timeComponent.setBold(true);
-        timeComponent.setUnderlined(true);
-        message.addExtra(timeComponent);
-
-        TextComponent stormMessage = new TextComponent(" horas de DeathStorm");
-        stormMessage.setColor(COLOR_PRIMARIO);
-        message.addExtra(stormMessage);
-
-        return message;
+    private void refreshBossbarOrder() {
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            progressBar.removePlayer(p);
+            timeBar.removePlayer(p);
+            progressBar.addPlayer(p);
+            timeBar.addPlayer(p);
+        }
     }
+
 
     private void spawnRandomLightning(World world) {
         int currentDay = dayHandler.getCurrentDay();
@@ -364,73 +435,6 @@ public class DeathStormHandler implements Listener {
         return center;
     }
 
-    private void checkPlayerLightningOptimized() {
-        long now = System.currentTimeMillis();
-        List<Player> eligiblePlayers = new ArrayList<>();
-
-        // Pre-filtrar jugadores elegibles
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            UUID playerId = player.getUniqueId();
-
-            if (lastLightningCheck.getOrDefault(playerId, 0L) + LIGHTNING_CHECK_COOLDOWN <= now) {
-                eligiblePlayers.add(player);
-                lastLightningCheck.put(playerId, now);
-            }
-        }
-
-        // Procesar en lotes para evitar sobrecargar el servidor
-        if (!eligiblePlayers.isEmpty()) {
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                for (Player player : eligiblePlayers) {
-                    if (player.isOnline() && random.nextBoolean()) {
-                        player.getWorld().strikeLightning(player.getLocation());
-                        player.sendMessage(ChatColor.RED + "¡Un rayo te ha alcanzado!");
-                    }
-                }
-            });
-        }
-    }
-
-    private boolean shouldShowDeathStormActionBarCached(Player player) {
-        UUID playerId = player.getUniqueId();
-
-        // Usar caché con limpieza periódica
-        return actionBarEligibilityCache.computeIfAbsent(playerId, id -> {
-            if (isActionBarPausedForPlayer(id)) return false;
-            if (MuerteHandler.isDeathMessageActive()) return false;
-            if (damageLogListener != null && damageLogListener.isPlayerInDamageLog(id)) return false;
-            return true;
-        });
-    }
-
-    private void invalidatePlayerCache(UUID playerId) {
-        actionBarEligibilityCache.remove(playerId);
-    }
-
-    private void clearCaches() {
-        timeFormatCache.clear();
-        actionBarEligibilityCache.clear();
-    }
-
-    private void startCacheCleanupTask() {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                long now = System.currentTimeMillis();
-                if (now - lastCacheClean > CACHE_CLEAN_INTERVAL) {
-                    // Limpiar cachés si son muy grandes
-                    if (timeFormatCache.size() > CACHE_MAX_SIZE) {
-                        timeFormatCache.clear();
-                    }
-                    if (actionBarEligibilityCache.size() > CACHE_MAX_SIZE) {
-                        actionBarEligibilityCache.clear();
-                    }
-                    lastCacheClean = now;
-                }
-            }
-        }.runTaskTimerAsynchronously(plugin, 0, 20 * 30); // Cada 30 segundos
-    }
-
     // Métodos públicos mantienen la misma interfaz
     public void resetStorm() {
         synchronized (this) {
@@ -438,7 +442,6 @@ public class DeathStormHandler implements Listener {
             isDeathStormActive = false;
         }
         recentlyStruckChunks.clear();
-        clearCaches();
         saveStormDataAsync();
     }
 
@@ -459,28 +462,9 @@ public class DeathStormHandler implements Listener {
             if (remainingStormSeconds == 0) {
                 isDeathStormActive = false;
                 recentlyStruckChunks.clear();
-                clearCaches();
             }
         }
         saveStormDataAsync();
-    }
-
-    public void pauseActionBarForPlayer(UUID playerId) {
-        pausedActionBars.add(playerId);
-        invalidatePlayerCache(playerId);
-    }
-
-    public void resumeActionBarForPlayer(UUID playerId) {
-        pausedActionBars.remove(playerId);
-        invalidatePlayerCache(playerId);
-    }
-
-    public boolean isActionBarPausedForPlayer(UUID playerId) {
-        return pausedActionBars.contains(playerId);
-    }
-
-    private boolean shouldShowDeathStormActionBar(Player player) {
-        return shouldShowDeathStormActionBarCached(player);
     }
 
     public void loadStormData() {
@@ -489,10 +473,11 @@ public class DeathStormHandler implements Listener {
             if (file.exists()) {
                 YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
                 int loadedSeconds = config.getInt("TormentaRestante", 0);
+                double loadedProgress = config.getDouble("BossbarProgress", 1.0);
 
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     remainingStormSeconds = loadedSeconds;
-                    Bukkit.getLogger().info("Storm data loaded: " + remainingStormSeconds + " seconds remaining.");
+                    bossbarProgress = loadedProgress;
                     if (remainingStormSeconds > 0) {
                         isDeathStormActive = true;
                         startStorm();
@@ -510,13 +495,11 @@ public class DeathStormHandler implements Listener {
         try {
             File file = new File(plugin.getDataFolder(), "DayandStorm.yml");
             YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
-
             config.set("TormentaRestante", remainingStormSeconds);
-
+            config.set("BossbarProgress", bossbarProgress);
             config.save(file);
-            Bukkit.getLogger().info("Storm data saved: " + remainingStormSeconds + " seconds remaining.");
         } catch (IOException e) {
-            Bukkit.getLogger().severe("Error saving storm: " + e.getMessage());
+            plugin.getLogger().severe("Error saving storm: " + e.getMessage());
         }
     }
 }

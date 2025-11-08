@@ -537,4 +537,9 @@ public class TiempoCommand implements CommandExecutor, TabCompleter {
         }
         return completions;
     }
+
+    public Set<String> getPlayerBossBars(UUID uuid) {
+        return playerBossBars.getOrDefault(uuid, new HashSet<>());
+    }
+
 }

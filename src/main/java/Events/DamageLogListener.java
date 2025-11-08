@@ -35,12 +35,10 @@ public class DamageLogListener implements Listener {
     private final Set<UUID> pausedActionBars = new HashSet<>();
     private final int delaySeconds = 15;
     private final JavaPlugin plugin;
-    private final DeathStormHandler deathStormHandler;
     private final File dataFile;
 
-    public DamageLogListener(JavaPlugin plugin, DeathStormHandler deathStormHandler) {
+    public DamageLogListener(JavaPlugin plugin) {
         this.plugin = plugin;
-        this.deathStormHandler = deathStormHandler;
         this.dataFile = new File(plugin.getDataFolder(), "damagelog.yml");
         if (!dataFile.exists()) {
             try {
@@ -135,18 +133,11 @@ public class DamageLogListener implements Listener {
             existingTask.cancel();
         }
 
-        if (deathStormHandler != null) {
-            deathStormHandler.pauseActionBarForPlayer(playerId);
-        }
-
         BukkitTask task = new BukkitRunnable() {
             @Override
             public void run() {
                 Player currentPlayer = Bukkit.getPlayer(playerId);
                 if (currentPlayer == null || !damageLogPlayers.containsKey(playerId)) {
-                    if (deathStormHandler != null) {
-                        deathStormHandler.resumeActionBarForPlayer(playerId);
-                    }
                     cancel();
                     damageLogTasks.remove(playerId);
                     return;
@@ -163,9 +154,6 @@ public class DamageLogListener implements Listener {
 
                 if (remainingTime > 0) {
                     if (!isActionBarPausedForPlayer(playerId)) {
-                        if (deathStormHandler != null) {
-                            deathStormHandler.pauseActionBarForPlayer(playerId);
-                        }
 
                         String message = ChatColor.of("#D24346") + "" + ChatColor.BOLD + "۞ " + ChatColor.RESET + ChatColor.of("#9179D4") + "Damage Log: " + ChatColor.RESET + ChatColor.of("#CE2E69") + ChatColor.BOLD + ChatColor.UNDERLINE +
                                 String.format("%02d:%02d", remainingTime / 60, remainingTime % 60);
@@ -179,9 +167,6 @@ public class DamageLogListener implements Listener {
                     }
                     damageLogPlayers.remove(playerId);
                     damageLogTasks.remove(playerId);
-                    if (deathStormHandler != null) {
-                        deathStormHandler.resumeActionBarForPlayer(playerId);
-                    }
                     cancel();
                 }
             }

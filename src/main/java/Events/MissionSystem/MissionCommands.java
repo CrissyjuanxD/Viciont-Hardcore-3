@@ -1,6 +1,6 @@
 package Events.MissionSystem;
 
-import org.bukkit.ChatColor;
+import net.md_5.bungee.api.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -111,9 +111,28 @@ public class MissionCommands implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            missionHandler.showPenalizedPlayers(sender);
+            if (!(sender instanceof Player)) {
+                sender.sendMessage(ChatColor.RED + "Solo jugadores pueden ejecutar este comando.");
+                return true;
+            }
+
+            Player player = (Player) sender;
+            int currentDay = missionHandler.getDayHandler().getCurrentDay();
+
+            if (!missionHandler.getPenaltyDays().containsKey(currentDay)) {
+                long nextPenaltyDay = missionHandler.getNextPenaltyDay(currentDay);
+                player.sendMessage(ChatColor.of("#ff6666") + "⚠ Hoy no es un día de penalización.");
+                player.sendMessage(ChatColor.of("#ffcc66") + "El próximo día de penalización será el día " + nextPenaltyDay + ".");
+                return true;
+            }
+
+            missionHandler.getPendingPenaltyConfirm().put(player.getUniqueId(), currentDay);
+            player.sendMessage(ChatColor.of("#ffaa00") + "Hoy (" + currentDay + ") es un día de penalización.");
+            player.sendMessage(ChatColor.of("#ffcc66") + "Escribe 'confirma' para aplicar penalizaciones o 'cancelar' para abortar.");
+
             return true;
         }
+
 
         if (label.equalsIgnoreCase("misiones")) {
             if (!(sender instanceof Player)) {

@@ -103,9 +103,9 @@ public class NightmareMechanic implements Listener {
             damageLogListener.pauseActionBarForPlayer(playerId);
         }
 
-        if (deathStormHandler != null) {
+/*        if (deathStormHandler != null) {
             deathStormHandler.pauseActionBarForPlayer(playerId);
-        }
+        }*/
 
         TextComponent message = new TextComponent();
         TextComponent progreso = new TextComponent(ChatColor.RED + "Pesadilla: " + ChatColor.DARK_RED + ChatColor.BOLD + String.format("%.1f", probability) + "%");
@@ -115,9 +115,9 @@ public class NightmareMechanic implements Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
-                if (deathStormHandler != null) {
+/*                if (deathStormHandler != null) {
                     deathStormHandler.resumeActionBarForPlayer(playerId);
-                }
+                }*/
 
                 if (damageLogListener != null) {
                     damageLogListener.resumeActionBarForPlayer(playerId);
@@ -213,9 +213,9 @@ public class NightmareMechanic implements Listener {
             if (damageLogListener != null) {
                 damageLogListener.pauseActionBarForPlayer(playerId);
             }
-            if (deathStormHandler != null) {
+/*            if (deathStormHandler != null) {
                 deathStormHandler.pauseActionBarForPlayer(playerId);
-            }
+            }*/
             TextComponent message = new TextComponent(ChatColor.RED + "Pesadilla Lvl " + (currentLevel + 1) + ": " +
                     ChatColor.DARK_RED + ChatColor.BOLD + String.format("%.1f", probability) + "%");
             player.spigot().sendMessage(ChatMessageType.ACTION_BAR, message);
@@ -223,9 +223,9 @@ public class NightmareMechanic implements Listener {
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    if (deathStormHandler != null) {
+/*                    if (deathStormHandler != null) {
                         deathStormHandler.resumeActionBarForPlayer(playerId);
-                    }
+                    }*/
 
                     if (damageLogListener != null) {
                         damageLogListener.resumeActionBarForPlayer(playerId);

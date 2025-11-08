@@ -31,9 +31,9 @@ public class DayThirteenChanges implements Listener {
     private final Random random = new Random();
 
     private final SpectralEye spectralEye;
-    private final EnderGhast enderGhast;
-    private final EnderCreeper enderCreeper;
-    private final EnderSilverfish enderSilverfish;
+    private final EspectralGhast espectralGhast;
+    private final EspectralCreeper espectralCreeper;
+    private final EspectralSilverfish espectralSilverfish;
 
     private final Bombita bombita;
     private final CorruptedZombies corruptedZombies;
@@ -52,9 +52,9 @@ public class DayThirteenChanges implements Listener {
         this.plugin = plugin;
         this.dayHandler = handler;
         this.spectralEye = new SpectralEye(plugin);
-        this.enderGhast = new EnderGhast(plugin);
-        this.enderCreeper = new EnderCreeper(plugin);
-        this.enderSilverfish = new EnderSilverfish(plugin);
+        this.espectralGhast = new EspectralGhast(plugin);
+        this.espectralCreeper = new EspectralCreeper(plugin);
+        this.espectralSilverfish = new EspectralSilverfish(plugin);
 
         this.bombita = new Bombita(plugin);
         this.corruptedZombies = new CorruptedZombies(plugin);
@@ -74,9 +74,9 @@ public class DayThirteenChanges implements Listener {
             Bukkit.getPluginManager().registerEvents(spectralEyeSpawner, plugin);
             registerRecipes();
             spectralEye.apply();
-            enderGhast.apply();
-            enderCreeper.apply();
-            enderSilverfish.apply();
+            espectralGhast.apply();
+            espectralCreeper.apply();
+            espectralSilverfish.apply();
         }
     }
 
@@ -84,9 +84,9 @@ public class DayThirteenChanges implements Listener {
         if (isApplied) {
             isApplied = false;
             spectralEye.revert();
-            enderGhast.revert();
-            enderCreeper.revert();
-            enderSilverfish.revert();
+            espectralGhast.revert();
+            espectralCreeper.revert();
+            espectralSilverfish.revert();
 
             Bukkit.removeRecipe(new NamespacedKey(plugin, "guardian_powder"));
             Bukkit.removeRecipe(new NamespacedKey(plugin, "apilate_gold_block"));
@@ -108,9 +108,9 @@ public class DayThirteenChanges implements Listener {
     }
 
     private boolean isSpecialMob(Entity entity) {
-        return entity.getPersistentDataContainer().has(enderGhast.getEnderGhastKey(), PersistentDataType.BYTE) ||
-                entity.getPersistentDataContainer().has(enderCreeper.getEnderCreeperKey(), PersistentDataType.BYTE) ||
-                entity.getPersistentDataContainer().has(enderSilverfish.getEnderSilverFishKey(), PersistentDataType.BYTE) ||
+        return entity.getPersistentDataContainer().has(espectralGhast.getEnderGhastKey(), PersistentDataType.BYTE) ||
+                entity.getPersistentDataContainer().has(espectralCreeper.getEnderCreeperKey(), PersistentDataType.BYTE) ||
+                entity.getPersistentDataContainer().has(espectralSilverfish.getEnderSilverFishKey(), PersistentDataType.BYTE) ||
                 entity.getPersistentDataContainer().has(bombita.getBombitaKey(), PersistentDataType.BYTE) ||
                 entity.getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE) ||
                 entity.getPersistentDataContainer().has(toxicSpider.getUltraCorruptedSpiderKey(), PersistentDataType.BYTE) ||
@@ -141,11 +141,11 @@ public class DayThirteenChanges implements Listener {
             // Distribución equitativa entre los 3 ender mobs
             double enderMobChoice = random.nextDouble();
             if (enderMobChoice < 0.30) { // Ender Ghast
-                enderGhast.spawnEnderGhast(loc);
+                espectralGhast.spawnEnderGhast(loc);
             } else if (enderMobChoice < 0.70) {
-                enderCreeper.spawnEnderCreeper(loc);
+                espectralCreeper.spawnEnderCreeper(loc);
             } else { // Ender Silverfish
-                enderSilverfish.spawnEnderSilverfish(loc);
+                espectralSilverfish.spawnEnderSilverfish(loc);
             }
         } else if (isOtherMob) {
             // Distribución equitativa entre los otros 4 mobs

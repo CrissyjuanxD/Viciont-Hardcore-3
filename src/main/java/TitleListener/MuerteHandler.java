@@ -1,12 +1,11 @@
 package TitleListener;
 
 import Events.DamageLogListener;
+import Handlers.DayHandler;
+import net.kyori.adventure.text.TranslatableComponent;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -18,6 +17,8 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import Handlers.DeathStormHandler;
 
 import java.util.HashMap;
@@ -29,14 +30,16 @@ public class MuerteHandler implements Listener {
     private final MuerteAnimation muerteAnimation;
     private final DamageLogListener damageLogListener;
     private final DeathStormHandler deathStormHandler;
+    private final DayHandler dayHandler;
     private BukkitRunnable currentDeathMessageTask;
     private static volatile boolean isDeathMessageActive = false;
     private final Map<Player, Location> deathLocations = new HashMap<>();
 
-    public MuerteHandler(JavaPlugin plugin, DamageLogListener damageLogListener, DeathStormHandler deathStormHandler) {
+    public MuerteHandler(JavaPlugin plugin, DamageLogListener damageLogListener, DeathStormHandler deathStormHandler, DayHandler dayHandler) {
         this.plugin = plugin;
         this.damageLogListener = damageLogListener;
         this.deathStormHandler = deathStormHandler;
+        this.dayHandler = dayHandler;
         this.muerteAnimation = new MuerteAnimation(plugin);
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
@@ -51,23 +54,53 @@ public class MuerteHandler implements Listener {
             if (damageLogListener != null) {
                 damageLogListener.pauseActionBarForPlayer(onlinePlayerId);
             }
-            if (deathStormHandler != null) {
-                deathStormHandler.pauseActionBarForPlayer(onlinePlayerId);
-            }
         });
 
         Location deathLocation = player.getLocation();
         deathLocations.put(player, deathLocation);
-
-        String playerName = player.getName();
-        String deathCause = (player.getLastDamageCause() != null && player.getLastDamageCause().getCause() != null)
-                ? player.getLastDamageCause().getCause().toString().replace("_", " ").toLowerCase()
-                : "desconocida";
+        String playerNames = player.getName();
 
         muerteAnimation.playAnimation(player, "");
 
-        String actionBarMessage = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + playerName + ChatColor.RESET
-                + ChatColor.GRAY + ChatColor.BOLD + " ha muerto por " + ChatColor.GOLD + ChatColor.BOLD + deathCause;
+        Component original = event.deathMessage();
+        if (original == null) return;
+
+        Component formatted;
+
+        // ✅ Si el mensaje es traducible, reconstruimos con color
+        if (original instanceof TranslatableComponent translatable) {
+            String key = translatable.key();
+            java.util.List<Component> args = translatable.args();
+            java.util.List<Component> coloredArgs = new java.util.ArrayList<>();
+
+            for (int i = 0; i < args.size(); i++) {
+                Component arg = args.get(i);
+                Component colored;
+
+                if (i == 0) {
+                    // Víctima (jugador) → morado y negrita
+                    colored = arg.color(NamedTextColor.DARK_PURPLE);
+                } else {
+                    // Todo lo demás (asesino, arma, proyectil, etc.) → dorado forzado
+                    colored = forceColor(arg, NamedTextColor.GOLD);
+                }
+
+                coloredArgs.add(colored);
+            }
+
+            // Reconstrucción completa del mensaje traducido
+            formatted = Component.translatable(
+                    key,
+                    coloredArgs
+            ).color(NamedTextColor.GRAY);
+
+        } else {
+            // Fallback por si no es traducible (raro)
+            formatted = Component.text(player.getName(), NamedTextColor.DARK_PURPLE)
+                    .append(Component.text(" ha muerto", NamedTextColor.GRAY));
+        }
+
+        Component actionBarMessage = formatted;
 
         if (currentDeathMessageTask != null && !currentDeathMessageTask.isCancelled()) {
             currentDeathMessageTask.cancel();
@@ -95,42 +128,16 @@ public class MuerteHandler implements Listener {
 
                             if (damageLogListener != null && damageLogListener.isPlayerInDamageLog(onlinePlayerId)) {
                                 damageLogListener.resumeActionBarForPlayer(onlinePlayerId);
-                                // Pausar DeathStorm mientras DamageLog está activo
-                                if (deathStormHandler != null) {
-                                    deathStormHandler.pauseActionBarForPlayer(onlinePlayerId);
-                                }
                             }
                         });
                     });
 
                     // Reactivación especial para el jugador que murió (sin delay)
                     Bukkit.getScheduler().runTask(plugin, () -> {
-                        if (deathStormHandler != null) {
-                            // Reactivar DeathStorm inmediatamente para el jugador muerto
-                            deathStormHandler.resumeActionBarForPlayer(player.getUniqueId());
-                        }
                         if (damageLogListener != null) {
                             damageLogListener.resumeActionBarForPlayer(player.getUniqueId());
                         }
                     });
-
-                    // Luego reactivar DeathStorm después de 1 segundo (20 ticks) para los demás
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        Bukkit.getOnlinePlayers().forEach(onlinePlayer -> {
-                            UUID onlinePlayerId = onlinePlayer.getUniqueId();
-                            // Saltar el jugador que murió (ya se reactivó)
-                            if (onlinePlayerId.equals(player.getUniqueId())) {
-                                return;
-                            }
-
-                            if (deathStormHandler != null) {
-                                // Solo reactivar si el jugador no está en DamageLog
-                                if (damageLogListener == null || !damageLogListener.isPlayerInDamageLog(onlinePlayerId)) {
-                                    deathStormHandler.resumeActionBarForPlayer(onlinePlayerId);
-                                }
-                            }
-                        });
-                    }, 20);
                     this.cancel();
                 }
             }
@@ -145,22 +152,46 @@ public class MuerteHandler implements Listener {
                 new BukkitRunnable() {
                     @Override
                     public void run() {
-                        Bukkit.getOnlinePlayers().forEach(p -> p.playSound(p.getLocation(), "minecraft:block.end_portal.spawn", 100000.0f, 0.1f));
+                        Bukkit.getOnlinePlayers().forEach(p -> p.playSound(p.getLocation(), Sound.BLOCK_END_PORTAL_SPAWN, 100000.0f, 0.1f));
 
                         new BukkitRunnable() {
                             @Override
                             public void run() {
-                                Bukkit.getOnlinePlayers().forEach(p -> p.playSound(p.getLocation(), "minecraft:item.trident.thunder", 100000.0f, 0.1f));
+                                deathStormHandler.addDeathStormTime(player);
 
                                 new BukkitRunnable() {
                                     @Override
                                     public void run() {
-                                        sendTitleToAllPlayers(playerName);
-                                        executeFinalBukkitCommands();
+
+                                        int day = dayHandler.getCurrentDay();
+                                        double chance;
+                                        int amplifierBonus;
+
+                                        if (day <= 3) {
+                                            chance = 0.15;
+                                            amplifierBonus = 0;
+                                        } else if (day <= 7) {
+                                            chance = 0.30;
+                                            amplifierBonus = 2;
+                                        } else if (day <= 11) {
+                                            chance = 0.45;
+                                            amplifierBonus = 3;
+                                        } else if (day <= 20) {
+                                            chance = 0.60;
+                                            amplifierBonus = 4;
+                                        } else {
+                                            chance = 0.80;
+                                            amplifierBonus = 5;
+                                        }
+
+                                        if (Math.random() <= chance) {
+                                            applyCurseToAllPlayers(amplifierBonus);
+                                            sendTitleToAllPlayers(playerNames);
+                                        }
                                     }
                                 }.runTaskLater(plugin, 4 * 20);
                             }
-                        }.runTaskLater(plugin, 20);
+                        }.runTaskLater(plugin, 10);
                     }
                 }.runTaskLater(plugin, 3 * 20);
             }
@@ -194,40 +225,63 @@ public class MuerteHandler implements Listener {
 
     private void executeBukkitCommands(Player player) {
         for (Player p : Bukkit.getOnlinePlayers()) {
-            p.playSound(p.getLocation(), "minecraft:block.respawn_anchor.deplete", 100000.0f, 2f);
-            p.playSound(p.getLocation(), "minecraft:block.beacon.deactivate", 100000.0f, 0.1f);
-            p.playSound(p.getLocation(), "minecraft:block.beacon.power_select", 100000.0f, 0.1f);
+            p.playSound(p.getLocation(), Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 100000.0f, 2f);
+            p.playSound(p.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, 100000.0f, 0.1f);
+            p.playSound(p.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, 100000.0f, 0.1f);
             p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, 10, 2));
         }
     }
 
-    private void executeFinalBukkitCommands() {
+    private void applyCurseToAllPlayers(int amplifierBonus) {
         for (Player p : Bukkit.getOnlinePlayers()) {
-            p.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 14 * 20, 0));
-            p.playSound(p.getLocation(), "minecraft:item.totem.use", 100000.0f, 0.1f);
-            p.playSound(p.getLocation(), "minecraft:entity.ender_dragon.death", 100000.0f, 0.7f);
-            p.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 6 * 20, 0));
-            p.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, 20 * 20, 9));
-            p.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 7 * 20, 0));
-            p.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 10 * 20, 3));
+            p.playSound(p.getLocation(), Sound.ITEM_TOTEM_USE, 100000.0f, 0.1f);
+            p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_DEATH, 100000.0f, 0.7f);
+
+            p.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 14 * 20, amplifierBonus));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 6 * 20, 2 + amplifierBonus));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, 20 * 20, 9 + amplifierBonus));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 7 * 20, 2 + amplifierBonus));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 10 * 20, 3 + amplifierBonus));
         }
     }
 
     private void sendTitleToAllPlayers(String playerName) {
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             onlinePlayer.sendTitle(
-                    ChatColor.DARK_GRAY + "" + ChatColor.MAGIC + "O" + ChatColor.RESET + ChatColor.GRAY + playerName + ChatColor.RESET + ChatColor.GRAY + ChatColor.MAGIC + "O", // Título (nombre del jugador con formato obfuscado)
-                    ChatColor.DARK_PURPLE + "" + ChatColor.RESET + ChatColor.DARK_PURPLE + ChatColor.BOLD + "۞Entro al sufrimiento eterno de Viciont۞", // Subtítulo
-                    10,
-                    70,
-                    20
+                    ChatColor.DARK_GRAY + "" + ChatColor.MAGIC + "Ｏ" + ChatColor.RESET + ChatColor.DARK_PURPLE + " ᴍᴀʟᴅɪᴄɪᴏɴ ʟɪʙᴇʀᴀᴅᴀ " + ChatColor.RESET + ChatColor.GRAY + ChatColor.MAGIC + "Ｏ", // 🟣 título principal
+                    ChatColor.GRAY + "" + ChatColor.BOLD + "۞ "
+                            + ChatColor.GOLD + playerName
+                            + ChatColor.GRAY + " ʜᴀ ᴇɴᴏᴊᴀᴅᴏ ᴀʟ "
+                            + ChatColor.DARK_GRAY + "" + ChatColor.BOLD + "ᴅᴀʀᴋ ᴅᴇᴍᴏɴ"
+                            + ChatColor.GRAY + " ۞", // subtítulo formateado
+                    10, // fadeIn ticks
+                    70, // stay ticks
+                    20  // fadeOut ticks
             );
         }
     }
 
-    private void sendActionBarToAllPlayers(String message) {
+    private void sendActionBarToAllPlayers(Component message) {
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-            onlinePlayer.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(message));
+            onlinePlayer.sendActionBar(message);
         }
     }
+
+    private Component forceColor(Component component, NamedTextColor color, TextDecoration... decorations) {
+        Component base = component.color(color);
+        for (TextDecoration deco : decorations) {
+            base = base.decorate(deco);
+        }
+
+        // Aplicar el color a todos los hijos
+        if (!component.children().isEmpty()) {
+            java.util.List<Component> recoloredChildren = new java.util.ArrayList<>();
+            for (Component child : component.children()) {
+                recoloredChildren.add(forceColor(child, color, decorations));
+            }
+            base = base.children(recoloredChildren);
+        }
+        return base;
+    }
+
 }

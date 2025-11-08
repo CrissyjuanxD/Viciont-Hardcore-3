@@ -18,7 +18,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
-
 import java.util.*;
 
 public class CorruptedArmor implements Listener {
@@ -31,7 +30,7 @@ public class CorruptedArmor implements Listener {
 
     public static ItemStack createCorruptedHelmet() {
         ItemStack item = new ItemStack(Material.NETHERITE_HELMET);
-        ItemMeta meta = item.getItemMeta();
+        ItemMeta meta = item.getItemMeta();;
 
         meta.setDisplayName(ChatColor.of("#9966ff") + "" + ChatColor.BOLD + "Corrupted Netherite Helmet");
         meta.setLore(Arrays.asList(
@@ -76,7 +75,6 @@ public class CorruptedArmor implements Listener {
         ));
         meta.setCustomModelData(2);
         meta.setRarity(ItemRarity.EPIC);
-        item.setDurability((short) 814);
         item.setItemMeta(meta);
         return item;
     }

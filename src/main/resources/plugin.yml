@@ -1,5 +1,5 @@
 name: Viciont_Hardcore3_Plugin
-version: 1.5.8
+version: ${project.version}
 main: vct.hardcore3.ViciontHardcore3
 author: CrissyJuanXD
 api-version: 1.21
@@ -29,17 +29,16 @@ commands:
     usage: /removedeathstorm
     permission: viciont_hardcore3.removedeathstorm
     permission-message: No tienes permiso para usar este comando.
+  stopdeathstorm:
+    description: Detiene la DeathStorm
+    usage: /stopdeathstorm
+    permission: viciont_hardcore3.stopdeathstorm
+    permission-message: No tienes permiso para usar este comando.
   cambiardia:
     description: Cambia manualmente al día especificado
     usage: /cambiardia <día>
     permission: viciont_hardcore3.cambiardia
     permission-message: No tienes permiso para usar este comando.
-  dia:
-    description: Muestra el día actual de Viciont Hardcore 3
-    usage: /dia
-  ping:
-    description: Muestra tu ping actual en milisegundos.
-    usage: /ping
   giveessence:
     description: Da al jugador una esencia específica.
     usage: /giveessence <nombre de esencia>
@@ -248,11 +247,24 @@ commands:
     usage: /mobcapinfo
     permission: viciont_hardcore3.mobcap.admin
     aliases: [ mcinfo, mobcapstatus ]
+  habilidades:
+    description: Muestra las habilidades desbloqueadas de un jugador
+    usage: /habilidades <jugador>
+  reloadevent:
+    description: Recarga configuraciones internas del plugin.
+    usage: /reloadevent <itempartyconfig>
+    permission: viciont_hardcore3.command.reload
+    permission-message: No tienes permiso para usar este comando.
+  viciont:
+    description: Comandos públicos del servidor Viciont.
+    usage: /viciont <subcomando>
+  fakeupgrade:
+    description: Da una plantilla de otro jugador para testeo.
+depend:
+  - NBTAPI
 softdepend:
   - PlaceholderAPI
   - StreamEvents
-  - ModelEngine
   - BetterRevive
   - Multiverse-Core
   - ProtocolLib
-  - NBTAPI

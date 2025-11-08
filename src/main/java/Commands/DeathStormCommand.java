@@ -27,6 +27,11 @@ public class DeathStormCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        if (label.equalsIgnoreCase("stopdeathstorm")) {
+            deathStormHandler.toggleStopDeathStorm(sender);
+            return true;
+        }
+
         if ((label.equalsIgnoreCase("adddeathstorm") || label.equalsIgnoreCase("removedeathstorm")) && args.length == 1) {
             int seconds = parseTime(args[0]);
             if (seconds < 0) {

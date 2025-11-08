@@ -1,0 +1,17 @@
+# Configuración del evento Fiesta de Items
+
+# Item a recolectar (SOLO uno de estos 4): caramelo | piruleta | algodon | soda
+item_to_collect: "caramelo"
+
+# Método de obtención: "block" o "mob"
+collection_method: "block"
+
+# Si es "block", pon el bloque (ej: "dirt", "diamond_ore")
+# Si es "mob", pon el mob (ej: "zombie", "corruptedzombie")
+collection_target: "dirt"
+
+# Duración del evento en formato HH:MM:SS
+event_duration: "00:10:00"
+
+# Cantidad “a salvo”. Admite negativo: -2 => los últimos 2 estarán en peligro (⚠)
+safe_players: -2
