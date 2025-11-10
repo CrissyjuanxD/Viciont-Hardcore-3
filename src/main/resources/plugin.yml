@@ -258,8 +258,11 @@ commands:
   viciont:
     description: Comandos públicos del servidor Viciont.
     usage: /viciont <subcomando>
-  fakeupgrade:
-    description: Da una plantilla de otro jugador para testeo.
+  ca:
+    description: Gestiona la corrupcion ansiosa de los jugadores.
+    usage: /ca <add/remove/reset/disable/enable> [jugador] [porcentaje].
+    permission: viciont_hardcore3.command.ca
+    permission-message: No tienes permiso para usar este comando.
 depend:
   - NBTAPI
 softdepend:

@@ -4,9 +4,17 @@ import Blocks.Endstalactitas;
 import Blocks.GuardianShulkerHeart;
 import Casino.CasinoManager;
 import Commands.*;
+import CorrupcionAnsiosa.CorrupcionAnsiosaCommand;
+import CorrupcionAnsiosa.CorrupcionAnsiosaManager;
+import CorrupcionAnsiosa.CorrupcionEffectsHandler;
+import CorrupcionAnsiosa.CorrupcionJoinListener;
 import Dificultades.*;
 import Dificultades.CustomMobs.*;
 import Dificultades.Features.*;
+import EffectListener.ConfusionEffect;
+import EffectListener.CorruptureEffect;
+import EffectListener.CustomEffectManager;
+import EffectListener.EffectPreventionListener;
 import Enchants.*;
 import Events.AchievementParty.AchievementCommands;
 import Events.AchievementParty.AchievementGUI;
@@ -34,9 +42,8 @@ import mobcap.commands.MobCapCommand;
 import mobcap.commands.MobCapTabCompleter;
 import mobcap.config.MobCapConfig;
 import mobcap.spawn.CustomSpawnManager;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.WorldLoadEvent;
@@ -47,35 +54,140 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import chat.chatgeneral;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.*;
+import java.util.Objects;
 
 public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
+    // ------------------------------------------------------------------------
+    //  Constantes y estado básico
+    // ------------------------------------------------------------------------
+
     public String Prefix = "&d&lViciont&5&lHardcore &5&l3&7➤ &f";
-    public String Version = getDescription().getVersion();
+    public String Version;
     public static boolean shuttingDown = false;
 
-    // Manejadores de Dificultades
+    private static ViciontHardcore3 instance;
 
-    private DeathStormHandler deathStormHandler;
+    // ------------------------------------------------------------------------
+    //  Core / Dificultades principales
+    // ------------------------------------------------------------------------
+
     private DayHandler dayHandler;
-    private SuccessNotification successNotif;
-    private ErrorNotification errorNotif;
+    private DeathStormHandler deathStormHandler;
     private NightmareMechanic nightmareMechanic;
 
-    // Sistema de Misiones
+    private SuccessNotification successNotif;
+    private ErrorNotification errorNotif;
+
+    private TiempoCommand tiempoCommand;
+    private CustomEffectManager effectManager;
+    private EffectPreventionListener effectPreventionListener;
+
+    // ------------------------------------------------------------------------
+    //  Sistemas de Misiones / Tiendas / Linterna
+    // ------------------------------------------------------------------------
+
     private MissionHandler missionHandler;
     private MissionSystemCommands missionSystemCommands;
     private MissionRewardHandler missionRewardHandler;
 
-    // Sistema de Tiendas
     private ShopHandler shopHandler;
     private ShopCommand shopCommand;
 
-    // Sistema de Linterna
     private FlashlightManager flashlightManager;
 
-    // Cambios de días
+    // ------------------------------------------------------------------------
+    //  Corrupción Ansiosa / Tótems / Items
+    // ------------------------------------------------------------------------
+
+    private CorrupcionAnsiosaManager corruptionManager;
+    private CorrupcionEffectsHandler corruptionEffectsHandler;
+
+    private DoubleLifeTotem doubleLifeTotemHandler;
+    private NormalTotemHandler normalTotemHandler;
+    private InvulnerableItemProtection invulnerableItemProtection;
+    private LifeTotem lifeTotem;
+    private SpiderTotem spiderTotem;
+    private InfernalTotem infernalTotem;
+    private EconomyIceTotem economyIceTotem;
+    private EconomyFlyTotem economyFlyTotem;
+    private EconomyItemsFunctions economyItemsFunctions;
+
+    // ------------------------------------------------------------------------
+    //  Ping / Sonidos / Teams / Spawners
+    // ------------------------------------------------------------------------
+
+    private PingMonitor pingMonitor;
+    private DamageLogListener damageLogListener;
+    private MobSoundManager mobSoundManager;
+    private GameModeTeamHandler gameModeTeamHandler;
+    private CustomSpawnerHandler customSpawnerHandler;
+    private ViciontCommands viciontCommands;
+
+    // ------------------------------------------------------------------------
+    //  Mobcap
+    // ------------------------------------------------------------------------
+
+    private MobCapManager mobCapManager;
+    private MobCapConfig config;
+    private CustomSpawnManager spawnManager;
+
+    // ------------------------------------------------------------------------
+    //  Habilidades
+    // ------------------------------------------------------------------------
+
+    private HabilidadesManager habilidadesManager;
+    private HabilidadesGUI habilidadesGUI;
+    private HabilidadesListener habilidadesListener;
+    private HabilidadesEffects habilidadesEffects;
+
+    // ------------------------------------------------------------------------
+    //  Eventos
+    // ------------------------------------------------------------------------
+
+    private EventoHandler eventoHandler;
+    private AchievementPartyHandler achievementPartyHandler;
+    private AchievementCommands achievementCommands;
+    private AchievementGUI achievementGUI;
+    private UltraWitherEvent ultraWitherEvent;
+    private ItemPartyHandler itemPartyHandler;
+
+    // ------------------------------------------------------------------------
+    //  Casino
+    // ------------------------------------------------------------------------
+
+    private CasinoManager casinoManager;
+    private SlotMachineManager slotMachineManager;
+
+    // ------------------------------------------------------------------------
+    //  Mobs / Bosses / Bloques / Armaduras / Dimensiones
+    // ------------------------------------------------------------------------
+
+    private RemoveParticlesCreeper removeParticlesCreeper;
+    private CorruptedZombies corruptedZombies;
+    private CorruptedInfernalSpider corruptedinfernalSpider;
+    private CustomDolphin customDolphin;
+    private CorruptedCreeper corruptedCreeper;
+    private CustomBoat customBoat;
+
+    private HellishBeeHandler hellishBeeHandler;
+    private InfestedBeeHandler infestedBeeHandler;
+    private QueenBeeHandler queenBeeHandler;
+    private UltraWitherBossHandler ultraWitherBossHandler;
+
+    private Endstalactitas endstalactitas;
+    private GuardianShulkerHeart guardianShulkerHeart;
+
+    private NightVisionHelmet nightVisionHelmet;
+    private CorruptedArmor corruptedArmor;
+    private EnderiteSwordListener enderiteSwordListener;
+    private TridenteEspectral tridenteEspectral;
+
+    private CorruptedEnd corruptedEnd;
+
+    // ------------------------------------------------------------------------
+    //  Cambios por día
+    // ------------------------------------------------------------------------
 
     private DayOneChanges dayOneChanges;
     private DayTwoChanges dayTwoChanges;
@@ -92,103 +204,149 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private DayFifteenChanges dayFifteenChanges;
     private DaySixteenChanges daySixteenChanges;
 
-    // Manejadores de totems e items
-
-    private DoubleLifeTotem doubleLifeTotemHandler;
-    private NormalTotemHandler normalTotemHandler;
-    private InvulnerableItemProtection invulnerableItemProtection;
-    private LifeTotem lifeTotem;
-    private SpiderTotem spiderTotem;
-    private InfernalTotem infernalTotem;
-    private EconomyIceTotem economyIceTotem;
-    private EconomyFlyTotem economyFlyTotem;
-
-    // Otros manejadores y listeners
-
-    private PingMonitor pingMonitor;
-    private DamageLogListener damageLogListener;
-    private EconomyItemsFunctions economyItemsFunctions;
-    private MobSoundManager mobSoundManager;
-    private GameModeTeamHandler gameModeTeamHandler;
-    private CustomSpawnerHandler customSpawnerHandler;
-    private ViciontCommands viciontCommands;
-
-    //Mobcap
-    private MobCapManager mobCapManager;
-    private MobCapConfig config;
-    private CustomSpawnManager spawnManager;
-
-    // Habilidades
-    private HabilidadesManager habilidadesManager;
-    private HabilidadesGUI habilidadesGUI;
-    private HabilidadesListener habilidadesListener;
-    private HabilidadesEffects habilidadesEffects;
-
-    // Manejadores de Estructuras
-
-    private StructureCommand structureCommand;
-
-    // Eventos
-
-    private EventoHandler eventoHandler;
-    private AchievementPartyHandler achievementPartyHandler;
-    private AchievementCommands achievementCommands;
-    private AchievementGUI achievementGUI;
-    private UltraWitherEvent ultraWitherEvent;
-    private ItemPartyHandler itemPartyHandler;
-
-    // Casino
-    private CasinoManager casinoManager;
-    private SlotMachineManager slotMachineManager;
-
-    // Mobs
-
-    private RemoveParticlesCreeper removeParticlesCreeper;
-    private CorruptedZombies corruptedZombies;
-    private CorruptedInfernalSpider corruptedinfernalSpider;
-    private CustomDolphin customDolphin;
-    private CorruptedCreeper corruptedCreeper;
-    private CustomBoat customBoat;
-
-    // Bosses
-
-    private HellishBeeHandler hellishBeeHandler;
-    private InfestedBeeHandler infestedBeeHandler;
-    private QueenBeeHandler queenBeeHandler;
-    private UltraWitherBossHandler ultraWitherBossHandler;
-
-    // Bloques
-
-    private Endstalactitas endstalactitas;
-    private GuardianShulkerHeart guardianShulkerHeart;
-
-    // Armors Y Herramentas
-
-    private NightVisionHelmet nightVisionHelmet;
-    private CorruptedArmor corruptedArmor;
-    private EnderiteSwordListener enderiteSwordListener;
-    private TridenteEspectral tridenteEspectral;
-
-    // Dimension
-
-    private CorruptedEnd corruptedEnd;
+    // ------------------------------------------------------------------------
+    //  Ciclo de vida del plugin
+    // ------------------------------------------------------------------------
 
     @Override
     public void onEnable() {
+        instance = this;
+        this.Version = getDescription().getVersion();
+
+        logStartup();
+        registerBaseListeners();
+
+        initCoreDayAndDeathStormSystem();
+        initTiempoSystem();
+        initItemsSystem();
+        initMissionSystem();
+        initChatTeamsAndFirstJoinSystem();
+        initGeneralCommandsAndCustomSpawners();
+        initAsyncAndUtilitySystems();
+        initEnchantSystem();
+        initAnimationAndTitleSystem();
+        initStructureSystem();
+        initDayChangesSystem();
+        initGameplaySystem();
+        initLootSystem();
+        initEventsSystem();
+        initEventCommandsSystem();
+        initShopSystem();
+        initCasinoSystem();
+        initFlashlightSystem();
+        initMobSoundSystem();
+        initBlocksSystem();
+        initMobsAndBossesSystem();
+        initMobCapSystem();
+        initHabilidadesSystem();
+        initPublicCommandSystem();
+        initCorruptedEndSystem();
+
+        getLogger().info("ViciontHardcore3 habilitado completamente.");
+    }
+
+    @Override
+    public void onDisable() {
         Bukkit.getConsoleSender().sendMessage(
-                ChatColor.translateAlternateColorCodes('&', Prefix + "&aha sido habilitado!, &eVersion: " + Version));
+                ChatColor.translateAlternateColorCodes('&',
+                        Prefix + "&aha sido deshabilitado!, &eVersion: " + Version));
 
-        // Registra los eventos de esta clase
+        // Guardar datos de DeathStorm
+        if (deathStormHandler != null) {
+            deathStormHandler.saveStormData();
+        } else {
+            Bukkit.getLogger().severe("deathStormHandler is null, cannot save storm data.");
+        }
+
+        // Guardar DamageLog
+        if (damageLogListener != null) {
+            try {
+                damageLogListener.saveDamageLogState();
+            } catch (Exception e) {
+                getLogger().severe("Error al guardar DamageLogState: " + e.getMessage());
+            }
+        }
+
+        // Apagar Nightmare
+        if (nightmareMechanic != null) {
+            nightmareMechanic.onDisableNightmare();
+        } else {
+            Bukkit.getLogger().severe("nightmareMechanic is null, cannot disable nightmare.");
+        }
+
+        // Custom Spawners
+        if (customSpawnerHandler != null) {
+            customSpawnerHandler.shutdown();
+        } else {
+            Bukkit.getLogger().severe("customSpawnerHandler is null, cannot shutdown custom spawners.");
+        }
+
+        // MobCap
+        if (config != null) {
+            MobCapManager.getInstance(this, config).shutdown();
+        }
+
+        // Economy items
+        if (economyItemsFunctions != null) {
+            economyItemsFunctions.onDisable();
+        }
+
+        // Casino
+        if (slotMachineManager != null) {
+            slotMachineManager.shutdown();
+        }
+
+        // Sonidos
+        if (mobSoundManager != null) {
+            mobSoundManager.shutdown();
+        }
+
+        // Linterna
+        if (flashlightManager != null) {
+            flashlightManager.shutdown();
+        }
+
+        // Corrupción Ansiosa
+        if (corruptionManager != null) {
+            corruptionManager.saveData();
+        }
+
+        if (effectManager != null) {
+            effectManager.cleanupAllEffects();
+        }
+
+        // Limpieza de bosses/abejas
+        cleanupBossHandlers();
+
+        // Corrupted End: aquí podrías añadir corruptedEnd.shutdown() si la implementas
+        // if (corruptedEnd != null) corruptedEnd.shutdown();
+
+        shuttingDown = true;
+    }
+
+    // ------------------------------------------------------------------------
+    //  Inicialización por sistemas (onEnable)
+    // ------------------------------------------------------------------------
+
+    private void logStartup() {
+        Bukkit.getConsoleSender().sendMessage(
+                ChatColor.translateAlternateColorCodes('&',
+                        Prefix + "&aha sido habilitado!, &eVersion: " + Version));
+    }
+
+    private void registerBaseListeners() {
         Bukkit.getServer().getPluginManager().registerEvents(this, this);
+    }
 
-        // Inicializa correctamente el DayHandler
+    private void initCoreDayAndDeathStormSystem() {
+        // DayHandler
         dayHandler = new DayHandler(this);
 
         // DeathStorm
         deathStormHandler = new DeathStormHandler(this, dayHandler);
-        getServer().getPluginManager().registerEvents(deathStormHandler, this);
+        Bukkit.getPluginManager().registerEvents(deathStormHandler, this);
 
-        // Comandos de DeathStorm
+        // Comandos DeathStorm
         PluginCommand resetCommand = getCommand("resetdeathstorm");
         PluginCommand addCommand = getCommand("adddeathstorm");
         PluginCommand removeCommand = getCommand("removedeathstorm");
@@ -200,30 +358,37 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         if (removeCommand != null) removeCommand.setExecutor(deathStormCommand);
         if (stopDeathStorm != null) stopDeathStorm.setExecutor(deathStormCommand);
 
-        // Comandos de días
+        // Comando cambio de día
         PluginCommand changeDayCommand = getCommand("cambiardia");
-
         if (changeDayCommand != null) {
             changeDayCommand.setExecutor(new DayCommandHandler(dayHandler));
         }
 
-        // Cargar datos de DeathStorm al iniciar
+        // Cargar datos existentes
         deathStormHandler.loadStormData();
 
-        //BedEvents
+        // Eventos de cama
         BedEvents bedEvents = new BedEvents(this, dayHandler, deathStormHandler);
-        getServer().getPluginManager().registerEvents(bedEvents, this);
+        Bukkit.getPluginManager().registerEvents(bedEvents, this);
+    }
 
-        // Registra evento de revivir
-        ReviveCommand reviveCommand = new ReviveCommand(this);
-        ReviveCoordsCommand reviveCoordsCommand = new ReviveCoordsCommand(this);
-        this.getCommand("revive").setExecutor(reviveCommand);
-        this.getCommand("revive").setTabCompleter(reviveCommand);
-        this.getCommand("revivecoords").setExecutor(reviveCoordsCommand);
+    private void initTiempoSystem() {
+        // Registrar el comando para el temporizador
+        tiempoCommand = new TiempoCommand(this);
 
-        // Inicializa los manejadores de eventos de totems e items
+        Objects.requireNonNull(getCommand("addtiempo")).setExecutor(tiempoCommand);
+        Objects.requireNonNull(getCommand("removetiempo")).setExecutor(tiempoCommand);
+        Objects.requireNonNull(getCommand("tiempoview")).setExecutor(tiempoCommand);
+
+        Objects.requireNonNull(getCommand("addtiempo")).setTabCompleter(tiempoCommand);
+        Objects.requireNonNull(getCommand("removetiempo")).setTabCompleter(tiempoCommand);
+        Objects.requireNonNull(getCommand("tiempoview")).setTabCompleter(tiempoCommand);
+    }
+
+    private void initItemsSystem() {
+        // Tótems protección de ítems Armor y Herramientas
         doubleLifeTotemHandler = new DoubleLifeTotem(this);
-        normalTotemHandler = new NormalTotemHandler(this, dayHandler);
+        normalTotemHandler = new NormalTotemHandler(this, dayHandler, corruptionManager, corruptionEffectsHandler);
         lifeTotem = new LifeTotem(this);
         spiderTotem = new SpiderTotem(this);
         infernalTotem = new InfernalTotem(this);
@@ -231,96 +396,146 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         economyFlyTotem = new EconomyFlyTotem(this);
         invulnerableItemProtection = new InvulnerableItemProtection(this);
         economyItemsFunctions = new EconomyItemsFunctions(this);
+        nightVisionHelmet = new NightVisionHelmet(this);
+        corruptedArmor = new CorruptedArmor(this);
+        enderiteSwordListener = new EnderiteSwordListener(this);
+        tridenteEspectral = new TridenteEspectral(this);
 
-        // Registra los eventos de totems e items
-        getServer().getPluginManager().registerEvents(normalTotemHandler, this);
-        getServer().getPluginManager().registerEvents(doubleLifeTotemHandler, this);
-        getServer().getPluginManager().registerEvents(lifeTotem, this);
-        getServer().getPluginManager().registerEvents(spiderTotem, this);
-        getServer().getPluginManager().registerEvents(infernalTotem, this);
-        getServer().getPluginManager().registerEvents(economyIceTotem, this);
-        getServer().getPluginManager().registerEvents(economyFlyTotem, this);
-        getServer().getPluginManager().registerEvents(invulnerableItemProtection, this);
-        getServer().getPluginManager().registerEvents(economyItemsFunctions, this);
+        Bukkit.getPluginManager().registerEvents(normalTotemHandler, this);
+        Bukkit.getPluginManager().registerEvents(doubleLifeTotemHandler, this);
+        Bukkit.getPluginManager().registerEvents(lifeTotem, this);
+        Bukkit.getPluginManager().registerEvents(spiderTotem, this);
+        Bukkit.getPluginManager().registerEvents(infernalTotem, this);
+        Bukkit.getPluginManager().registerEvents(economyIceTotem, this);
+        Bukkit.getPluginManager().registerEvents(economyFlyTotem, this);
+        Bukkit.getPluginManager().registerEvents(invulnerableItemProtection, this);
+        Bukkit.getPluginManager().registerEvents(economyItemsFunctions, this);
+        Bukkit.getPluginManager().registerEvents(nightVisionHelmet, this);
+        Bukkit.getPluginManager().registerEvents(corruptedArmor, this);
+        Bukkit.getPluginManager().registerEvents(enderiteSwordListener, this);
+        Bukkit.getPluginManager().registerEvents(tridenteEspectral, this);
+    }
 
-        // Registrar eventos de chat y teams
+    private void initMissionSystem() {
+        // Handler principal de misiones
+        missionHandler = new MissionHandler(this, dayHandler);
+
+        // Comandos de misión (panel, etc.)
+        missionSystemCommands = new MissionSystemCommands(this, dayHandler);
+
+        // Recompensas (usa el handler desde comandos)
+        missionRewardHandler = new MissionRewardHandler(this, missionSystemCommands.getMissionHandler());
+
+        // Registro de listeners internos del sistema de misiones
+        missionHandler.registerAllMissionListeners();
+        // Si algún día usas @EventHandler en MissionHandler, puedes descomentar:
+        // Bukkit.getPluginManager().registerEvents(missionHandler, this);
+    }
+
+    private void initChatTeamsAndFirstJoinSystem() {
         chatgeneral chatGeneralHandler = new chatgeneral();
         gameModeTeamHandler = new GameModeTeamHandler(this);
-        FirstJoinHandler firstJoinHandler = new FirstJoinHandler(this, missionSystemCommands);
-        getServer().getPluginManager().registerEvents(chatGeneralHandler, this);
-        getServer().getPluginManager().registerEvents(gameModeTeamHandler, this);
-        getServer().getPluginManager().registerEvents(firstJoinHandler, this);
 
-        // Registrar el Ping Monitor
+        // Ahora missionSystemCommands ya está inicializado -> se corrige el posible NPE
+        FirstJoinHandler firstJoinHandler = new FirstJoinHandler(this, missionSystemCommands, corruptionManager);
+
+        Bukkit.getPluginManager().registerEvents(chatGeneralHandler, this);
+        Bukkit.getPluginManager().registerEvents(gameModeTeamHandler, this);
+        Bukkit.getPluginManager().registerEvents(firstJoinHandler, this);
+    }
+
+    private void initGeneralCommandsAndCustomSpawners() {
+        // spawnvct
+        Objects.requireNonNull(this.getCommand("spawnvct"))
+                .setExecutor(new SpawnMobs(this, dayHandler));
+
+        // eggvct
+        Objects.requireNonNull(this.getCommand("eggvct"))
+                .setExecutor(new EggSpawnerCommand(this));
+
+        // Items generales
+        ItemsCommands itemsCommands = new ItemsCommands(this);
+
+        // Spawners custom
+        customSpawnerHandler = new CustomSpawnerHandler(this, dayHandler);
+        new GiveSpawnerCommand(this); // Se registra dentro del constructor
+
+        Objects.requireNonNull(this.getCommand("reloadcustomspawn"))
+                .setExecutor(new ReloadCustomSpawnCommand(customSpawnerHandler));
+
+        Objects.requireNonNull(this.getCommand("givevct")).setExecutor(itemsCommands);
+        Objects.requireNonNull(this.getCommand("givevct")).setTabCompleter(itemsCommands);
+
+        Bukkit.getPluginManager().registerEvents(customSpawnerHandler, this);
+    }
+
+    private void initAsyncAndUtilitySystems() {
+        // Lista VHList
+        new VHList(this).runTaskTimer(this, 0, 10);
+
+        // Damage log
+        damageLogListener = new DamageLogListener(this);
+        Bukkit.getPluginManager().registerEvents(damageLogListener, this);
+
+        // Ping monitor
         pingMonitor = new PingMonitor(this);
         pingMonitor.startMonitoring();
         getLogger().info("PingMonitor activado.");
 
-        //comandos generales
-        Objects.requireNonNull(this.getCommand("spawnvct")).setExecutor(new SpawnMobs(this, dayHandler));
-        Objects.requireNonNull(this.getCommand("eggvct")).setExecutor(new EggSpawnerCommand(this));
-        ItemsCommands itemsCommands = new ItemsCommands(this);
-        customSpawnerHandler = new CustomSpawnerHandler(this, dayHandler);
-        new GiveSpawnerCommand(this);
-        this.getCommand("reloadcustomspawn").setExecutor(new ReloadCustomSpawnCommand(customSpawnerHandler));
-        getCommand("givevct").setExecutor(itemsCommands);
-        getCommand("givevct").setTabCompleter(itemsCommands);
-        getServer().getPluginManager().registerEvents(customSpawnerHandler, this);
-
-
-        // Registrar el comando para el temporizador;
-        TiempoCommand tiempoCommand = new TiempoCommand(this);
-        this.getCommand("addtiempo").setExecutor(tiempoCommand);
-        this.getCommand("removetiempo").setExecutor(tiempoCommand);
-        this.getCommand("tiempoview").setExecutor(tiempoCommand);
-        this.getCommand("addtiempo").setTabCompleter(tiempoCommand);
-        this.getCommand("removetiempo").setTabCompleter(tiempoCommand);
-        this.getCommand("tiempoview").setTabCompleter(tiempoCommand);
-
-        // Registrar eventos de list
-        new VHList(this).runTaskTimer(this, 0, 10);
-
-        // Damage Log Listener
-        damageLogListener = new DamageLogListener(this);
-        getServer().getPluginManager().registerEvents(damageLogListener, this);
-
-        // Registrar el comando "giveessence"
+        // Comando giveessence
         GiveEssenceCommand giveEssenceCommand = new GiveEssenceCommand();
         Objects.requireNonNull(this.getCommand("giveessence")).setExecutor(giveEssenceCommand);
+    }
 
-        // Registra la clase EnhancedEnchantmentTable para crear los ítems y recetas
+    private void initEnchantSystem() {
         new EnhancedEnchantmentTable(this);
-        getServer().getPluginManager().registerEvents(new EnhancedEnchantmentGUI(this), this);
-        getServer().getPluginManager().registerEvents(new EnchantDelete(this), this);
+        Bukkit.getPluginManager().registerEvents(new EnhancedEnchantmentGUI(this), this);
+        Bukkit.getPluginManager().registerEvents(new EnchantDelete(this), this);
+    }
 
-        // Inicializar RuletaAnimation, TP, Disco y MuerteAnimation
+    private void initAnimationAndTitleSystem() {
+        // Animaciones
         RuletaAnimation ruletaAnimation = new RuletaAnimation(this);
         MuerteAnimation muerteAnimation = new MuerteAnimation(this);
         BonusAnimation bonusAnimation = new BonusAnimation(this);
-        SuccessNotification successNotif = new SuccessNotification(this);
-        ErrorNotification errorNotif = new ErrorNotification(this);
+
+        // Notificaciones (esta vez asignamos a campos, no a variables locales)
+        successNotif = new SuccessNotification(this);
+        errorNotif = new ErrorNotification(this);
+
+        // MuerteHandler
         MuerteHandler muertehandler = new MuerteHandler(this, damageLogListener, deathStormHandler, dayHandler);
+
+        // Comandos de teleport / disco
         DiscoCommand discoCommand = new DiscoCommand(this);
-        this.getCommand("magictp").setExecutor(new MagicTP(this));
-        this.getCommand("playdisco").setExecutor(discoCommand);
-        this.getCommand("stopdisco").setExecutor(discoCommand);
-        getServer().getPluginManager().registerEvents(discoCommand, this);
-        getServer().getPluginManager().registerEvents(muertehandler, this);
+        Objects.requireNonNull(this.getCommand("magictp")).setExecutor(new MagicTP(this));
+        Objects.requireNonNull(this.getCommand("playdisco")).setExecutor(discoCommand);
+        Objects.requireNonNull(this.getCommand("stopdisco")).setExecutor(discoCommand);
 
-        // Registrar el comando y su ejecutor
-        getCommand("ruletavct").setExecutor(new RuletaCommand(ruletaAnimation));
-        getCommand("muertevct").setExecutor(new MuerteCommand(muerteAnimation));
-        getCommand("bonusvct").setExecutor(new BonusCommand(bonusAnimation));
+        Bukkit.getPluginManager().registerEvents(discoCommand, this);
+        Bukkit.getPluginManager().registerEvents(muertehandler, this);
 
+        // Comandos de ruleta / muerte / bonus
+        Objects.requireNonNull(this.getCommand("ruletavct"))
+                .setExecutor(new RuletaCommand(ruletaAnimation));
+        Objects.requireNonNull(this.getCommand("muertevct"))
+                .setExecutor(new MuerteCommand(muerteAnimation));
+        Objects.requireNonNull(this.getCommand("bonusvct"))
+                .setExecutor(new BonusCommand(bonusAnimation));
+
+        // Listeners adicionales
         SnowballDamage snowballDamage1 = new SnowballDamage(this);
         FireResistanceHandler fireResistanceHandler = new FireResistanceHandler(this);
-        getServer().getPluginManager().registerEvents(snowballDamage1, this);
-        getServer().getPluginManager().registerEvents(fireResistanceHandler, this);
+        Bukkit.getPluginManager().registerEvents(snowballDamage1, this);
+        Bukkit.getPluginManager().registerEvents(fireResistanceHandler, this);
+    }
 
-        //Registrar Estructuras
-        structureCommand = new StructureCommand(this);
+    private void initStructureSystem() {
+        // Si StructureCommand registra comandos dentro del constructor, no hace falta más
+        new StructureCommand(this);
+    }
 
-        // Inicializa los cambios de días
+    private void initDayChangesSystem() {
         dayOneChanges = new DayOneChanges(this, dayHandler);
         dayTwoChanges = new DayTwoChanges(this);
         dayFourChanges = new DayFourChanges(this, dayHandler);
@@ -335,186 +550,150 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         dayFourteenChanges = new DayFourteenChanges(this, dayHandler);
         dayFifteenChanges = new DayFifteenChanges(this, dayHandler);
         daySixteenChanges = new DaySixteenChanges(this, dayHandler);
+    }
 
+    private void initGameplaySystem() {
+        //Nightmare
+        nightmareMechanic = new NightmareMechanic(this, tiempoCommand, successNotif, deathStormHandler, damageLogListener);
 
-        //Nightmare Event
-        this.nightmareMechanic = new NightmareMechanic(this, tiempoCommand, successNotif, deathStormHandler, damageLogListener);
+        //CorrupcionAnsiosa
+        corruptionManager = new CorrupcionAnsiosaManager(this);
+        corruptionEffectsHandler = new CorrupcionEffectsHandler(this, corruptionManager);
+        Bukkit.getPluginManager().registerEvents(new CorrupcionJoinListener(corruptionManager), this);
+
+        //Efectos Custom
+        this.effectManager = new CustomEffectManager();
+
+        ConfusionEffect confusionEffect = new ConfusionEffect(this);
+        CorruptureEffect corruptureEffect = new CorruptureEffect(this);
+
+        effectManager.registerEffect(confusionEffect);
+        effectManager.registerEffect(corruptureEffect);
+
+        getServer().getPluginManager().registerEvents(effectManager, this);
+        getServer().getPluginManager().registerEvents(corruptureEffect, this);
+
+        this.effectPreventionListener = new EffectPreventionListener();
+        getServer().getPluginManager().registerEvents(effectPreventionListener, this);
+
+        // Comandos
         NightmareCommand nightmareCommand = new NightmareCommand(this, nightmareMechanic);
-        this.getCommand("addnightmare").setExecutor(nightmareCommand);
-        this.getCommand("removenightmare").setExecutor(nightmareCommand);
-        this.getCommand("resetnightmarecooldown").setExecutor(nightmareCommand);
+        Objects.requireNonNull(this.getCommand("addnightmare")).setExecutor(nightmareCommand);
+        Objects.requireNonNull(this.getCommand("removenightmare")).setExecutor(nightmareCommand);
+        Objects.requireNonNull(this.getCommand("resetnightmarecooldown")).setExecutor(nightmareCommand);
+        Objects.requireNonNull(getCommand("ca")).setExecutor(new CorrupcionAnsiosaCommand(corruptionManager));
+    }
 
-        //Loottables
-        getServer().getPluginManager().registerEvents(new LootHandler(this), this);
+    private void initLootSystem() {
+        Bukkit.getPluginManager().registerEvents(new LootHandler(this), this);
+    }
 
-        // Inicializar EventoHandler y Eventos Generales
-        this.eventoHandler = new EventoHandler(this);
-        this.ultraWitherEvent = new UltraWitherEvent(this, tiempoCommand, successNotif, errorNotif);
-        this.achievementPartyHandler = new AchievementPartyHandler(this);
-        this.achievementGUI = new AchievementGUI(this, achievementPartyHandler);
+    private void initEventsSystem() {
+        eventoHandler = new EventoHandler(this);
+        ultraWitherEvent = new UltraWitherEvent(this, tiempoCommand, successNotif, errorNotif);
+        achievementPartyHandler = new AchievementPartyHandler(this);
+        achievementGUI = new AchievementGUI(this, achievementPartyHandler);
         achievementCommands = new AchievementCommands(achievementPartyHandler);
-        this.itemPartyHandler = new Events.ItemParty.ItemPartyHandler(this, tiempoCommand);
-        getServer().getPluginManager().registerEvents(eventoHandler, this);
-        getServer().getPluginManager().registerEvents(ultraWitherEvent, this);
-        getServer().getPluginManager().registerEvents(achievementPartyHandler, this);
-        getServer().getPluginManager().registerEvents(itemPartyHandler, this);
+        itemPartyHandler = new ItemPartyHandler(this, tiempoCommand);
 
-        this.getCommand("addlogro").setExecutor(achievementCommands);
-        this.getCommand("addlogro").setTabCompleter(achievementCommands);
-        this.getCommand("removelogro").setExecutor(achievementCommands);
-        this.getCommand("removelogro").setTabCompleter(achievementCommands);
+        Bukkit.getPluginManager().registerEvents(eventoHandler, this);
+        Bukkit.getPluginManager().registerEvents(ultraWitherEvent, this);
+        Bukkit.getPluginManager().registerEvents(achievementPartyHandler, this);
+        Bukkit.getPluginManager().registerEvents(itemPartyHandler, this);
 
-        // Sistema de Misiones
-        this.missionHandler = new MissionHandler(this, dayHandler);
-        missionSystemCommands = new MissionSystemCommands(this, dayHandler);
-        missionRewardHandler = new MissionRewardHandler(this, missionSystemCommands.getMissionHandler());
-        missionHandler.registerAllMissionListeners();
-        /*getServer().getPluginManager().registerEvents(missionHandler, this);*/
+        // Comandos de logros
+        Objects.requireNonNull(this.getCommand("addlogro")).setExecutor(achievementCommands);
+        Objects.requireNonNull(this.getCommand("addlogro")).setTabCompleter(achievementCommands);
+        Objects.requireNonNull(this.getCommand("removelogro")).setExecutor(achievementCommands);
+        Objects.requireNonNull(this.getCommand("removelogro")).setTabCompleter(achievementCommands);
+    }
 
-        // Sistema de Tiendas
+    private void initEventCommandsSystem() {
+        EventsCommands eventsCommands = new EventsCommands(
+                eventoHandler,
+                achievementPartyHandler,
+                itemPartyHandler,
+                achievementGUI
+        );
+
+        Objects.requireNonNull(this.getCommand("start")).setExecutor(eventsCommands);
+        Objects.requireNonNull(this.getCommand("start")).setTabCompleter(eventsCommands);
+
+        Objects.requireNonNull(this.getCommand("end")).setExecutor(eventsCommands);
+        Objects.requireNonNull(this.getCommand("end")).setTabCompleter(eventsCommands);
+
+        Objects.requireNonNull(this.getCommand("evento1")).setExecutor(eventsCommands);
+        Objects.requireNonNull(this.getCommand("evento1")).setTabCompleter(eventsCommands);
+
+        Objects.requireNonNull(this.getCommand("reset")).setExecutor(eventsCommands);
+        Objects.requireNonNull(this.getCommand("reset")).setTabCompleter(eventsCommands);
+
+        Objects.requireNonNull(this.getCommand("logros")).setExecutor(eventsCommands);
+        Objects.requireNonNull(this.getCommand("logros")).setTabCompleter(eventsCommands);
+
+        Objects.requireNonNull(this.getCommand("reloadevent")).setExecutor(eventsCommands);
+        Objects.requireNonNull(this.getCommand("reloadevent")).setTabCompleter(eventsCommands);
+    }
+
+    private void initShopSystem() {
         shopHandler = new ShopHandler(this);
         shopCommand = new ShopCommand(this, shopHandler);
-        this.getCommand("spawntienda").setExecutor(shopCommand);
-        this.getCommand("spawntienda").setTabCompleter(shopCommand);
 
-        // Sistema de Casino
+        Objects.requireNonNull(this.getCommand("spawntienda")).setExecutor(shopCommand);
+        Objects.requireNonNull(this.getCommand("spawntienda")).setTabCompleter(shopCommand);
+    }
+
+    private void initCasinoSystem() {
         casinoManager = new CasinoManager(this);
         slotMachineManager = new SlotMachineManager(this);
 
-        getServer().getScheduler().runTaskLater(this, () -> {
+        Bukkit.getScheduler().runTaskLater(this, () -> {
             if (slotMachineManager != null) {
                 slotMachineManager.loadSlotMachinesFromFile();
             }
         }, 20L);
+    }
 
-        // Sistema de Linterna
+    private void initFlashlightSystem() {
         flashlightManager = new FlashlightManager(this);
-        this.getCommand("flashlight").setExecutor(new Commands.FlashlightCommand(this, flashlightManager));
+        Objects.requireNonNull(this.getCommand("flashlight"))
+                .setExecutor(new Commands.FlashlightCommand(this, flashlightManager));
+    }
 
-        this.getCommand("start").setExecutor((sender, command, label, args) -> {
-            if (args.length == 1) {
-                switch (args[0].toLowerCase()) {
-                    case "evento1":
-                        eventoHandler.iniciarEvento();
-                        break;
-                    case "skybattle":
-                        eventoHandler.iniciarSecuenciaInicioSkyBattle();
-                        break;
-                    case "force":
-                        eventoHandler.forzarEvento();
-                        break;
-                    case "reglas":
-                        eventoHandler.espera1();
-                        break;
-                    case "resetpurple":
-                        eventoHandler.eliminarPurpleConcrete();
-                        break;
-                    case "logros":
-                        achievementPartyHandler.startEvent(sender);
-                        break;
-                    case "itemparty":
-                        itemPartyHandler.iniciarEvento();
-                        break;
-                    default:
-                        sender.sendMessage("Uso incorrecto del comando. Usa /start <evento1|skybattle|force|reglas|resetpurple|logros|itemparty>");
-                }
-            } else {
-                sender.sendMessage("Uso incorrecto del comando. Usa /start <evento1|skybattle|force|reglas|resetpurple|logros|itemparty>");
-            }
-            return true;
-        });
-
-        this.getCommand("end").setExecutor((sender, command, label, args) -> {
-            if (args.length == 1 && args[0].equalsIgnoreCase("evento1")) {
-                eventoHandler.terminarEvento();
-            } else if (args.length == 1 && args[0].equalsIgnoreCase("logros")) {
-                achievementPartyHandler.endEvent(sender);
-            } else if (args.length == 1 && args[0].equalsIgnoreCase("itemparty")) {
-                itemPartyHandler.terminarEvento();
-            } else {
-                sender.sendMessage("Uso incorrecto del comando. Usa /end <evento1|logros|itemparty>");
-            }
-            return true;
-        });
-
-        // En tu clase principal, añade esto al registrar comandos
-        this.getCommand("evento1").setExecutor((sender, command, label, args) -> {
-            if (args.length > 0 && args[0].equalsIgnoreCase("participantes")) {
-                eventoHandler.gestionarParticipantes(sender, Arrays.copyOfRange(args, 1, args.length));
-                return true;
-            }
-            sender.sendMessage(ChatColor.RED + "Uso: /evento participantes <list|add|remove> [jugador]");
-            return true;
-        });
-
-        this.getCommand("reset").setExecutor((sender, command, label, args) -> {
-            if (args.length == 1 && args[0].equalsIgnoreCase("logros")) {
-                achievementPartyHandler.resetEvent(sender);
-                return true;
-            } else if (args.length == 1 && args[0].equalsIgnoreCase("itempartyplayers")) {
-                itemPartyHandler.resetPlayersFile();
-                return true;
-            }
-            return false;
-        });
-
-        this.getCommand("logros").setExecutor((sender, command, label, args) -> {
-            if (sender instanceof Player) {
-                Player player = (Player) sender;
-                achievementGUI.openAchievementGUI(player);
-                return true;
-            }
-            return false;
-        });
-
-        this.getCommand("reloadevent").setExecutor((sender, command, label, args) -> {
-            if (args.length == 1 && args[0].equalsIgnoreCase("itempartyconfig")) {
-                itemPartyHandler.reloadConfig();
-                sender.sendMessage("§aConfiguración de ItemParty recargada correctamente.");
-                return true;
-            }
-            return false;
-        });
-
-        // manejador de sonidos
+    private void initMobSoundSystem() {
         mobSoundManager = new MobSoundManager(this);
-        /*getServer().getPluginManager().registerEvents(mobSoundManager, this);*/
+        // Si quieres activarlo:
+        // Bukkit.getPluginManager().registerEvents(mobSoundManager, this);
+    }
 
-        //Manejador de bloques
+    private void initBlocksSystem() {
         endstalactitas = new Endstalactitas(this);
         guardianShulkerHeart = new GuardianShulkerHeart(this);
-        getServer().getPluginManager().registerEvents(endstalactitas, this);
-        getServer().getPluginManager().registerEvents(guardianShulkerHeart, this);
 
-        //Instancias y registros mobs
+        Bukkit.getPluginManager().registerEvents(endstalactitas, this);
+        Bukkit.getPluginManager().registerEvents(guardianShulkerHeart, this);
+    }
+
+    private void initMobsAndBossesSystem() {
         corruptedZombies = new CorruptedZombies(this);
         corruptedCreeper = new CorruptedCreeper(this);
         customDolphin = new CustomDolphin(this);
         customBoat = new CustomBoat(this);
-        getServer().getPluginManager().registerEvents(customBoat, this);
-        getServer().getPluginManager().registerEvents(customDolphin, this);
         corruptedinfernalSpider = new CorruptedInfernalSpider(this);
 
-        removeParticlesCreeper = new RemoveParticlesCreeper(this);
-        getServer().getPluginManager().registerEvents(removeParticlesCreeper, this);
+        Bukkit.getPluginManager().registerEvents(customBoat, this);
+        Bukkit.getPluginManager().registerEvents(customDolphin, this);
 
-        //CInstancia de Bosses
+        removeParticlesCreeper = new RemoveParticlesCreeper(this);
+        Bukkit.getPluginManager().registerEvents(removeParticlesCreeper, this);
+        //Booses
         infestedBeeHandler = new InfestedBeeHandler(this);
         hellishBeeHandler = new HellishBeeHandler(this);
         queenBeeHandler = new QueenBeeHandler(this);
         ultraWitherBossHandler = new UltraWitherBossHandler(this);
+    }
 
-        //Armors y herramientas
-        nightVisionHelmet = new NightVisionHelmet(this);
-        corruptedArmor = new CorruptedArmor(this);
-        enderiteSwordListener = new EnderiteSwordListener(this);
-        tridenteEspectral = new TridenteEspectral(this);
-        getServer().getPluginManager().registerEvents(nightVisionHelmet, this);
-        getServer().getPluginManager().registerEvents(corruptedArmor, this);
-        getServer().getPluginManager().registerEvents(enderiteSwordListener, this);
-        getServer().getPluginManager().registerEvents(tridenteEspectral, this);
-
-        //MOBCAP
+    private void initMobCapSystem() {
         config = new MobCapConfig(this);
         mobCapManager = MobCapManager.getInstance(this, config);
         spawnManager = new CustomSpawnManager(this, config);
@@ -527,34 +706,34 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         Objects.requireNonNull(getCommand("mobcapinfo")).setExecutor(commandExecutor);
 
         Bukkit.getPluginManager().registerEvents(spawnManager, this);
+        getLogger().info("Lógica de MobCap habilitada correctamente!");
+    }
 
-        getLogger().info("Logica de MobCap habilitada correctamente!");
-
-        //Habilidades System
+    private void initHabilidadesSystem() {
         habilidadesManager = new HabilidadesManager(this);
         habilidadesEffects = new HabilidadesEffects(this);
         habilidadesGUI = new HabilidadesGUI(this, habilidadesManager, dayHandler);
         habilidadesListener = new HabilidadesListener(this, habilidadesManager, habilidadesEffects);
 
-        getServer().getPluginManager().registerEvents(habilidadesGUI, this);
-        getServer().getPluginManager().registerEvents(habilidadesListener, this);
-
+        Bukkit.getPluginManager().registerEvents(habilidadesGUI, this);
+        Bukkit.getPluginManager().registerEvents(habilidadesListener, this);
 
         HabilidadesCommand habilidadesCommand = new HabilidadesCommand(habilidadesManager);
         Objects.requireNonNull(getCommand("habilidades")).setExecutor(habilidadesCommand);
         Objects.requireNonNull(getCommand("habilidades")).setTabCompleter(habilidadesCommand);
 
         getLogger().info("Sistema de Habilidades habilitado correctamente!");
+    }
 
-        //Comando Publico
+    private void initPublicCommandSystem() {
         viciontCommands = new ViciontCommands(this, deathStormHandler, dayHandler);
-        getCommand("viciont").setExecutor(viciontCommands);
-        getCommand("viciont").setTabCompleter(viciontCommands);
+        Objects.requireNonNull(getCommand("viciont")).setExecutor(viciontCommands);
+        Objects.requireNonNull(getCommand("viciont")).setTabCompleter(viciontCommands);
+    }
 
-        //Dimensiones Corrupted End
-
-        this.corruptedEnd = new CorruptedEnd(this);
-        getServer().getPluginManager().registerEvents(corruptedEnd, this);
+    private void initCorruptedEndSystem() {
+        corruptedEnd = new CorruptedEnd(this);
+        Bukkit.getPluginManager().registerEvents(corruptedEnd, this);
 
         Bukkit.getScheduler().runTaskLater(this, () -> {
             if (Bukkit.getWorld(CorruptedEnd.WORLD_NAME) == null) {
@@ -562,9 +741,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
             } else {
                 corruptedEnd.corruptedWorld = Bukkit.getWorld(CorruptedEnd.WORLD_NAME);
             }
-
             corruptedEnd.initialize();
-
         }, 20L);
 
         new BukkitRunnable() {
@@ -575,77 +752,13 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
                 }
             }
         }.runTaskTimer(this, 40L, 20L);
-
     }
 
-    @Override
-    public void onDisable() {
-        Bukkit.getConsoleSender().sendMessage(
-                ChatColor.translateAlternateColorCodes('&', Prefix + "&aha sido deshabilitado!, &eVersion: " + Version));
+    // ------------------------------------------------------------------------
+    //  Limpieza de bosses
+    // ------------------------------------------------------------------------
 
-        // Guardar datos de DeathStorm al deshabilitar
-        if (deathStormHandler != null) {
-            deathStormHandler.saveStormData();
-        } else {
-            Bukkit.getLogger().severe("deathStormHandler is null, cannot save storm data.");
-        }
-
-        if (damageLogListener != null) {
-            try {
-                damageLogListener.saveDamageLogState();
-            } catch (Exception e) {
-                getLogger().severe("Error al guardar DamageLogState: " + e.getMessage());
-            }
-        }
-
-        if (nightmareMechanic != null) {
-            nightmareMechanic.onDisableNightmare();
-        } else {
-            Bukkit.getLogger().severe("nightmareMechanic is null, cannot disable nightmare.");
-        }
-
-        if (customSpawnerHandler != null) {
-            customSpawnerHandler.shutdown();
-        } else {
-            Bukkit.getLogger().severe("customSpawnerHandler is null, cannot disable nightmare.");
-        }
-
-
-        MobCapManager.getInstance(this, config).shutdown();
-        economyItemsFunctions.onDisable();
-
-        // Limpiar SlotMachineManager
-        if (slotMachineManager != null) {
-            slotMachineManager.shutdown();
-        }
-
-        // Limpiar MobSoundManager
-        if (mobSoundManager != null) {
-            mobSoundManager.shutdown();
-        }
-
-        // Limpiar sistema de linterna
-        if (flashlightManager != null) {
-            flashlightManager.shutdown();
-        }
-
-/*        if (mobCapManager != null) {
-            mobCapManager.shutdown();
-        }*/
-
-        // Guardar el estado de los Infested bee
-        cleanup();
-
-        // Limpiar Corrupted End
-        if (corruptedEnd != null) {
-        }
-
-        shuttingDown = true;
-
-    }
-
-    private void cleanup() {
-        // Limpiar el handler antes de cancelar tareas
+    private void cleanupBossHandlers() {
         if (infestedBeeHandler != null) {
             try {
                 infestedBeeHandler.shutdown();
@@ -685,22 +798,43 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
             }
             ultraWitherBossHandler = null;
         }
-
-        // Cancelar todas las tareas pendientes del plugin
-        /*Bukkit.getScheduler().cancelTasks(this);*/
     }
 
+    // ------------------------------------------------------------------------
+    //  Eventos básicos (join / quit / world load)
+    // ------------------------------------------------------------------------
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        String message = ChatColor.WHITE + "\uDB80\uDC65 " + ChatColor.RESET + ChatColor.of("#B83EFF") + ChatColor.BOLD + event.getPlayer().getName() + ChatColor.RESET + ChatColor.of("#FF009F") + " se ha conectado.";
+        String message = ChatColor.WHITE + "\uDB80\uDC65 " +
+                ChatColor.RESET + ChatColor.of("#B83EFF") + ChatColor.BOLD + event.getPlayer().getName() +
+                ChatColor.RESET + ChatColor.of("#FF009F") + " se ha conectado.";
         event.setJoinMessage(message);
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        String message = ChatColor.WHITE + "\uDB80\uDC63 " + ChatColor.RESET + ChatColor.of("#B8B8B8") + ChatColor.BOLD + event.getPlayer().getName() + ChatColor.RESET + ChatColor.of("#7C7981") + " se ha desconectado.";
+        String message = ChatColor.WHITE + "\uDB80\uDC63 " +
+                ChatColor.RESET + ChatColor.of("#B8B8B8") + ChatColor.BOLD + event.getPlayer().getName() +
+                ChatColor.RESET + ChatColor.of("#7C7981") + " se ha desconectado.";
         event.setQuitMessage(message);
+    }
+
+    @EventHandler
+    public void onWorldLoad(WorldLoadEvent event) {
+        if (mobCapManager != null && mobCapManager.isInitialized()) {
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                mobCapManager.handleNewWorld(event.getWorld());
+            }, 20L);
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    //  Getters útiles
+    // ------------------------------------------------------------------------
+
+    public static ViciontHardcore3 getInstance() {
+        return instance;
     }
 
     public DayHandler getDayHandler() {
@@ -719,15 +853,6 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         return slotMachineManager;
     }
 
-    @EventHandler
-    public void onWorldLoad(WorldLoadEvent event) {
-        if (mobCapManager != null && mobCapManager.isInitialized()) {
-            Bukkit.getScheduler().runTaskLater(this, () -> {
-                mobCapManager.handleNewWorld(event.getWorld());
-            }, 20L);
-        }
-    }
-
     public MobCapManager getMobCapManager() {
         return mobCapManager;
     }
@@ -740,4 +865,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         return spawnManager;
     }
 
+    public CustomEffectManager getEffectManager() {
+        return effectManager;
+    }
 }

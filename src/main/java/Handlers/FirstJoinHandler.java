@@ -1,6 +1,7 @@
 package Handlers;
 
 import Commands.MissionSystemCommands;
+import CorrupcionAnsiosa.CorrupcionAnsiosaManager;
 import Events.AchievementParty.AchievementPartyHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -21,11 +22,13 @@ public class FirstJoinHandler implements Listener {
     private final JavaPlugin plugin;
     private final AchievementPartyHandler achievementHandler;
     private final MissionSystemCommands missionSystemCommands;
+    private final CorrupcionAnsiosaManager corruptionManager;
 
-    public FirstJoinHandler(JavaPlugin plugin, MissionSystemCommands missionSystemCommands) {
+    public FirstJoinHandler(JavaPlugin plugin, MissionSystemCommands missionSystemCommands, CorrupcionAnsiosaManager corruptionManager) {
         this.plugin = plugin;
         this.achievementHandler = new AchievementPartyHandler(plugin);
         this.missionSystemCommands = missionSystemCommands;
+        this.corruptionManager = corruptionManager;
     }
 
     @EventHandler
@@ -58,12 +61,16 @@ public class FirstJoinHandler implements Listener {
                 survivorTeam.addEntry(player.getName());
             }
 
+            corruptionManager.initializePlayerData(player);
             giveWelcomeKit(player);
 
             // Mensajes adicionales o tareas que desees realizar en el ingreso
             Bukkit.getScheduler().runTaskLater(this.plugin, () -> {
                 player.sendMessage("§e۞ Has recibido tu kit de bienvenida!");
             }, 40);
+        } else {
+            // Para jugadores que ya han entrado antes, asegurar que tengan datos de corrupción
+            corruptionManager.initializePlayerData(player);
         }
     }
 

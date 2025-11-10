@@ -38,14 +38,6 @@ import java.util.stream.Collectors;
 
 public class ItemPartyHandler implements Listener {
 
-    // ===== Colores (HEX en §x-RRGGBB) =====
-    private static final String HEX_NUM_Y_WARN = "#ae52e3";
-    private static final String HEX_TOP1_NAME  = "#e5d480";
-    private static final String HEX_TOP2_6     = "#4aa5dc";
-    private static final String HEX_WARN_NAME  = "#ee749e";
-    private static final String GRIS = "§7";
-    private static final String BLANCO = "§f";
-
     private final JavaPlugin plugin;
     private final TiempoCommand tiempoCommand;
     private final RuletaAnimation ruletaAnimation;
@@ -271,7 +263,7 @@ public class ItemPartyHandler implements Listener {
         if (!eventoActivo) return;
 
         long now = System.currentTimeMillis();
-        if (now - lastScoreUpdate < 400) return; // Máx. 2 actualizaciones por segundo
+        if (now - lastScoreUpdate < 200) return;
         lastScoreUpdate = now;
 
         List<Map.Entry<String, Integer>> sorted = ordenarPlayers();
@@ -377,10 +369,6 @@ public class ItemPartyHandler implements Listener {
     }
 
 
-
-    /**
-     * Línea vacía escalonada invisible
-     */
     private void addBlankLine(Objective obj, int score, int index) {
         String base = "§r" + " ".repeat(Math.min(12, index + 5));
         obj.getScore(base).setScore(score);
