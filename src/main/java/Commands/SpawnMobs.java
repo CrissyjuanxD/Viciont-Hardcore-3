@@ -1,5 +1,6 @@
 package Commands;
 
+import Bosses.QueenBeeHandler;
 import Dificultades.CustomMobs.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -22,7 +23,6 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
     private final Iceologer iceologerSpawner;
     private final CorruptedZombies corruptedZombieSpawner;
     private final CorruptedSpider corruptedSpider;
-    private final QueenBeeHandler queenBeeHandler;
     private final HellishBeeHandler hellishBeeHandler;
     private final GuardianBlaze guardianBlaze;
     private final GuardianCorruptedSkeleton guardianCorruptedSkeleton;
@@ -64,7 +64,6 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
         this.iceologerSpawner = new Iceologer(plugin);
         this.corruptedZombieSpawner = new CorruptedZombies(plugin);
         this.corruptedSpider = new CorruptedSpider(plugin);
-        this.queenBeeHandler = new QueenBeeHandler(plugin);
         this.hellishBeeHandler = new HellishBeeHandler(plugin);
         this.guardianBlaze = new GuardianBlaze(plugin);
         this.guardianCorruptedSkeleton = new GuardianCorruptedSkeleton(plugin);
@@ -158,8 +157,8 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
                 break;
 
             case "queenbee":
-                queenBeeHandler.spawnQueenBee(location);
-                sender.sendMessage("¡Queen Bees ha sido spawneada en " + locationToString(location) + "!");
+                QueenBeeHandler.spawn(plugin, location);
+                sender.sendMessage("§d¡Corrupted Queen Bee ha sido invocada en " + locationToString(location) + "!");
                 break;
 
             case "hellishbee":

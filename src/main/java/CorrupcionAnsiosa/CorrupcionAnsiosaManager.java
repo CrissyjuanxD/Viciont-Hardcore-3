@@ -5,6 +5,9 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 
 import java.io.File;
 import java.io.IOException;
@@ -110,15 +113,31 @@ public class CorrupcionAnsiosaManager {
     public void addCorruption(Player player, double amount) {
         if (!enabled) return;
         PlayerCorruptionData data = getPlayerData(player);
+        double before = data.getCorruption();
+
         data.addCorruption(amount);
+        double after = data.getCorruption();
+
         saveData();
+
+        double change = after - before;
+        if (change != 0)
+            sendCorruptionChange(player, change);
     }
 
     public void removeCorruption(Player player, double amount) {
         if (!enabled) return;
         PlayerCorruptionData data = getPlayerData(player);
+        double before = data.getCorruption();
+
         data.removeCorruption(amount);
+        double after = data.getCorruption();
+
         saveData();
+
+        double change = after - before;
+        if (change != 0)
+            sendCorruptionChange(player, change);
     }
 
     public void resetCorruption(Player player) {
@@ -135,4 +154,35 @@ public class CorrupcionAnsiosaManager {
     public HashMap<UUID, PlayerCorruptionData> getAllPlayerData() {
         return new HashMap<>(playerData);
     }
+
+    public Plugin getPlugin() {
+        return plugin;
+    }
+
+    public static void sendCorruptionChange(Player player, double change) {
+
+        String symbol = "\u06de";
+
+        Component prefix = Component.text(symbol + " ")
+                .color(TextColor.fromHexString("#B228E7"))
+                .append(Component.text("Corrupción Ansiosa: ")
+                        .color(TextColor.fromHexString("#A777E9"))
+                );
+
+        Component amount;
+        if (change > 0) {
+            amount = Component.text("+" + String.format("%.0f", change) + "%")
+                    .color(TextColor.fromHexString("#9ADE6F"))
+                    .decorate(TextDecoration.BOLD);
+        } else {
+            amount = Component.text(String.format("%.0f", change) + "%")
+                    .color(TextColor.fromHexString("#E67B79"))
+                    .decorate(TextDecoration.BOLD);
+        }
+
+        Component finalMsg = prefix.append(amount);
+
+        player.sendActionBar(finalMsg);
+    }
+
 }

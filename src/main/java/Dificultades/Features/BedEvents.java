@@ -2,13 +2,15 @@ package Dificultades.Features;
 
 import Handlers.DayHandler;
 import Handlers.DeathStormHandler;
+import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.ChatColor;
-import org.bukkit.*;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
+import org.bukkit.Bukkit;
+import org.bukkit.GameRule;
+import org.bukkit.Statistic;
+import org.bukkit.World;
 import org.bukkit.entity.Phantom;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerBedEnterEvent;
@@ -17,25 +19,28 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class BedEvents implements Listener {
+
     private final DayHandler dayHandler;
     private final DeathStormHandler deathStormHandler;
+    private final NightmareMechanic nightmareMechanic;
     private final JavaPlugin plugin;
+
     private final List<Player> playersInBed = new ArrayList<>();
     private final Map<Player, Long> lastPhantomReset = new HashMap<>();
     private final Random random = new Random();
-    private final long PHANTOM_RESET_COOLDOWN = 60 * 60 * 1000;
+    private final long PHANTOM_RESET_COOLDOWN = 60 * 60 * 1000L;
 
-    public BedEvents(JavaPlugin plugin, DayHandler dayHandler, DeathStormHandler deathStormHandler) {
+    // Probabilidad de que la cama (día 12+) active Nightmare
+    private static final double NIGHTMARE_CHANCE = 0.25; // 25%
+
+    public BedEvents(JavaPlugin plugin, DayHandler dayHandler, DeathStormHandler deathStormHandler, NightmareMechanic nightmareMechanic) {
         this.plugin = plugin;
         this.dayHandler = dayHandler;
         this.deathStormHandler = deathStormHandler;
+        this.nightmareMechanic = nightmareMechanic;
     }
 
     @EventHandler
@@ -53,9 +58,8 @@ public class BedEvents implements Listener {
             sleepPercentage = 0;
         }
 
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            world.setGameRule(GameRule.PLAYERS_SLEEPING_PERCENTAGE, sleepPercentage);
-        }, 1L);
+        Bukkit.getScheduler().runTaskLater(plugin, () ->
+                world.setGameRule(GameRule.PLAYERS_SLEEPING_PERCENTAGE, sleepPercentage), 1L);
 
         if (currentDay < 12 && deathStormHandler.isDeathStormActive()) {
             player.sendMessage(ChatColor.GRAY + "No puedes dormir durante una DeathStorm");
@@ -63,12 +67,15 @@ public class BedEvents implements Listener {
             return;
         }
 
+        // 🔥 LÓGICA ESPECIAL DÍA 12+: ya no spawnea phantoms extra, ahora puede activar Nightmare
         if (currentDay >= 12) {
             event.setCancelled(true);
             handlePhantomReset(player);
+            handleNightmareBedTrigger(player);
             return;
         }
 
+        // Lógica original de dormir (días < 12)
         if (world.getTime() >= 12530 && world.getTime() <= 23458 && !world.isThundering()) {
             if (currentDay >= 4 && Bukkit.getOnlinePlayers().size() < 4) {
                 sendActionBar(player, ChatColor.RED + "¡No hay suficientes jugadores online para dormir! (Se necesitan 4)");
@@ -82,9 +89,11 @@ public class BedEvents implements Listener {
             }
 
             String message = currentDay < 4
-                    ? ChatColor.YELLOW + "" + ChatColor.BOLD + "۞ " + ChatColor.of("#F8F8A4") + ChatColor.BOLD + "Durmiendo" + ChatColor.GRAY + ChatColor.BOLD +": " + ChatColor.GOLD + "1" + ChatColor.GRAY + ChatColor.BOLD + "/" + ChatColor.GOLD + "1 " + ChatColor.GRAY + ChatColor.ITALIC + "(" + ChatColor.of("#F8F8A4") + "Noche saltada" + ChatColor.GRAY + ")"
+                    ? ChatColor.YELLOW + "" + ChatColor.BOLD + "۞ " + ChatColor.of("#F8F8A4") + ChatColor.BOLD + "Durmiendo" + ChatColor.GRAY + ChatColor.BOLD + ": " +
+                    ChatColor.GOLD + "1" + ChatColor.GRAY + ChatColor.BOLD + "/" + ChatColor.GOLD + "1 " +
+                    ChatColor.GRAY + ChatColor.ITALIC + "(" + ChatColor.of("#F8F8A4") + "Noche saltada" + ChatColor.GRAY + ")"
                     : ChatColor.GOLD + String.format("Durmiendo: %d/4 (%.0f%%)",
-                    playersInBed.size(), (playersInBed.size()/4.0)*100);
+                    playersInBed.size(), (playersInBed.size() / 4.0) * 100);
 
             sendGlobalActionBar(message);
 
@@ -145,6 +154,10 @@ public class BedEvents implements Listener {
         }
     }
 
+    // ===========================
+    //   RESET PHANTOMS (igual)
+    // ===========================
+
     private void handlePhantomReset(Player player) {
         if (lastPhantomReset.containsKey(player)) {
             long timeSinceLastReset = System.currentTimeMillis() - lastPhantomReset.get(player);
@@ -159,26 +172,40 @@ public class BedEvents implements Listener {
             lastPhantomReset.put(player, System.currentTimeMillis());
             player.setStatistic(Statistic.TIME_SINCE_REST, 0);
             player.sendMessage(ChatColor.GREEN + "Contador de phantoms reseteado!");
-
-            if (random.nextDouble() < 0.25) {
-                spawnPhantomSwarm(player);
-                player.sendMessage(ChatColor.RED + "Phantoms aparecieron!");
-            }
         } else {
             player.sendMessage(ChatColor.YELLOW + "Nada ocurrió al intentar dormir...");
         }
     }
 
-    private void spawnPhantomSwarm(Player player) {
-        Location loc = player.getLocation().add(0, 10, 0);
-        int count = 5 + random.nextInt(6);
+    // ===========================
+    //   ACTIVAR NIGHTMARE DÍA 12+
+    // ===========================
 
-        for (int i = 0; i < count; i++) {
-            Vector offset = new Vector(random.nextDouble() * 10 - 5, 0, random.nextDouble() * 10 - 5);
-            Phantom phantom = (Phantom) player.getWorld().spawnEntity(loc.add(offset), EntityType.PHANTOM);
-            phantom.setTarget(player);
+    private void handleNightmareBedTrigger(Player player) {
+        if (nightmareMechanic == null) return;
+
+        if (nightmareMechanic.isInNightmare(player.getUniqueId())) {
+            player.sendMessage(ChatColor.DARK_RED + "۞ Ya estás atrapado en una pesadilla...");
+            return;
+        }
+
+        if (!nightmareMechanic.canTriggerNightmare(player.getUniqueId())) {
+            player.sendMessage(ChatColor.GRAY + "۞ Aún sientes las secuelas de tu última pesadilla...");
+            return;
+        }
+
+        if (random.nextDouble() < NIGHTMARE_CHANCE) {
+            nightmareMechanic.forceStartNightmare(player.getUniqueId(), 1);
+            player.sendMessage(ChatColor.DARK_RED + "۞ Algo invade tus sueños... has entrado en " +
+                    ChatColor.BOLD + "Modo Pesadilla.");
+        } else {
+            player.sendMessage(ChatColor.GRAY + "Te intentas dormir, pero una inquietud extraña recorre tu cuerpo...");
         }
     }
+
+    // ===========================
+    //      ACTION BARS (solo cama)
+    // ===========================
 
     private void sendGlobalActionBar(String message) {
         for (Player p : Bukkit.getOnlinePlayers()) {

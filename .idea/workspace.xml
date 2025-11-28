@@ -9,22 +9,37 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="23b0ad47-a402-4788-8284-bb6d2e5ca004" name="Changes" comment="(VERSION 1.5.9) Se añadieron nuevas clases de Mobs, CustomSpawner completamente terminado, libro de habilidades falta por corregir, correcion de bugs en eventos, nuevas titulos cuando empieza una deathstorm (falta mejorar)">
-      <change afterPath="$PROJECT_DIR$/src/main/java/Commands/EventsCommands.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/CorrupcionAnsiosaCommand.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/CorrupcionAnsiosaManager.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/CorrupcionEffectsHandler.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/CorrupcionJoinListener.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/PlayerCorruptionData.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/EffectListener/ConfusionEffect.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/EffectListener/CorruptureEffect.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/EffectListener/CustomEffect.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/EffectListener/CustomEffectManager.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/EffectListener/EffectPreventionListener.java" afterDir="false" />
+    <list default="true" id="23b0ad47-a402-4788-8284-bb6d2e5ca004" name="Changes" comment="(VERSION 1.5.10) Se reorganizo toda la clase principal, se añadio el gameplay de &quot;Corrupcion Ansiosa&quot; falta pulir, se añadio sistema de efectos Custom &quot;Confusion&quot; - &quot;Corrupture&quot;">
+      <change afterPath="$PROJECT_DIR$/src/main/java/Bosses/AreaZone.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/Bosses/BaseBoss.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/Bosses/QueenBeeHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/Commands/DebugArenaCommand.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/Commands/testtiastcommand.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/CorrupcionAnsiosaConsumiblesListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/Handlers/ToastHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/items/CorrupcionAnsiosaItems.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Events/ItemParty/ItemPartyHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/ItemParty/ItemPartyHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Handlers/FirstJoinHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Handlers/FirstJoinHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Casino/SlotMachine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Casino/SlotMachine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Commands/EggSpawnerCommand.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Commands/ItemsCommands.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Commands/ItemsCommands.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Commands/NightmareCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Commands/NightmareCommand.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Commands/SpawnMobs.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Commands/SpawnMobs.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/CorrupcionAnsiosaCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/CorrupcionAnsiosaCommand.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/CorrupcionAnsiosaManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/CorrupcionAnsiosaManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/PlayerCorruptionData.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/PlayerCorruptionData.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/Iceologer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/Iceologer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/NMSUtils.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/QueenBeeHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/QueenBeeHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayFourChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayFourChanges.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/Features/BedEvents.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/Features/BedEvents.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/Features/NightmareMechanic.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/Features/NightmareMechanic.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission1.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission1.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission4.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission4.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission6.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission6.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Handlers/CustomSpawnerHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Handlers/CustomSpawnerHandler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/Handlers/NormalTotemHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Handlers/NormalTotemHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/items/EmblemItems.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/items/EmblemItems.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/vct/hardcore3/ViciontHardcore3.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/vct/hardcore3/ViciontHardcore3.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/resources/plugin.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/plugin.yml" afterDir="false" />
     </list>
@@ -56,6 +71,9 @@
     &quot;accountId&quot;: &quot;cf9ef982-8ab2-418b-b8ab-1b570338dbbd&quot;
   }
 }</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 0
@@ -86,7 +104,8 @@
     &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
     &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
     &quot;project.structure.side.proportion&quot;: &quot;0.33448276&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.keymap&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
     &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
@@ -322,6 +341,22 @@
       <workItem from="1762626816708" duration="865000" />
       <workItem from="1762627733767" duration="19734000" />
       <workItem from="1762738401872" duration="622000" />
+      <workItem from="1762759413377" duration="332000" />
+      <workItem from="1762780913125" duration="1620000" />
+      <workItem from="1762881885540" duration="3046000" />
+      <workItem from="1762925843462" duration="6222000" />
+      <workItem from="1762976620764" duration="652000" />
+      <workItem from="1762998139512" duration="38000" />
+      <workItem from="1763059890493" duration="17429000" />
+      <workItem from="1763143458531" duration="3030000" />
+      <workItem from="1763224742701" duration="21860000" />
+      <workItem from="1763358653518" duration="5979000" />
+      <workItem from="1763528381381" duration="444000" />
+      <workItem from="1763529036475" duration="10413000" />
+      <workItem from="1763571806201" duration="5834000" />
+      <workItem from="1763853217408" duration="584000" />
+      <workItem from="1763874556213" duration="16000" />
+      <workItem from="1764313184001" duration="2105000" />
     </task>
     <task id="LOCAL-00001" summary="MUCHOS MUCHISIMOS CAMBIOS (vERSION 1.5.2)">
       <option name="closed" value="true" />
@@ -395,7 +430,15 @@
       <option name="project" value="LOCAL" />
       <updated>1762581004516</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="(VERSION 1.5.10) Se reorganizo toda la clase principal, se añadio el gameplay de &quot;Corrupcion Ansiosa&quot; falta pulir, se añadio sistema de efectos Custom &quot;Confusion&quot; - &quot;Corrupture&quot;">
+      <option name="closed" value="true" />
+      <created>1762759663230</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1762759663230</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -410,6 +453,7 @@
     <MESSAGE value="(VERSION 1.5.7) Casino Mejorado y Base de Corrupted End" />
     <MESSAGE value="(VERSION 1.5.8) Cambios Menores" />
     <MESSAGE value="(VERSION 1.5.9) Se añadieron nuevas clases de Mobs, CustomSpawner completamente terminado, libro de habilidades falta por corregir, correcion de bugs en eventos, nuevas titulos cuando empieza una deathstorm (falta mejorar)" />
-    <option name="LAST_COMMIT_MESSAGE" value="(VERSION 1.5.9) Se añadieron nuevas clases de Mobs, CustomSpawner completamente terminado, libro de habilidades falta por corregir, correcion de bugs en eventos, nuevas titulos cuando empieza una deathstorm (falta mejorar)" />
+    <MESSAGE value="(VERSION 1.5.10) Se reorganizo toda la clase principal, se añadio el gameplay de &quot;Corrupcion Ansiosa&quot; falta pulir, se añadio sistema de efectos Custom &quot;Confusion&quot; - &quot;Corrupture&quot;" />
+    <option name="LAST_COMMIT_MESSAGE" value="(VERSION 1.5.10) Se reorganizo toda la clase principal, se añadio el gameplay de &quot;Corrupcion Ansiosa&quot; falta pulir, se añadio sistema de efectos Custom &quot;Confusion&quot; - &quot;Corrupture&quot;" />
   </component>
 </project>

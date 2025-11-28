@@ -33,21 +33,27 @@ public class PlayerCorruptionData {
         double corruption = getCorruption();
         int level = getCorruptionLevel(currentDay);
 
+        // Nivel 1: sin fallos
         if (level == 1) {
-            if (corruption < 70) return 0.25;
-            if (corruption < 60) return 0.50;
-            return 0.0;
-        } else if (level == 2) {
-            if (corruption < 70) return 0.75;
-            if (corruption < 60) return 0.90;
-            if (corruption < 50) return 0.10;
-            return 0.0;
-        } else if (level == 3) {
-            if (corruption < 70) return 0.90;
-            if (corruption < 60) return 0.30;
-            if (corruption < 50) return 1.0; // 100% de fallo
             return 0.0;
         }
+
+        // Nivel 2 (día 10+)
+        if (level == 2) {
+            if (corruption < 50) return 0.10;  // 10%
+            if (corruption < 60) return 0.05;  // 5%
+            if (corruption < 70) return 0.01;  // 1%
+            return 0.0;
+        }
+
+        // Nivel 3 (día 20+)
+        if (level == 3) {
+            if (corruption < 50) return 1.00;  // 100%
+            if (corruption < 60) return 0.30;  // 30%
+            if (corruption < 70) return 0.15;  // 15%
+            return 0.0;
+        }
+
         return 0.0;
     }
 }

@@ -4,10 +4,7 @@ import Blocks.Endstalactitas;
 import Blocks.GuardianShulkerHeart;
 import Casino.CasinoManager;
 import Commands.*;
-import CorrupcionAnsiosa.CorrupcionAnsiosaCommand;
-import CorrupcionAnsiosa.CorrupcionAnsiosaManager;
-import CorrupcionAnsiosa.CorrupcionEffectsHandler;
-import CorrupcionAnsiosa.CorrupcionJoinListener;
+import CorrupcionAnsiosa.*;
 import Dificultades.*;
 import Dificultades.CustomMobs.*;
 import Dificultades.Features.*;
@@ -172,7 +169,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
     private HellishBeeHandler hellishBeeHandler;
     private InfestedBeeHandler infestedBeeHandler;
-    private QueenBeeHandler queenBeeHandler;
+    /*private QueenBeeHandler queenBeeHandler;*/
     private UltraWitherBossHandler ultraWitherBossHandler;
 
     private Endstalactitas endstalactitas;
@@ -218,6 +215,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
         initCoreDayAndDeathStormSystem();
         initTiempoSystem();
+        initCorruptionSystem();
         initItemsSystem();
         initMissionSystem();
         initChatTeamsAndFirstJoinSystem();
@@ -366,10 +364,6 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
         // Cargar datos existentes
         deathStormHandler.loadStormData();
-
-        // Eventos de cama
-        BedEvents bedEvents = new BedEvents(this, dayHandler, deathStormHandler);
-        Bukkit.getPluginManager().registerEvents(bedEvents, this);
     }
 
     private void initTiempoSystem() {
@@ -384,6 +378,20 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         Objects.requireNonNull(getCommand("removetiempo")).setTabCompleter(tiempoCommand);
         Objects.requireNonNull(getCommand("tiempoview")).setTabCompleter(tiempoCommand);
     }
+
+    private void initCorruptionSystem() {
+        corruptionManager = new CorrupcionAnsiosaManager(this);
+        corruptionEffectsHandler = new CorrupcionEffectsHandler(this, corruptionManager);
+        Bukkit.getPluginManager().registerEvents(new CorrupcionJoinListener(corruptionManager), this);
+        Bukkit.getPluginManager().registerEvents(new CorrupcionAnsiosaConsumiblesListener(corruptionManager), this);
+
+        // Registrar comando /ca
+        Objects.requireNonNull(getCommand("ca"))
+                .setExecutor(new CorrupcionAnsiosaCommand(corruptionManager));
+
+        getLogger().info("Corrupción Ansiosa inicializada correctamente.");
+    }
+
 
     private void initItemsSystem() {
         // Tótems protección de ítems Armor y Herramientas
@@ -430,6 +438,8 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         missionHandler.registerAllMissionListeners();
         // Si algún día usas @EventHandler en MissionHandler, puedes descomentar:
         // Bukkit.getPluginManager().registerEvents(missionHandler, this);
+        Objects.requireNonNull(getCommand("testtoast")).setExecutor(new testtiastcommand(this));
+
     }
 
     private void initChatTeamsAndFirstJoinSystem() {
@@ -448,10 +458,6 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         // spawnvct
         Objects.requireNonNull(this.getCommand("spawnvct"))
                 .setExecutor(new SpawnMobs(this, dayHandler));
-
-        // eggvct
-        Objects.requireNonNull(this.getCommand("eggvct"))
-                .setExecutor(new EggSpawnerCommand(this));
 
         // Items generales
         ItemsCommands itemsCommands = new ItemsCommands(this);
@@ -556,11 +562,6 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         //Nightmare
         nightmareMechanic = new NightmareMechanic(this, tiempoCommand, successNotif, deathStormHandler, damageLogListener);
 
-        //CorrupcionAnsiosa
-        corruptionManager = new CorrupcionAnsiosaManager(this);
-        corruptionEffectsHandler = new CorrupcionEffectsHandler(this, corruptionManager);
-        Bukkit.getPluginManager().registerEvents(new CorrupcionJoinListener(corruptionManager), this);
-
         //Efectos Custom
         this.effectManager = new CustomEffectManager();
 
@@ -576,12 +577,16 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         this.effectPreventionListener = new EffectPreventionListener();
         getServer().getPluginManager().registerEvents(effectPreventionListener, this);
 
+        // Eventos de cama
+        BedEvents bedEvents = new BedEvents(this, dayHandler, deathStormHandler, nightmareMechanic);
+        Bukkit.getPluginManager().registerEvents(bedEvents, this);
+
         // Comandos
         NightmareCommand nightmareCommand = new NightmareCommand(this, nightmareMechanic);
         Objects.requireNonNull(this.getCommand("addnightmare")).setExecutor(nightmareCommand);
         Objects.requireNonNull(this.getCommand("removenightmare")).setExecutor(nightmareCommand);
         Objects.requireNonNull(this.getCommand("resetnightmarecooldown")).setExecutor(nightmareCommand);
-        Objects.requireNonNull(getCommand("ca")).setExecutor(new CorrupcionAnsiosaCommand(corruptionManager));
+        Objects.requireNonNull(this.getCommand("levelnightmare")).setExecutor(nightmareCommand);
     }
 
     private void initLootSystem() {
@@ -689,8 +694,10 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         //Booses
         infestedBeeHandler = new InfestedBeeHandler(this);
         hellishBeeHandler = new HellishBeeHandler(this);
-        queenBeeHandler = new QueenBeeHandler(this);
+        /*queenBeeHandler = new QueenBeeHandler(this);*/
         ultraWitherBossHandler = new UltraWitherBossHandler(this);
+
+        Objects.requireNonNull(getCommand("debugarena")).setExecutor(new DebugArenaCommand());
     }
 
     private void initMobCapSystem() {
@@ -779,7 +786,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
             hellishBeeHandler = null;
         }
 
-        if (queenBeeHandler != null) {
+/*        if (queenBeeHandler != null) {
             try {
                 queenBeeHandler.shutdown();
                 getLogger().info("QueenBeeHandler limpiado correctamente");
@@ -787,7 +794,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
                 getLogger().warning("Error al limpiar QueenBeeHandler: " + e.getMessage());
             }
             queenBeeHandler = null;
-        }
+        }*/
 
         if (ultraWitherBossHandler != null) {
             try {

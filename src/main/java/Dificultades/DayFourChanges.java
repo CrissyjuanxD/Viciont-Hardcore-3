@@ -1,5 +1,6 @@
 package Dificultades;
 
+import Bosses.QueenBeeHandler;
 import Dificultades.CustomMobs.*;
 import Enchants.EssenceFactory;
 import items.EmblemItems;
@@ -43,7 +44,7 @@ public class DayFourChanges implements Listener {
     private final CorruptedInfernalSpider corruptedInfernalSpider;
     private final CorruptedZombies corruptedZombies;
     private final CorruptedSpider corruptedSpider;
-    private final QueenBeeHandler queenBeeHandler;
+    /*private final QueenBeeHandler queenBeeHandler;*/
     private final DayHandler dayHandler;
 
     private final NamespacedKey uuidKey;
@@ -55,7 +56,7 @@ public class DayFourChanges implements Listener {
         this.blazespawmer = new GuardianBlaze(plugin);
         this.guardianCorruptedSkeleton = new GuardianCorruptedSkeleton(plugin);
         this.corruptedInfernalSpider = new CorruptedInfernalSpider(plugin);
-        this.queenBeeHandler = new QueenBeeHandler(plugin);
+        /*this.queenBeeHandler = new QueenBeeHandler(plugin);*/
         this.corruptedZombies = new CorruptedZombies(plugin);
         this.corruptedSpider = new CorruptedSpider(plugin);
         this.uuidKey = new NamespacedKey(plugin, "creator_uuid");
@@ -317,7 +318,7 @@ public class DayFourChanges implements Listener {
                     world.spawnParticle(Particle.TOTEM_OF_UNDYING, spawnLocation, 100, 0.5, 1, 0.5, 0.1);
                     world.playSound(spawnLocation, Sound.ENTITY_FIREWORK_ROCKET_BLAST, 5.0f, 1.0f);
 
-                    queenBeeHandler.spawnQueenBee(spawnLocation);
+                    QueenBeeHandler.spawn(plugin, spawnLocation);
 
                     destroyAltarStructure(altarLocation);
 
@@ -703,7 +704,7 @@ public class DayFourChanges implements Listener {
         netherEmblemRecipe.setIngredient('E', new RecipeChoice.ExactChoice(EssenceFactory.createProtectionEssence())); // Cualquier esencia
         netherEmblemRecipe.setIngredient('O', Material.GOLD_BLOCK);
         netherEmblemRecipe.setIngredient('I', new RecipeChoice.ExactChoice(EmblemItems.createFragmentoInfernal()));
-        netherEmblemRecipe.setIngredient('A', new RecipeChoice.ExactChoice(QueenBeeHandler.createAguijonAbejaReina())); // Aguijón de Abeja Reina
+        netherEmblemRecipe.setIngredient('A', new RecipeChoice.ExactChoice(EmblemItems.createAgujonReal())); // Aguijón de Abeja Reina
 
         // Receta del Overworld Emblem
         ShapedRecipe overworldEmblemRecipe = new ShapedRecipe(new NamespacedKey(plugin, "overworld_emblem"), EmblemItems.createOverworldEmblem());

@@ -59,11 +59,6 @@ commands:
     usage: /bonusvct <json>
     permission: viciont_hardcore3.bonusvct
     permission-message: No tienes permiso para usar este comando.
-  vcth:
-    description: Localiza y maneja las estructuras de Corrupted Villages.
-    usage: /<command> locate Corrupted_Village
-    permission: vicionthardcore3.command.vcth
-    permission-message: No tienes permiso para usar este comando.
   structure:
     description: Genera estructuras especiales en el mundo
     usage: /structure <nombre>
@@ -126,11 +121,6 @@ commands:
     usage: /spawnvct <mob> [jugador (opcional)] [x] [y] [z]
     permission: viciont_hardcore3.command.spawnvct
     permission-message: No tienes permiso para usar este comando.
-  eggvct:
-    description: Da un huevo para spawnear un mob personalizado.
-    usage: /<command> <mob>
-    permission: viciont_hardcore3.command.eggvct
-    permission-message: No tienes permiso para usar este comando.
   addtiempo:
     description: Añade un temporizador en la bossbar.
     usage: /addtiempo [nombre opcional] <tiempo> [on/off]
@@ -165,6 +155,11 @@ commands:
     description: Resetea el cooldown del evento Nightmare a un jugador o a todos.
     usage: /resetnightmarecooldown <player|@a>
     permission: viciont_hardcore3.command.resetnightmarecooldown
+    permission-message: No tienes permiso para usar este comando.
+  levelnightmare:
+    description: Ajusta el nivel de la pesadilla
+    usage: /levelnightmare <jugador|@a> <Nvl1/Nvl2/Nvl3>
+    permission: viciont_hardcore3.command.levelnightmare
     permission-message: No tienes permiso para usar este comando.
   givespawner:
     description: Da un spawner personalizado que genera mobs custom.
@@ -263,6 +258,14 @@ commands:
     usage: /ca <add/remove/reset/disable/enable> [jugador] [porcentaje].
     permission: viciont_hardcore3.command.ca
     permission-message: No tienes permiso para usar este comando.
+  debugarena:
+    description: Activa el modo debug de arenas.
+    usage: /debugarena
+    permission: viciont_hardcore3.command.debugarena
+    permission-message: No tienes permiso para usar este comando.
+  testtoast:
+    description: Prueba un toast personalizado
+    usage: /<command>
 depend:
   - NBTAPI
 softdepend:

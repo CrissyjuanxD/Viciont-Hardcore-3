@@ -7,7 +7,6 @@ import Blocks.CorruptedAncientDebris;
 import Blocks.Endstalactitas;
 import Blocks.GuardianShulkerHeart;
 import Dificultades.CustomMobs.CustomBoat;
-import Dificultades.CustomMobs.QueenBeeHandler;
 import Dificultades.DayOneChanges;
 import Enchants.EnhancedEnchantmentTable;
 import Events.UltraWitherBattle.UltraWitherCompass;
@@ -1085,8 +1084,8 @@ public class SlotMachine implements Listener {
             case "infernaltotem":
                 item = infernalTotem.createInfernalTotem();
                 break;
-            case "aguijon_abeja_reina":
-                item = QueenBeeHandler.createAguijonAbejaReina();
+            case "aguijon_real":
+                item = EmblemItems.createAgujonReal();
                 break;
             case "upgrade_vacio":
                 item = UpgradeNTItems.createUpgradeVacio();

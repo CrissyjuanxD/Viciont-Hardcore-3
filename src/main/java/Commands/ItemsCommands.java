@@ -6,7 +6,7 @@ import Blocks.CorruptedAncientDebris;
 import Blocks.Endstalactitas;
 import Blocks.GuardianShulkerHeart;
 import Dificultades.CustomMobs.CustomBoat;
-import Dificultades.CustomMobs.QueenBeeHandler;
+/*import Dificultades.CustomMobs.QueenBeeHandler;*/
 import Dificultades.DayFourChanges;
 import Dificultades.DayOneChanges;
 import Enchants.EnhancedEnchantmentTable;
@@ -136,8 +136,8 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
                 item = infernalTotem.createInfernalTotem();
                 item.setAmount(cantidad);
                 break;
-            case "aguijon_abeja_reina":
-                item = QueenBeeHandler.createAguijonAbejaReina();
+            case "aguijon_real":
+                item = EmblemItems.createAgujonReal();
                 item.setAmount(cantidad);
                 break;
             case "upgrade_vacio":
@@ -500,6 +500,22 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
                 item = HabilidadesBook.createHabilidadesBook();
                 item.setAmount(cantidad);
                 break;
+            case "fragmento_de_cordura":
+                item = CorrupcionAnsiosaItems.createFragmentoCordura();
+                item.setAmount(cantidad);
+                break;
+            case "manzana_marchita":
+                item = CorrupcionAnsiosaItems.createManzanaMarchita();
+                item.setAmount(cantidad);
+                break;
+            case "compuesto_s13":
+                item = CorrupcionAnsiosaItems.createCompuestoS13();
+                item.setAmount(cantidad);
+                break;
+            case "serum_de_serenidad":
+                item = CorrupcionAnsiosaItems.createSerumSerenidad();
+                item.setAmount(cantidad);
+                break;
             default:
                 sender.sendMessage("§cEse item no existe.");
                 return true;
@@ -519,7 +535,7 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
             completions.add("lifetotem");
             completions.add("spidertotem");
             completions.add("infernaltotem");
-            completions.add("aguijon_abeja_reina");
+            completions.add("aguijon_real");
             completions.add("upgrade_vacio");
             completions.add("fragmento_upgrade");
             completions.add("duplicador");
@@ -607,6 +623,10 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
             completions.add("tridente_espectral");
             completions.add("linterna");
             completions.add("libro_habilidades");
+            completions.add("fragmento_de_cordura");
+            completions.add("manzana_marchita");
+            completions.add("compuesto_s13");
+            completions.add("serum_de_serenidad");
         } else if (args.length == 2) {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 completions.add(player.getName());

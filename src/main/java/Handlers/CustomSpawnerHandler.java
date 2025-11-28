@@ -1,5 +1,6 @@
 package Handlers;
 
+import Bosses.QueenBeeHandler;
 import Dificultades.CustomMobs.*;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -52,7 +53,7 @@ public class CustomSpawnerHandler implements Listener {
     private final Iceologer iceologerSpawner;
     private final CorruptedZombies corruptedZombieSpawner;
     private final CorruptedSpider corruptedSpider;
-    private final QueenBeeHandler queenBeeHandler;
+    /*private final QueenBeeHandler queenBeeHandler;*/
     private final HellishBeeHandler hellishBeeHandler;
     private final InfestedBeeHandler infestedBeeHandler;
     private final GuardianBlaze guardianBlaze;
@@ -153,7 +154,7 @@ public class CustomSpawnerHandler implements Listener {
         this.iceologerSpawner = new Iceologer(plugin);
         this.corruptedZombieSpawner = new CorruptedZombies(plugin);
         this.corruptedSpider = new CorruptedSpider(plugin);
-        this.queenBeeHandler = new QueenBeeHandler(plugin);
+        /*this.queenBeeHandler = new QueenBeeHandler(plugin);*/
         this.hellishBeeHandler = new HellishBeeHandler(plugin);
         this.infestedBeeHandler = new InfestedBeeHandler(plugin);
         this.guardianBlaze = new GuardianBlaze(plugin);
@@ -822,7 +823,7 @@ public class CustomSpawnerHandler implements Listener {
                 corruptedSpider.spawnCorruptedSpider(location);
                 break;
             case "queenbee":
-                queenBeeHandler.spawnQueenBee(location);
+                QueenBeeHandler.spawn(plugin, location);
                 break;
             case "hellishbee":
                 hellishBeeHandler.spawnHellishBee(location);

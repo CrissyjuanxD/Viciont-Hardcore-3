@@ -1,5 +1,6 @@
 package Events.MissionSystem;
 
+import Handlers.ToastHandler;
 import TitleListener.SuccessNotification;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Material;
@@ -22,11 +23,13 @@ public class Mission1 implements Mission, Listener {
     private final JavaPlugin plugin;
     private final MissionHandler missionHandler;
     private final SuccessNotification successNotification;
+    private final ToastHandler toastHandler;
 
     public Mission1(JavaPlugin plugin, MissionHandler missionHandler) {
         this.plugin = plugin;
         this.missionHandler = missionHandler;
         this.successNotification = new SuccessNotification(plugin);
+        this.toastHandler = new ToastHandler(plugin);
     }
 
     @Override
@@ -181,7 +184,8 @@ public class Mission1 implements Mission, Listener {
                 if (data.getBoolean("players." + playerName + ".missions.1.armor.leggings", false)) completed++;
                 if (data.getBoolean("players." + playerName + ".missions.1.armor.boots", false)) completed++;
 
-                player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Progreso de armadura: " + ChatColor.of("#FFB6C1") + completed + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "4");
+/*                player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Progreso de armadura: " + ChatColor.of("#FFB6C1") + completed + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "4");*/
+                toastHandler.sendToast(player, ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Prog. de Armadura: " + ChatColor.GREEN + completed + ChatColor.of("#87CEEB") + "/" + ChatColor.GRAY + "4", "Logro de Armoradura de Diamante", "minecraft:diamond_chestplate");
             }
         }
     }

@@ -1,6 +1,5 @@
 package Events.MissionSystem;
 
-import Dificultades.CustomMobs.QueenBeeHandler;
 import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
@@ -93,7 +92,7 @@ public class Mission4 implements Mission, Listener {
         Bee bee = (Bee) event.getEntity();
 
         // Verificar si es una Abeja Reina usando el método del QueenBeeHandler
-        if (bee.getCustomName() != null && bee.getCustomName().contains("Abeja Reina")) {
+        if (bee.getCustomName() != null && bee.getCustomName().contains("Corrupted Queen Bee")) {
             // Marcar que este jugador dañó a la Abeja Reina
             playerDamagedQueenBee.put(player.getUniqueId(), true);
         }
@@ -108,7 +107,7 @@ public class Mission4 implements Mission, Listener {
         Bee bee = (Bee) event.getEntity();
 
         // Verificar si es una Abeja Reina
-        if (bee.getCustomName() != null && bee.getCustomName().contains("Abeja Reina")) {
+        if (bee.getCustomName() != null && bee.getCustomName().contains("Corrupted Queen Bee")) {
             // Buscar jugadores en un radio de 100 bloques que hayan dañado a la abeja
             for (Player player : bee.getWorld().getPlayers()) {
                 if (player.getLocation().distance(bee.getLocation()) <= 100) {

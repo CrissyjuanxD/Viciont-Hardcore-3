@@ -83,6 +83,26 @@ public class EmblemItems {
         return item;
     }
 
+    public static ItemStack createAgujonReal() {
+        ItemStack item = new ItemStack(Material.YELLOW_DYE);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "Aguijón Real");
+        meta.setCustomModelData(2);
+
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.GRAY + " ");
+        lore.add(ChatColor.GRAY + "Un aguijón perteneciente a una");
+        lore.add(ChatColor.GRAY + "Reina Abeja infestada en una oscura corrupción.");
+        lore.add("");
+        lore.add(ChatColor.DARK_PURPLE + "" + ChatColor.ITALIC + "Este artefacto podría abrir otra dimensión.");
+        lore.add(ChatColor.GRAY + " ");
+
+        meta.setLore(lore);
+        meta.setRarity(ItemRarity.EPIC);
+        item.setItemMeta(meta);
+        return item;
+    }
+
     public static ItemStack createNetherEmblem() {
         ItemStack item = new ItemStack(Material.ECHO_SHARD);
         ItemMeta meta = item.getItemMeta();

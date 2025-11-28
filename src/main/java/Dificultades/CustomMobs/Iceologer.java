@@ -21,14 +21,10 @@ import org.bukkit.util.Vector;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-
-import java.lang.reflect.Method;
 import java.util.*;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-
 
 public class Iceologer implements Listener {
+
     private final JavaPlugin plugin;
     private final Set<Evoker> activeIceologers = new HashSet<>();
     private final Set<Player> frozenPlayers = new HashSet<>();
@@ -40,7 +36,7 @@ public class Iceologer implements Listener {
     private final Set<UUID> blindnessApplied = new HashSet<>();
     private final Map<UUID, Long> playerBowCooldowns = new HashMap<>();
 
-    // Instancias para el manejo del arco de hielo
+    // Arco de hielo
     private final IceBowItem iceBowItem;
     private final IceBowLogic iceBowLogic;
 
@@ -50,11 +46,8 @@ public class Iceologer implements Listener {
         this.iceAngelKey = new NamespacedKey(plugin, "ice_angel");
         this.iceFangsKey = new NamespacedKey(plugin, "ice_fangs");
 
-        // Inicializar instancias del arco de hielo
         this.iceBowItem = new IceBowItem(plugin);
         this.iceBowLogic = new IceBowLogic(plugin, playerBowCooldowns);
-        setupNMSListener();
-
     }
 
     public void apply() {
@@ -79,19 +72,22 @@ public class Iceologer implements Listener {
         }
     }
 
+    // === SPAWN / CONTROL DEL ICEOLOGER ===
+
     public Evoker spawnIceologer(Location location) {
         Evoker iceologer = (Evoker) location.getWorld().spawnEntity(location, EntityType.EVOKER);
         iceologer.setCustomName(ChatColor.AQUA + "" + ChatColor.BOLD + "Iceologer");
         iceologer.setCustomNameVisible(true);
+
         iceologer.getAttribute(Attribute.GENERIC_FOLLOW_RANGE).setBaseValue(32);
 
-        // Aumentar la vida del Iceologer (el doble de vida normal)
-        iceologer.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(48.0); // Normal: 24.0
+        // Vida aumentada
+        iceologer.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(48.0);
         iceologer.setHealth(48.0);
 
         iceologer.getPersistentDataContainer().set(iceologerKey, PersistentDataType.BYTE, (byte) 1);
 
-        // Equipar el arco de hielo usando la nueva clase
+        // Arco de hielo
         ItemStack iceBow = iceBowItem.createIceBow();
         iceologer.getEquipment().setItemInMainHand(iceBow);
         iceologer.getEquipment().setItemInMainHandDropChance(0.0f);
@@ -104,7 +100,6 @@ public class Iceologer implements Listener {
     public void monitorIceologer(Evoker iceologer) {
         new BukkitRunnable() {
             private int bowCooldown = 0;
-            private int summonCooldown = 0;
             private int customFangsCooldown = 0;
 
             @Override
@@ -116,33 +111,29 @@ public class Iceologer implements Listener {
                 }
 
                 if (iceologer.getTarget() instanceof Player player) {
-                    if ((player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE) &&
-                            iceologer.hasLineOfSight(player)) {
+                    if ((player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE)
+                            && iceologer.hasLineOfSight(player)) {
 
                         double distance = iceologer.getLocation().distance(player.getLocation());
 
-                        // Disparar arco cada 3-4 segundos si está a distancia media/larga
+                        // Disparo de arco a media / larga distancia
                         if (distance >= 8 && distance <= 20 && bowCooldown <= 0) {
                             iceBowLogic.shootIceBow(iceologer, player, iceologerKey);
-                            bowCooldown = 60 + random.nextInt(20); // 3-4 segundos
+                            bowCooldown = 60 + random.nextInt(20); // 3–4 segundos
                         }
 
-                        //if (summonCooldown <= 0) {
-                            //performIceAngelSummon(iceologer, player);
-                            //summonCooldown = 400;
-                        //}
-
+                        // Fangs personalizados cada X ticks
                         if (customFangsCooldown <= 0) {
                             performCustomFangsAttack(iceologer, player);
-                            customFangsCooldown = 160; // 8 segundos exactos
+                            customFangsCooldown = 160; // 8 segundos
                         }
 
-                        // Ataque especial cada 6 segundos
+                        // Ataque especial esfera de hielo cada 6s
                         if (distance < 15 && iceologer.getTicksLived() % 120 == 0) {
                             performSpecialAttack(iceologer, player);
                         }
 
-                        // Ataque de bloques de hielo cada 5 segundos
+                        // Bloques de hielo cada 5s
                         if (iceologer.getTicksLived() % 100 == 0) {
                             performIceBlockAttack(iceologer);
                         }
@@ -155,46 +146,52 @@ public class Iceologer implements Listener {
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
-    // Método para transformar Vex en Ángeles de Hielo
+    // === ÁNGELES DE HIELO (VEX CUSTOM) ===
+
     private void transformToIceAngel(Vex vex) {
         vex.setCustomName(ChatColor.AQUA + "" + ChatColor.BOLD + "Angel de Hielo");
         vex.setCustomNameVisible(false);
         vex.getPersistentDataContainer().set(iceAngelKey, PersistentDataType.BYTE, (byte) 1);
 
-        // Mejorar atributos
         vex.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20.0);
         vex.setHealth(20.0);
 
-        // Efectos visuales
         vex.getWorld().spawnParticle(Particle.SNOWFLAKE,
-                vex.getLocation().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.1);
+                vex.getLocation().add(0, 1, 0),
+                20, 0.5, 0.5, 0.5, 0.1);
         vex.getWorld().playSound(vex.getLocation(),
-                Sound.ENTITY_PLAYER_HURT_FREEZE, 0.8f, 1.2f);
+                Sound.ENTITY_PLAYER_HURT_FREEZE,
+                0.8f, 1.2f);
     }
 
-    private void transformToIceFangs(EvokerFangs vex) {
-        vex.setCustomName("Iceologer");
-        vex.setCustomNameVisible(false);
-        vex.getPersistentDataContainer().set(iceFangsKey, PersistentDataType.BYTE, (byte) 1);
+    private void spawnCustomIceAngel(Evoker summoner, Location location) {
+        Vex iceAngel = (Vex) summoner.getWorld().spawnEntity(location, EntityType.VEX);
+        transformToIceAngel(iceAngel);
+
+        // Objetivo: mismo target que el Iceologer, si existe
+        if (summoner.getTarget() != null && summoner.getTarget().isValid()) {
+            iceAngel.setTarget(summoner.getTarget());
+        }
 
         // Efectos visuales
-        vex.getWorld().spawnParticle(Particle.SNOWFLAKE,
-                vex.getLocation().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.1);
-        vex.getWorld().playSound(vex.getLocation(),
-                Sound.ENTITY_PLAYER_HURT_FREEZE, 0.8f, 1.2f);
+        iceAngel.getWorld().spawnParticle(
+                Particle.SNOWFLAKE,
+                location.clone().add(0, 1, 0),
+                30, 0.5, 0.5, 0.5, 0.1);
+        iceAngel.getWorld().playSound(location,
+                Sound.ENTITY_PLAYER_HURT_FREEZE,
+                1.0f, 0.8f);
     }
 
-    // Implementación del ataque personalizado de invocación
+    // Invocación especial (si la quieres usar en algún momento)
     private void performIceAngelSummon(Evoker iceologer, Player target) {
         iceologer.getWorld().playSound(iceologer.getLocation(),
                 Sound.ENTITY_EVOKER_PREPARE_SUMMON, 1.0f, 0.8f);
 
-
-        // Partículas de invocación (cambiar a azul/hielo)
         iceologer.getWorld().spawnParticle(Particle.SNOWFLAKE,
-                iceologer.getLocation().add(0, 2, 0), 50, 0.5, 0.5, 0.5, 0.2);
+                iceologer.getLocation().add(0, 2, 0),
+                50, 0.5, 0.5, 0.5, 0.2);
 
-        // Spawnear entre 2 y 3 Ángeles de Hielo
         int angelsToSpawn = 1 + random.nextInt(2);
         Location spawnLocation = iceologer.getLocation().add(0, 1, 0);
 
@@ -203,23 +200,20 @@ public class Iceologer implements Listener {
                 Vex iceAngel = (Vex) iceologer.getWorld().spawnEntity(spawnLocation, EntityType.VEX);
                 transformToIceAngel(iceAngel);
 
-                // Establecer el objetivo del ángel
                 if (target != null && target.isValid()) {
                     iceAngel.setTarget(target);
                 }
-            }, 10L + (i * 5L)); // Espaciar las invocaciones
+            }, 10L + (i * 5L));
         }
-
-        // Cooldown para el ataque
-        iceologer.getPersistentDataContainer().set(
-                new NamespacedKey(plugin, "last_summon_time"),
-                PersistentDataType.LONG,
-                System.currentTimeMillis()
-        );
     }
 
-    // Interceptar el ataque normal de invocación de vexes
-// Reemplaza tu método onVexSpawn con esta versión mejorada
+    // === EVENTOS VANILLA: VEX Y FANGS DEL EVOKER ===
+
+    /**
+     * Cuando un Vex se spawnea por hechizo (SPELL) de un Evoker:
+     * - Si el hechicero es un Iceologer cercano, cancelamos ese Vex
+     *   y spawneamos nuestro Ángel de Hielo custom.
+     */
     @EventHandler
     public void onVexSpawn(CreatureSpawnEvent event) {
         if (event.getEntityType() != EntityType.VEX) return;
@@ -227,285 +221,72 @@ public class Iceologer implements Listener {
 
         Vex vex = (Vex) event.getEntity();
 
-        // Buscar Iceologers activos en un radio
         for (Evoker iceologer : activeIceologers) {
-            if (iceologer.getWorld().equals(vex.getWorld()) &&
-                    iceologer.getLocation().distance(vex.getLocation()) <= 12) {
+            if (iceologer.getWorld().equals(vex.getWorld())
+                    && iceologer.getLocation().distance(vex.getLocation()) <= 12) {
 
-                // Cancelar el spawn del Vex vanilla
                 event.setCancelled(true);
-
-                // Spawnear nuestro Ángel de Hielo personalizado
                 spawnCustomIceAngel(iceologer, vex.getLocation());
                 break;
             }
         }
     }
 
-    private void spawnCustomIceAngel(Evoker summoner, Location location) {
-        // Crear un Vex personalizado
-        Vex iceAngel = (Vex) summoner.getWorld().spawnEntity(location, EntityType.VEX);
-        transformToIceAngel(iceAngel);
+    /**
+     * Cuando se spawnean EvokerFangs (ya sea SPELL o cualquier razón):
+     * - Si hay un Iceologer activo cerca, convertimos esas fangs en fangs de hielo.
+     *   (para los hechizos vanilla del Evoker).
+     * - Las fangs que tú creas manualmente ya vienen marcadas por PDC y no necesitan esto.
+     */
+    @EventHandler
+    public void onFangsSpawn(CreatureSpawnEvent event) {
+        if (!(event.getEntity() instanceof EvokerFangs fangs)) return;
 
-        try {
-            // Obtener la entidad NMS del Vex
-            Object nmsVex = getNMSEntity(iceAngel);
-            Object nmsEvoker = getNMSEntity(summoner);
-
-            if (nmsVex != null && nmsEvoker != null) {
-                // Usar reflexión para establecer el propietario
-                Class<?> vexClass = nmsVex.getClass();
-                java.lang.reflect.Field ownerField = vexClass.getDeclaredField("b"); // Campo "owner" en NMS
-                ownerField.setAccessible(true);
-                ownerField.set(nmsVex, nmsEvoker);
-            }
-        } catch (Exception e) {
-            plugin.getLogger().warning("No se pudo establecer el summoner del Vex: " + e.getMessage());
+        // Si ya está marcada como fang de hielo (spawnCustomFang), no tocamos nada
+        if (fangs.getPersistentDataContainer().has(iceFangsKey, PersistentDataType.BYTE)) {
+            return;
         }
 
-        // Establecer objetivo si el summoner tiene uno
-        if (summoner.getTarget() != null) {
-            iceAngel.setTarget(summoner.getTarget());
-        }
-
-        // Efectos de spawn
-        iceAngel.getWorld().spawnParticle(Particle.SNOWFLAKE,
-                location.clone().add(0, 1, 0), 30, 0.5, 0.5, 0.5, 0.1);
-        iceAngel.getWorld().playSound(location,
-                Sound.ENTITY_PLAYER_HURT_FREEZE, 1.0f, 0.8f);
-    }
-
-    // Método de utilidad para obtener la entidad NMS
-    private Object getNMSEntity(org.bukkit.entity.Entity bukkitEntity) {
-        try {
-            return bukkitEntity.getClass().getMethod("getHandle").invoke(bukkitEntity);
-        } catch (Exception e) {
-            plugin.getLogger().warning("Error al obtener entidad NMS: " + e.getMessage());
-            return null;
-        }
-    }
-
-    private void setupNMSListener() {
-        try {
-            // Obtener las clases NMS necesarias
-            Class<?> entityEvokerClass = NMSUtils.getNMSClass("EntityEvoker");
-            Class<?> entityVexClass = NMSUtils.getNMSClass("EntityVex");
-            Class<?> entityEvokerFangsClass = NMSUtils.getNMSClass("EntityEvokerFangs");
-
-            if (entityEvokerClass != null && entityVexClass != null && entityEvokerFangsClass != null) {
-                // Usar reflexión para interceptar ambos métodos
-                interceptEvokerSummon();
-                interceptEvokerFangs();
-            }
-        } catch (Exception e) {
-            plugin.getLogger().warning("No se pudo configurar NMS listener: " + e.getMessage());
-            // Fallback al sistema de eventos de Bukkit
-            setupBukkitFallback();
-        }
-    }
-
-    private void interceptEvokerSummon() {
-        try {
-            Class<?> entityEvokerClass = NMSUtils.getNMSClass("EntityEvoker");
-            java.lang.reflect.Method summonMethod = entityEvokerClass.getDeclaredMethod("s"); // Método summonVex en algunas versiones
-
-            // Crear un proxy para el método
-            java.lang.reflect.InvocationHandler handler = (proxy, method, args) -> {
-                if (method.getName().equals("s") || method.getName().equals("summonVex")) {
-                    Object evokerEntity = args[0];
-                    Entity bukkitEvoker = getBukkitEntity(evokerEntity);
-
-                    if (bukkitEvoker instanceof Evoker evoker && activeIceologers.contains(evoker)) {
-                        // Cancelar la invocación normal y usar la nuestra
-                        if (evoker.getTarget() instanceof Player player) {
-                            performIceAngelSummon(evoker, player);
-                        }
-                        return null;
-                    }
-                }
-                return method.invoke(proxy, args);
-            };
-
-            // Aplicar el proxy al método
-            Object proxy = java.lang.reflect.Proxy.newProxyInstance(
-                    entityEvokerClass.getClassLoader(),
-                    new Class<?>[]{entityEvokerClass},
-                    handler
-            );
-
-        } catch (Exception e) {
-            plugin.getLogger().warning("Error interceptando invocación de Vex: " + e.getMessage());
-        }
-    }
-
-    private void interceptEvokerFangs() {
-        try {
-            Class<?> entityEvokerClass = NMSUtils.getNMSClass("EntityEvoker");
-
-            // Buscar el método que crea EvokerFangs
-            final java.lang.reflect.Method[] fangsMethodHolder = new java.lang.reflect.Method[1];
-            java.lang.reflect.Method[] methods = entityEvokerClass.getDeclaredMethods();
-
-            for (java.lang.reflect.Method method : methods) {
-                if (method.getReturnType().getName().contains("EntityEvokerFangs") ||
-                        method.getName().equals("summonFangs") ||
-                        method.getName().equals("a") || method.getName().equals("b") || method.getName().equals("c")) {
-                    fangsMethodHolder[0] = method;
-                    break;
-                }
-            }
-
-            if (fangsMethodHolder[0] != null) {
-                java.lang.reflect.InvocationHandler handler = (proxy, method, args) -> {
-                    if (method.getName().equals(fangsMethodHolder[0].getName())) {
-                        Object evokerEntity = proxy;
-                        Entity bukkitEvoker = getBukkitEntity(evokerEntity);
-
-                        if (bukkitEvoker instanceof Evoker evoker && activeIceologers.contains(evoker)) {
-                            return null;
-                        }
-                    }
-                    return method.invoke(proxy, args);
-                };
-
-                Object proxy = java.lang.reflect.Proxy.newProxyInstance(
-                        entityEvokerClass.getClassLoader(),
-                        new Class<?>[]{entityEvokerClass},
-                        handler
-                );
-            }
-        } catch (Exception e) {
-            plugin.getLogger().warning("Error interceptando EvokerFangs: " + e.getMessage());
-        }
-    }
-
-    private Entity getBukkitEntity(Object nmsEntity) {
-        try {
-            if (nmsEntity == null) return null;
-
-            Class<?> entityClass = nmsEntity.getClass();
-            // Buscar el método getBukkitEntity en la clase NMS
-            java.lang.reflect.Method getBukkitEntity = null;
-
-            for (java.lang.reflect.Method method : entityClass.getMethods()) {
-                if (method.getName().equals("getBukkitEntity") &&
-                        method.getReturnType().isAssignableFrom(Entity.class)) {
-                    getBukkitEntity = method;
-                    break;
-                }
-            }
-
-            if (getBukkitEntity != null) {
-                return (Entity) getBukkitEntity.invoke(nmsEntity);
-            }
-
-            // Fallback: intentar con el método de CraftEntity
-            Class<?> craftEntityClass = NMSUtils.getCraftClass("entity.CraftEntity");
-            if (craftEntityClass != null) {
-                java.lang.reflect.Method getHandle = craftEntityClass.getMethod("getHandle");
-                Object craftEntity = getHandle.invoke(nmsEntity);
-                if (craftEntity instanceof Entity) {
-                    return (Entity) craftEntity;
-                }
-            }
-
-            return null;
-        } catch (Exception e) {
-            plugin.getLogger().warning("Error en getBukkitEntity: " + e.getMessage());
-            return null;
-        }
-    }
-
-    private void setupBukkitFallback() {
-        // Sistema de respaldo usando eventos de Bukkit
-        plugin.getLogger().info("Usando sistema de respaldo para detectar Vex");
-
-        Bukkit.getPluginManager().registerEvents(new Listener() {
-            @EventHandler
-            public void onCreatureSpawn(CreatureSpawnEvent event) {
-                if (event.getEntity() instanceof Vex vex &&
-                        event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SPELL) {
-
-                    handleVexSpawn(vex);
-                }
-                if (event.getEntity() instanceof EvokerFangs fangs) {
-                    debugFangsSpawn(fangs, event.getSpawnReason());
-                    handleFangsSpawn(fangs);
-                }
-            }
-        }, plugin);
-    }
-
-    private void handleVexSpawn(Vex vex) {
-        // Buscar Iceologers cercanos
         for (Evoker iceologer : activeIceologers) {
-            if (iceologer.getWorld().equals(vex.getWorld()) &&
-                    iceologer.getLocation().distance(vex.getLocation()) <= 15) {
+            if (iceologer.getWorld().equals(fangs.getWorld())
+                    && iceologer.getLocation().distance(fangs.getLocation()) <= 15) {
 
-                // Transformar el Vex después de un pequeño delay
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    if (vex.isValid() && !vex.isDead()) {
-                        transformToIceAngel(vex);
-                    }
-                }, 2L);
+                transformToIceFangs(fangs);
                 break;
             }
         }
     }
 
-    private void handleFangsSpawn(EvokerFangs fangs) {
-        // Buscar el Evoker dueño de estos fangs
-        try {
-            Object nmsFang = getNMSEntity(fangs);
-            if (nmsFang != null) {
-                Class<?> fangClass = nmsFang.getClass();
-                Field ownerField = fangClass.getDeclaredField("owner");
-                ownerField.setAccessible(true);
-                Object owner = ownerField.get(nmsFang);
+    // === FANGS DE HIELO ===
 
-                if (owner != null) {
-                    Entity bukkitOwner = getBukkitEntity(owner);
-                    if (bukkitOwner instanceof Evoker evoker &&
-                            activeIceologers.contains(evoker)) {
+    private void transformToIceFangs(EvokerFangs fangs) {
+        fangs.setCustomName("Iceologer");
+        fangs.setCustomNameVisible(false);
+        fangs.getPersistentDataContainer().set(iceFangsKey, PersistentDataType.BYTE, (byte) 1);
 
-                        transformToIceFangs(fangs);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            // Fallback a búsqueda por proximidad
-            for (Evoker iceologer : activeIceologers) {
-                if (iceologer.getWorld().equals(fangs.getWorld()) &&
-                        iceologer.getLocation().distance(fangs.getLocation()) <= 15) {
-
-                    transformToIceFangs(fangs);
-                    break;
-                }
-            }
-        }
+        fangs.getWorld().spawnParticle(Particle.SNOWFLAKE,
+                fangs.getLocation().add(0, 1, 0),
+                20, 0.5, 0.5, 0.5, 0.1);
+        fangs.getWorld().playSound(fangs.getLocation(),
+                Sound.ENTITY_PLAYER_HURT_FREEZE,
+                0.8f, 1.2f);
     }
 
     private void performCustomFangsAttack(Evoker iceologer, LivingEntity target) {
-        // ✅ Cooldown más consistente usando ticks en lugar de milisegundos
-        // (ya lo manejamos en el monitor con customFangsCooldown)
-
         Location startLocation = iceologer.getLocation();
         Location targetLocation = target.getLocation();
 
-        // Sonido de preparación
-        iceologer.getWorld().playSound(startLocation, Sound.ENTITY_EVOKER_PREPARE_ATTACK, 1.5f, 0.7f);
+        iceologer.getWorld().playSound(startLocation,
+                Sound.ENTITY_EVOKER_PREPARE_ATTACK, 1.5f, 0.7f);
 
-        // Efectos visuales en el Iceologer
         iceologer.getWorld().spawnParticle(Particle.SNOWFLAKE,
-                startLocation.add(0, 2, 0), 40, 0.7, 0.7, 0.7, 0.2);
+                startLocation.add(0, 2, 0),
+                40, 0.7, 0.7, 0.7, 0.2);
 
-        // Calcular dirección y distancia
         double distance = startLocation.distance(targetLocation);
 
-        // ✅ AJUSTE: Si la distancia es muy grande, limitar el número de fangs
         int fangsCount;
         if (distance > 30) {
-            // Para distancias largas, crear un ataque más concentrado
             fangsCount = 8 + random.nextInt(5);
         } else {
             fangsCount = (int) (distance * 0.8);
@@ -517,20 +298,16 @@ public class Iceologer implements Listener {
         for (int i = 0; i < fangsCount; i++) {
             double progress = (i + 1) / (double) fangsCount;
 
-            // ✅ MEJORA: Para distancias largas, hacer que los fangs aparezcan más cerca del jugador
             Location fangLocation;
             if (distance > 30) {
-                // Aparecer más cerca del jugador para distancias largas
                 double adjustedDistance = distance - 10 + (random.nextDouble() * 20);
                 fangLocation = startLocation.clone().add(direction.clone().multiply(adjustedDistance * progress));
             } else {
                 fangLocation = startLocation.clone().add(direction.clone().multiply(distance * progress));
             }
 
-            // Ajustar altura - buscar terreno adecuado
             fangLocation.setY(findSafeHeight(fangLocation));
 
-            // Delay para efecto de onda
             int delay = i * 2;
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (iceologer.isValid() && !iceologer.isDead() && target.isValid()) {
@@ -539,111 +316,75 @@ public class Iceologer implements Listener {
             }, delay);
         }
 
-        // ✅ EFECTO FINAL
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (target.isValid()) {
                 target.getWorld().playSound(target.getLocation(),
                         Sound.ENTITY_PLAYER_HURT_FREEZE, 1.2f, 0.8f);
                 target.getWorld().spawnParticle(Particle.SNOWFLAKE,
-                        target.getLocation().add(0, 1, 0), 30, 1.0, 1.0, 1.0, 0.3);
+                        target.getLocation().add(0, 1, 0),
+                        30, 1.0, 1.0, 1.0, 0.3);
             }
         }, fangsCount * 2L);
     }
 
-    // ✅ MÉTODO AUXILIAR para encontrar altura segura
     private double findSafeHeight(Location location) {
         World world = location.getWorld();
         int x = location.getBlockX();
         int z = location.getBlockZ();
 
-        // Buscar desde arriba hacia abajo para encontrar la primera superficie sólida
         for (int y = world.getMaxHeight(); y > world.getMinHeight(); y--) {
             Location checkLoc = new Location(world, x, y, z);
-            if (!checkLoc.getBlock().getType().isAir() &&
-                    checkLoc.getBlock().getType().isSolid()) {
-                return y + 0.1; // Justo encima del bloque
+            if (!checkLoc.getBlock().getType().isAir()
+                    && checkLoc.getBlock().getType().isSolid()) {
+                return y + 0.1;
             }
         }
-        return location.getY(); // Fallback
+        return location.getY();
     }
 
     private void spawnCustomFang(Evoker summoner, Location location) {
-
         if (location.getBlock().getType().isSolid()) {
-            // Ajustar hacia arriba si está dentro de un bloque
             location.add(0, 1, 0);
         }
 
-        // Crear el EvokerFang custom
         EvokerFangs fang = (EvokerFangs) summoner.getWorld().spawnEntity(location, EntityType.EVOKER_FANGS);
 
         fang.setCustomName("Iceologer");
         fang.setCustomNameVisible(false);
-
-        // Marcar como fang de hielo
         fang.getPersistentDataContainer().set(iceFangsKey, PersistentDataType.BYTE, (byte) 1);
 
         updateFangsMetadata(fang);
 
-        // Establecer el owner
-        try {
-            Object nmsFang = getNMSEntity(fang);
-            Object nmsEvoker = getNMSEntity(summoner);
-
-            if (nmsFang != null && nmsEvoker != null) {
-                Class<?> fangClass = nmsFang.getClass();
-                java.lang.reflect.Field ownerField = fangClass.getDeclaredField("owner");
-                ownerField.setAccessible(true);
-                ownerField.set(nmsFang, nmsEvoker);
-            }
-        } catch (Exception e) {
-            // Silencioso, no es crítico
-        }
-
-        // Efectos de hielo
         fang.getWorld().spawnParticle(Particle.SNOWFLAKE,
-                location.add(0, 0.5, 0), 10, 0.3, 0.3, 0.3, 0.1);
+                location.add(0, 0.5, 0),
+                10, 0.3, 0.3, 0.3, 0.1);
         fang.getWorld().playSound(location,
                 Sound.BLOCK_GLASS_BREAK, 0.7f, 1.2f);
     }
 
-
     private void updateFangsMetadata(EvokerFangs fangs) {
-        try {
-            // Forzar la actualización de la metadata del cliente
-            fangs.setGlowing(true);
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (fangs.isValid()) {
-                    fangs.setGlowing(false);
-                }
-            }, 2L);
-
-        } catch (Exception e) {
-            plugin.getLogger().warning("Error actualizando metadata: " + e.getMessage());
-        }
+        fangs.setGlowing(true);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (fangs.isValid()) {
+                fangs.setGlowing(false);
+            }
+        }, 2L);
     }
 
-    private void debugFangsSpawn(EvokerFangs fangs, CreatureSpawnEvent.SpawnReason reason) {
-        plugin.getLogger().info("EvokerFangs spawn - Razón: " + reason +
-                ", Loc: " + fangs.getLocation() +
-                ", CustomName: " + fangs.getCustomName());
-    }
-
-
+    // Daño de fangs de hielo
     @EventHandler
     public void onEntityDamageByFangs(EntityDamageByEntityEvent event) {
         if (event.getDamager() instanceof EvokerFangs fangs) {
             if (fangs.getPersistentDataContainer().has(iceFangsKey, PersistentDataType.BYTE)) {
-                // ✅ Aumentar daño para que sea significativo a cualquier distancia
-                event.setDamage(10.0); // Daño fijo de 4 corazones
+                event.setDamage(10.0); // 4 corazones
 
                 if (event.getEntity() instanceof LivingEntity entity) {
-                    entity.setFreezeTicks(entity.getFreezeTicks() + 120); // 6 segundos
-                    entity.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 80, 2)); // Slowness más fuerte
+                    entity.setFreezeTicks(entity.getFreezeTicks() + 120); // 6s
+                    entity.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 80, 2));
 
-                    // Efectos visuales
                     entity.getWorld().spawnParticle(Particle.SNOWFLAKE,
-                            entity.getLocation().add(0, 1, 0), 20, 0.7, 0.7, 0.7, 0.2);
+                            entity.getLocation().add(0, 1, 0),
+                            20, 0.7, 0.7, 0.7, 0.2);
                     entity.getWorld().playSound(entity.getLocation(),
                             Sound.ENTITY_PLAYER_HURT_FREEZE, 1.2f, 0.8f);
                 }
@@ -651,22 +392,24 @@ public class Iceologer implements Listener {
         }
     }
 
-    // Hacer que los Ángeles de Hielo también apliquen efectos de congelación
+    // ÁNGEL DE HIELO pega → congela
     @EventHandler
     public void onIceAngelAttack(EntityDamageByEntityEvent event) {
         if (event.getDamager() instanceof Vex vex &&
                 vex.getPersistentDataContainer().has(iceAngelKey, PersistentDataType.BYTE)) {
 
             if (event.getEntity() instanceof LivingEntity entity) {
-                // Aplicar congelación
-                entity.setFreezeTicks(entity.getFreezeTicks() + 80); // 4 segundos
+                entity.setFreezeTicks(entity.getFreezeTicks() + 80);
                 entity.getWorld().spawnParticle(Particle.SNOWFLAKE,
-                        entity.getLocation().add(0, 1, 0), 10, 0.3, 0.3, 0.3, 0.1);
+                        entity.getLocation().add(0, 1, 0),
+                        10, 0.3, 0.3, 0.3, 0.1);
                 entity.getWorld().playSound(entity.getLocation(),
                         Sound.ENTITY_PLAYER_HURT_FREEZE, 0.5f, 1.2f);
             }
         }
     }
+
+    // === ESFERA DE HIELO (ataque especial) ===
 
     private void performSpecialAttack(Evoker iceologer, Player player) {
         player.playSound(player.getLocation(), Sound.ENTITY_EVOKER_PREPARE_ATTACK, 10f, 2f);
@@ -725,7 +468,9 @@ public class Iceologer implements Listener {
                         player.damage(4);
                         applyFreezeEffect(player);
                         player.getWorld().playSound(player.getLocation(), Sound.BLOCK_GLASS_BREAK, 1f, 0.5f);
-                        player.getWorld().spawnParticle(Particle.EXPLOSION, player.getLocation(), 30, 0.5, 0.5, 0.5);
+                        player.getWorld().spawnParticle(Particle.EXPLOSION,
+                                player.getLocation(),
+                                30, 0.5, 0.5, 0.5);
                     }
                     blockDisplay.remove();
                     cancel();
@@ -737,13 +482,17 @@ public class Iceologer implements Listener {
     private void applyFreezeEffect(Player player) {
         player.setFreezeTicks(300);
         frozenPlayers.add(player);
-        player.getWorld().spawnParticle(Particle.SNOWFLAKE, player.getLocation().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.1);
-        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_HURT_FREEZE, 1f, 0.1f);
+        player.getWorld().spawnParticle(Particle.SNOWFLAKE,
+                player.getLocation().add(0, 1, 0),
+                20, 0.5, 0.5, 0.5, 0.1);
+        player.playSound(player.getLocation(),
+                Sound.ENTITY_PLAYER_HURT_FREEZE, 1f, 0.1f);
     }
+
+    // === ARCO / TARGET / BLOQUES DE HIELO ===
 
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        // El manejo de flechas ahora está en IceBowLogic
         if (event.getDamager() instanceof Arrow arrow) {
             iceBowLogic.handleArrowDamage(event, arrow, iceologerKey);
         }
@@ -753,17 +502,15 @@ public class Iceologer implements Listener {
     public void onEntityTarget(EntityTargetEvent event) {
         if (event.getEntity() instanceof Evoker iceologer && activeIceologers.contains(iceologer)) {
             if (event.getTarget() instanceof Player player) {
-                // Aplicar ceguera a todos los jugadores en un radio de 25 bloques (solo una vez)
                 if (!blindnessApplied.contains(iceologer.getUniqueId())) {
                     for (Player nearbyPlayer : iceologer.getWorld().getPlayers()) {
                         if (nearbyPlayer.getLocation().distance(iceologer.getLocation()) <= 25) {
-                            nearbyPlayer.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 300, 0)); // 15 segundos
+                            nearbyPlayer.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 300, 0));
                         }
                     }
                     blindnessApplied.add(iceologer.getUniqueId());
                 }
             } else {
-                // Limpiar efectos de congelación si el objetivo no es un jugador
                 if (event.getTarget() instanceof Player player) {
                     frozenPlayers.remove(player);
                     player.setFreezeTicks(0);
@@ -788,7 +535,7 @@ public class Iceologer implements Listener {
         if (nearbyPlayers.isEmpty()) return;
 
         Player target = nearbyPlayers.size() > 1
-                ? nearbyPlayers.get(new Random().nextInt(nearbyPlayers.size()))
+                ? nearbyPlayers.get(random.nextInt(nearbyPlayers.size()))
                 : nearbyPlayers.get(0);
 
         Location origin = target.getLocation().add(0, 10, 0);
@@ -814,7 +561,7 @@ public class Iceologer implements Listener {
     private void animateFallingBlock(BlockDisplay blockDisplay, Location center) {
         new BukkitRunnable() {
             private double height = 10;
-            private double velocity = 0.2;
+            private final double velocity = 0.2;
 
             @Override
             public void run() {
@@ -822,7 +569,9 @@ public class Iceologer implements Listener {
                 height -= velocity;
                 blockDisplay.teleport(currentLocation.subtract(0, velocity, 0));
 
-                currentLocation.getWorld().spawnParticle(Particle.SNOWFLAKE, currentLocation, 5, 0.1, 0.1, 0.1, 0.1);
+                currentLocation.getWorld().spawnParticle(Particle.SNOWFLAKE,
+                        currentLocation,
+                        5, 0.1, 0.1, 0.1, 0.1);
 
                 if (height <= 0) {
                     applyExplosionEffect(blockDisplay.getLocation(), center);
@@ -852,13 +601,15 @@ public class Iceologer implements Listener {
         }
     }
 
+    // === DAÑO / MUERTE DEL ICEOLOGER ===
+
     @EventHandler
     public void onIceologerDamage(EntityDamageEvent event) {
         if (event.getEntity() instanceof Evoker iceologer &&
                 iceologer.getPersistentDataContainer().has(iceologerKey, PersistentDataType.BYTE)) {
 
-            // Sonido de daño de Illusioner
-            iceologer.getWorld().playSound(iceologer.getLocation(), Sound.ENTITY_ILLUSIONER_HURT, 1.0f, 1.5f);
+            iceologer.getWorld().playSound(iceologer.getLocation(),
+                    Sound.ENTITY_ILLUSIONER_HURT, 1.0f, 1.5f);
         }
     }
 
@@ -867,37 +618,32 @@ public class Iceologer implements Listener {
         if (event.getEntity() instanceof Evoker iceologer &&
                 iceologer.getPersistentDataContainer().has(iceologerKey, PersistentDataType.BYTE)) {
 
-            // Prevenir que suelte totems
             event.getDrops().removeIf(item -> item.getType() == Material.TOTEM_OF_UNDYING);
 
-            // 10% de probabilidad de dropear el arco
             if (random.nextDouble() <= 0.1) {
                 ItemStack iceBow = iceBowItem.createIceBow();
                 iceologer.getWorld().dropItemNaturally(iceologer.getLocation(), iceBow);
             }
 
-            // Sonido de muerte de Illusioner
-            iceologer.getWorld().playSound(iceologer.getLocation(), Sound.ENTITY_ILLUSIONER_DEATH, SoundCategory.HOSTILE, 1.0f, 1.5f);
-            iceologer.getWorld().dropItemNaturally(iceologer.getLocation(), ItemsTotems.createIceCrystal());
+            iceologer.getWorld().playSound(iceologer.getLocation(),
+                    Sound.ENTITY_ILLUSIONER_DEATH, SoundCategory.HOSTILE, 1.0f, 1.5f);
+            iceologer.getWorld().dropItemNaturally(iceologer.getLocation(),
+                    ItemsTotems.createIceCrystal());
 
             activeIceologers.remove(iceologer);
             blindnessApplied.remove(iceologer.getUniqueId());
 
-            // Limpiar cooldowns de jugadores si es necesario
             playerBowCooldowns.entrySet().removeIf(entry ->
-                    System.currentTimeMillis() - entry.getValue() > 300000); // Limpiar entradas de más de 5 minutos
+                    System.currentTimeMillis() - entry.getValue() > 300000);
         }
     }
+
+    // === GETTERS / UTIL ===
 
     public NamespacedKey getIceologerKey() {
         return iceologerKey;
     }
 
-    private boolean isIceologer(Entity entity) {
-        return entity instanceof Evoker && entity.getPersistentDataContainer().has(iceologerKey, PersistentDataType.BYTE);
-    }
-
-    // Getters para acceder a las instancias desde otros lugares
     public Set<Evoker> getActiveIceologers() {
         return activeIceologers;
     }

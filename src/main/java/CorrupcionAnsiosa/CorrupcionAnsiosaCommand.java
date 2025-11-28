@@ -63,7 +63,6 @@ public class CorrupcionAnsiosaCommand implements CommandExecutor, TabCompleter {
             if (args[1].equalsIgnoreCase("@a")) {
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     corruptionManager.addCorruption(player, amount);
-                    player.sendMessage(ChatColor.YELLOW + "Tu corrupción ansiosa ha aumentado en " + amount + "%");
                 }
                 sender.sendMessage(ChatColor.GREEN + "Corrupción aumentada para todos los jugadores.");
             } else {
@@ -74,7 +73,6 @@ public class CorrupcionAnsiosaCommand implements CommandExecutor, TabCompleter {
                 }
                 corruptionManager.addCorruption(target, amount);
                 sender.sendMessage(ChatColor.GREEN + "Corrupción de " + target.getName() + " aumentada en " + amount + "%");
-                target.sendMessage(ChatColor.YELLOW + "Tu corrupción ansiosa ha aumentado en " + amount + "%");
             }
         } catch (NumberFormatException e) {
             sender.sendMessage(ChatColor.RED + "Porcentaje inválido.");
@@ -92,7 +90,6 @@ public class CorrupcionAnsiosaCommand implements CommandExecutor, TabCompleter {
             if (args[1].equalsIgnoreCase("@a")) {
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     corruptionManager.removeCorruption(player, amount);
-                    player.sendMessage(ChatColor.YELLOW + "Tu corrupción ansiosa ha disminuido en " + amount + "%");
                 }
                 sender.sendMessage(ChatColor.GREEN + "Corrupción disminuida para todos los jugadores.");
             } else {
@@ -103,7 +100,6 @@ public class CorrupcionAnsiosaCommand implements CommandExecutor, TabCompleter {
                 }
                 corruptionManager.removeCorruption(target, amount);
                 sender.sendMessage(ChatColor.GREEN + "Corrupción de " + target.getName() + " disminuida en " + amount + "%");
-                target.sendMessage(ChatColor.YELLOW + "Tu corrupción ansiosa ha disminuido en " + amount + "%");
             }
         } catch (NumberFormatException e) {
             sender.sendMessage(ChatColor.RED + "Porcentaje inválido.");
@@ -119,7 +115,7 @@ public class CorrupcionAnsiosaCommand implements CommandExecutor, TabCompleter {
         if (args[1].equalsIgnoreCase("@a")) {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 corruptionManager.resetCorruption(player);
-                player.sendMessage(ChatColor.YELLOW + "Tu corrupción ansiosa ha sido resetada al 100%");
+                player.sendMessage(ChatColor.YELLOW + "Un Admin ha reseteado tu corrupción ansiosa.");
             }
             sender.sendMessage(ChatColor.GREEN + "Corrupción resetada para todos los jugadores.");
         } else {
@@ -130,7 +126,7 @@ public class CorrupcionAnsiosaCommand implements CommandExecutor, TabCompleter {
             }
             corruptionManager.resetCorruption(target);
             sender.sendMessage(ChatColor.GREEN + "Corrupción de " + target.getName() + " resetada al 100%");
-            target.sendMessage(ChatColor.YELLOW + "Tu corrupción ansiosa ha sido resetada al 100%");
+            target.sendMessage(ChatColor.YELLOW + "Un Admin ha reseteado tu corrupción ansiosa.");
         }
     }
 

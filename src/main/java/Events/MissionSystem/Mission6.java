@@ -1,5 +1,6 @@
 package Events.MissionSystem;
 
+import Handlers.ToastHandler;
 import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
@@ -26,11 +27,13 @@ public class Mission6 implements Mission, Listener {
     private final JavaPlugin plugin;
     private final MissionHandler missionHandler;
     private final SuccessNotification successNotification;
+    private final ToastHandler toastHandler;
 
     public Mission6(JavaPlugin plugin, MissionHandler missionHandler) {
         this.plugin = plugin;
         this.missionHandler = missionHandler;
         this.successNotification = new SuccessNotification(plugin);
+        this.toastHandler = new ToastHandler(plugin);
     }
 
     @Override
@@ -113,15 +116,32 @@ public class Mission6 implements Mission, Listener {
             zombiesKilled++;
             data.set("players." + playerName + ".missions.6.corrupted_zombies_killed", zombiesKilled);
 
-            killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Corrupted Zombies eliminados: " +
-                    ChatColor.of("#FFB6C1") + zombiesKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "25");
+           /* killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Corrupted Zombies eliminados: " +
+                    ChatColor.of("#FFB6C1") + zombiesKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "25");*/
+            toastHandler.sendToast(
+                    killer,
+                    ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") +
+                            "Corrupted Zombies: " + ChatColor.GREEN +
+                            zombiesKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.GRAY + "25",
+                    "Progreso de Misión: Exterminador de Corruptos Zombies",
+                    "minecraft:netherite_sword"
+            );
+
         } else if (isCorruptedSpider) {
             int spidersKilled = data.getInt("players." + playerName + ".missions.6.corrupted_spiders_killed", 0);
             spidersKilled++;
             data.set("players." + playerName + ".missions.6.corrupted_spiders_killed", spidersKilled);
 
-            killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Corrupted Spiders eliminadas: " +
-                    ChatColor.of("#FFB6C1") + spidersKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "25");
+            /*killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Corrupted Spiders eliminadas: " +
+                    ChatColor.of("#FFB6C1") + spidersKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "25");*/
+            toastHandler.sendToast(
+                    killer,
+                    ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") +
+                            "Corrupted Spiders: " + ChatColor.GREEN +
+                            spidersKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.GRAY + "25",
+                    "Progreso de Misión: Exterminador de Corruptos Spiders",
+                    "minecraft:netherite_sword"
+            );
         } else {
             return;
         }
