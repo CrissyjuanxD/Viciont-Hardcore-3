@@ -21,7 +21,7 @@ import net.md_5.bungee.api.ChatColor;
 public class NetheriteVexGuardian implements Listener {
     private final JavaPlugin plugin;
     private final NamespacedKey vexGuardianKey;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
 
     public NetheriteVexGuardian(JavaPlugin plugin) {
         this.plugin = plugin;

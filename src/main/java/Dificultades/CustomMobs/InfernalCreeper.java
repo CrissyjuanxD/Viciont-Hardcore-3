@@ -8,7 +8,6 @@ import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.inventory.ItemStack;
@@ -17,12 +16,21 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
+
+import java.util.*;
 
 public class InfernalCreeper implements Listener {
     private final JavaPlugin plugin;
     private final NamespacedKey infernalCreeperKey;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
+
+    // --- OPTIMIZACIÓN CENTRALIZADA ---
+    // Guardamos el Creeper y su Objetivo actual
+    private static final Map<UUID, UUID> trackingCreepers = new HashMap<>();
+    private static BukkitTask magneticTask;
+    // ---------------------------------
 
     public InfernalCreeper(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -33,6 +41,7 @@ public class InfernalCreeper implements Listener {
         if (!eventsRegistered) {
             Bukkit.getPluginManager().registerEvents(this, plugin);
             eventsRegistered = true;
+            startMagneticTask();
         }
     }
 
@@ -45,6 +54,11 @@ public class InfernalCreeper implements Listener {
                     }
                 }
             }
+            if (magneticTask != null) {
+                magneticTask.cancel();
+                magneticTask = null;
+            }
+            trackingCreepers.clear();
             eventsRegistered = false;
         }
     }
@@ -75,43 +89,63 @@ public class InfernalCreeper implements Listener {
 
     @EventHandler
     public void onTarget(EntityTargetLivingEntityEvent event) {
-        if (event.getEntity() instanceof Creeper creeper &&
-                isInfernalCreeper(creeper) &&
-                event.getTarget() != null) {
-
-            startMagneticPull(creeper, (LivingEntity) event.getTarget());
+        if (event.getEntity() instanceof Creeper creeper && isInfernalCreeper(creeper)) {
+            if (event.getTarget() != null) {
+                // Registrar el objetivo para la tarea central
+                trackingCreepers.put(creeper.getUniqueId(), event.getTarget().getUniqueId());
+                startMagneticTask();
+            } else {
+                // Si pierde el target, dejar de trackear
+                trackingCreepers.remove(creeper.getUniqueId());
+            }
         }
     }
 
-    private void startMagneticPull(Creeper creeper, LivingEntity target) {
-        new BukkitRunnable() {
+    // --- TAREA ÚNICA DE MAGNETISMO ---
+    private void startMagneticTask() {
+        if (magneticTask != null && !magneticTask.isCancelled()) return;
+
+        magneticTask = new BukkitRunnable() {
             @Override
             public void run() {
-                if (creeper.isDead() || !creeper.isValid() ||
-                        target.isDead() || !target.isValid() ||
-                        creeper.getTarget() == null || !creeper.getTarget().equals(target)) {
-                    this.cancel();
-                    return;
-                }
+                if (trackingCreepers.isEmpty()) return;
 
-                Vector direction = creeper.getLocation().toVector()
-                        .subtract(target.getLocation().toVector())
-                        .normalize()
-                        .multiply(0.10);
+                Iterator<Map.Entry<UUID, UUID>> it = trackingCreepers.entrySet().iterator();
+                while (it.hasNext()) {
+                    Map.Entry<UUID, UUID> entry = it.next();
+                    Creeper creeper = (Creeper) Bukkit.getEntity(entry.getKey());
+                    LivingEntity target = (LivingEntity) Bukkit.getEntity(entry.getValue());
 
-                Vector currentVelocity = target.getVelocity();
-                Vector newVelocity = direction;
+                    // Validaciones
+                    if (creeper == null || !creeper.isValid() || creeper.isDead()) {
+                        if (creeper != null && !creeper.isValid()) it.remove(); // Limpieza
+                        continue;
+                    }
 
-                newVelocity.setY(Math.min(newVelocity.getY(), 0.1));
+                    if (target == null || !target.isValid() || target.isDead() ||
+                            creeper.getTarget() == null || !creeper.getTarget().getUniqueId().equals(target.getUniqueId())) {
+                        it.remove(); // Ya no es válido el target
+                        continue;
+                    }
 
-                target.setVelocity(currentVelocity.multiply(0.8).add(newVelocity.multiply(0.2)));
+                    // Lógica de atracción
+                    Vector direction = creeper.getLocation().toVector()
+                            .subtract(target.getLocation().toVector())
+                            .normalize()
+                            .multiply(0.10);
 
-                if (Math.random() < 0.4) {
-                    target.getWorld().spawnParticle(Particle.FLAME, target.getLocation(), 2, 0.2, 0.2, 0.2, 0.01);
-                }
+                    Vector currentVelocity = target.getVelocity();
+                    Vector newVelocity = direction;
+                    newVelocity.setY(Math.min(newVelocity.getY(), 0.1));
 
-                if (Math.random() < 0.1) {
-                    target.getWorld().playSound(target.getLocation(), Sound.ENTITY_BLAZE_SHOOT, 0.4f, 0.8f);
+                    target.setVelocity(currentVelocity.multiply(0.8).add(newVelocity.multiply(0.2)));
+
+                    if (Math.random() < 0.4) {
+                        target.getWorld().spawnParticle(Particle.FLAME, target.getLocation(), 2, 0.2, 0.2, 0.2, 0.01);
+                    }
+                    if (Math.random() < 0.1) {
+                        target.getWorld().playSound(target.getLocation(), Sound.ENTITY_BLAZE_SHOOT, 0.4f, 0.8f);
+                    }
                 }
             }
         }.runTaskTimer(plugin, 0L, 5L);
@@ -119,41 +153,33 @@ public class InfernalCreeper implements Listener {
 
     @EventHandler
     public void onDamage(EntityDamageByEntityEvent event) {
-        if (event.getEntity() instanceof Creeper creeper &&
-                isInfernalCreeper(creeper)) {
-
+        if (event.getEntity() instanceof Creeper creeper && isInfernalCreeper(creeper)) {
             if (event.getDamager() instanceof Projectile && creeper.getHealth() <= 10) {
                 event.setCancelled(true);
-
                 creeper.getWorld().spawnParticle(Particle.FIREWORK, creeper.getLocation(), 15);
                 creeper.getWorld().playSound(creeper.getLocation(), Sound.ITEM_SHIELD_BLOCK, 1.0f, 0.8f);
             }
-
             creeper.getWorld().spawnParticle(Particle.LAVA, creeper.getLocation(), 5);
         }
     }
 
     @EventHandler
     public void onExplosionPrime(org.bukkit.event.entity.ExplosionPrimeEvent event) {
-        if (event.getEntity() instanceof Creeper creeper &&
-                isInfernalCreeper(creeper)) {
-
+        if (event.getEntity() instanceof Creeper creeper && isInfernalCreeper(creeper)) {
             event.setRadius(10.0f);
-
             creeper.getWorld().playSound(creeper.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 3.0f, 0.8f);
 
+            // Efecto visual de explosión (única vez, no requiere manager complejo)
             new BukkitRunnable() {
                 int ticks = 0;
                 @Override
                 public void run() {
-                    if (ticks >= 20) {
+                    if (ticks >= 20 || !creeper.isValid()) {
                         this.cancel();
                         return;
                     }
-
                     creeper.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, creeper.getLocation(), 30, 1, 1, 1, 0.3);
                     creeper.getWorld().playSound(creeper.getLocation(), Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1.0f, 1.0f);
-
                     ticks++;
                 }
             }.runTaskTimer(plugin, 0L, 1L);
@@ -165,6 +191,9 @@ public class InfernalCreeper implements Listener {
         if (event.getEntity() instanceof Creeper creeper && isInfernalCreeper(creeper)) {
             Location loc = creeper.getLocation();
 
+            // Limpieza inmediata del sistema de tracking
+            trackingCreepers.remove(creeper.getUniqueId());
+
             double baseDropChance = 0.40;
             double lootingBonus = 0;
             double doubleDropChance = 0;
@@ -173,34 +202,24 @@ public class InfernalCreeper implements Listener {
                 ItemStack weapon = creeper.getKiller().getInventory().getItemInMainHand();
                 if (weapon != null && weapon.getEnchantments().containsKey(Enchantment.LOOTING)) {
                     int lootingLevel = weapon.getEnchantmentLevel(Enchantment.LOOTING);
-
                     switch (lootingLevel) {
-                        case 1:
-                            lootingBonus = 0.10;
-                            break;
-                        case 2:
-                            lootingBonus = 0.20;
-                            break;
-                        case 3:
+                        case 1 -> lootingBonus = 0.10;
+                        case 2 -> lootingBonus = 0.20;
+                        case 3 -> {
                             lootingBonus = 0.25;
                             doubleDropChance = 0.30;
-                            break;
+                        }
                     }
                 }
             }
 
-            double totalDropChance = baseDropChance + lootingBonus;
-
-            if (Math.random() <= totalDropChance) {
+            if (Math.random() <= (baseDropChance + lootingBonus)) {
                 ItemStack powder = ItemsTotems.createInfernalCreeperPowder();
-
                 if (doubleDropChance > 0 && Math.random() <= doubleDropChance) {
                     powder.setAmount(2);
                 }
-
                 creeper.getWorld().dropItemNaturally(loc, powder);
             }
-
             creeper.getWorld().playSound(creeper.getLocation(), Sound.ENTITY_CREEPER_DEATH, 2.0f, 1.8f);
         }
     }

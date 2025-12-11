@@ -2,7 +2,6 @@ package Dificultades.CustomMobs;
 
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -18,12 +17,15 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+import java.util.Objects;
 
 public class GuardianCorruptedSkeleton implements Listener {
 
@@ -31,8 +33,11 @@ public class GuardianCorruptedSkeleton implements Listener {
     private final NamespacedKey gcorruptedskelKey;
     private final NamespacedKey guardianProjectileKey;
     private final Random random = new Random();
-    private boolean eventsRegistered = false;
-    private final Map<Creature, Integer> skeletonTasks = new HashMap<>();
+    private static boolean eventsRegistered = false;
+
+    // --- OPTIMIZACIÓN ---
+    private static final Set<UUID> activeSkeletons = new HashSet<>();
+    private static BukkitTask aiTask;
 
     public GuardianCorruptedSkeleton(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -44,6 +49,7 @@ public class GuardianCorruptedSkeleton implements Listener {
         if (!eventsRegistered) {
             plugin.getServer().getPluginManager().registerEvents(this, plugin);
             eventsRegistered = true;
+            startAITask();
         }
     }
 
@@ -56,10 +62,11 @@ public class GuardianCorruptedSkeleton implements Listener {
                     }
                 }
             }
-            for (Integer taskId : skeletonTasks.values()) {
-                Bukkit.getScheduler().cancelTask(taskId);
+            if (aiTask != null) {
+                aiTask.cancel();
+                aiTask = null;
             }
-            skeletonTasks.clear();
+            activeSkeletons.clear();
             eventsRegistered = false;
         }
     }
@@ -77,37 +84,54 @@ public class GuardianCorruptedSkeleton implements Listener {
     private void applyGuardianCorruptedSkeletonAttributes(WitherSkeleton skeleton) {
         skeleton.setCustomName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Guardian Corrupted Skeleton");
         skeleton.setCustomNameVisible(false);
-
         Objects.requireNonNull(skeleton.getAttribute(Attribute.GENERIC_MAX_HEALTH)).setBaseValue(30.0);
         skeleton.setHealth(30.0);
         Objects.requireNonNull(skeleton.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE)).setBaseValue(6.0);
         skeleton.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, 0));
 
         skeleton.getPersistentDataContainer().set(gcorruptedskelKey, PersistentDataType.BYTE, (byte) 1);
-        startSkullRunnable(skeleton);
+
+        activeSkeletons.add(skeleton.getUniqueId());
+        startAITask();
     }
 
     private boolean isCorruptedWither(WitherSkeleton skeleton) {
         return skeleton.getPersistentDataContainer().has(gcorruptedskelKey, PersistentDataType.BYTE);
     }
 
-    private void startSkullRunnable(WitherSkeleton skeleton) {
-        int taskId = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (skeleton == null || skeleton.isDead() || !isCorruptedWither(skeleton)) {
-                skeletonTasks.remove(skeleton);
-                return;
-            }
+    // --- TAREA CENTRALIZADA DE IA (Disparo de Cráneos) ---
+    private void startAITask() {
+        if (aiTask != null && !aiTask.isCancelled()) return;
 
-            LivingEntity target = skeleton.getTarget();
-            if (target instanceof Player player) {
-                if (skeleton.getLocation().distance(player.getLocation()) <= 20) {
-                    if (random.nextDouble() < 0.5) {
-                        launchSkull(skeleton, player);
+        // Ejecutar cada 60 ticks (3 segundos)
+        aiTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (activeSkeletons.isEmpty()) return;
+
+                Iterator<UUID> it = activeSkeletons.iterator();
+                while(it.hasNext()) {
+                    UUID uuid = it.next();
+                    Entity entity = Bukkit.getEntity(uuid);
+
+                    if (entity == null || !entity.isValid() || entity.isDead()) {
+                        if (entity != null && !entity.isValid()) it.remove();
+                        continue;
+                    }
+
+                    if (entity instanceof WitherSkeleton skeleton) {
+                        LivingEntity target = skeleton.getTarget();
+                        if (target instanceof Player player) {
+                            if (skeleton.getLocation().distance(player.getLocation()) <= 20) {
+                                if (random.nextDouble() < 0.5) {
+                                    launchSkull(skeleton, player);
+                                }
+                            }
+                        }
                     }
                 }
             }
-        }, 0L, 60L).getTaskId();
-        skeletonTasks.put(skeleton, taskId);
+        }.runTaskTimer(plugin, 0L, 60L);
     }
 
     private void launchSkull(WitherSkeleton skeleton, Player player) {
@@ -122,6 +146,7 @@ public class GuardianCorruptedSkeleton implements Listener {
         data.set(guardianProjectileKey, PersistentDataType.BYTE, (byte) 1);
         skull.setCustomName("Corrupted Skeleton Skull");
 
+        // Partículas del proyectil (tarea corta y temporal, aceptable)
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -178,7 +203,6 @@ public class GuardianCorruptedSkeleton implements Listener {
     @EventHandler
     public void onEntityDamage(EntityDamageEvent event) {
         if (event.getEntity() instanceof WitherSkeleton skeleton && isCorruptedWither(skeleton)) {
-
             if (event.getCause() == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION ||
                     event.getCause() == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) {
                 event.setCancelled(true);
@@ -207,10 +231,7 @@ public class GuardianCorruptedSkeleton implements Listener {
     @EventHandler
     public void onSkeletonDeath(EntityDeathEvent event) {
         if (event.getEntity() instanceof WitherSkeleton skeleton && isCorruptedWither(skeleton)) {
-            Integer taskId = skeletonTasks.remove(skeleton);
-            if (taskId != null) {
-                Bukkit.getScheduler().cancelTask(taskId);
-            }
+            activeSkeletons.remove(skeleton.getUniqueId());
         }
     }
 
@@ -219,7 +240,7 @@ public class GuardianCorruptedSkeleton implements Listener {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             for (Entity entity : event.getWorld().getEntities()) {
                 if (entity instanceof WitherSkeleton skeleton && isCorruptedWither(skeleton)) {
-                    transformToCorruptedSkeleton(skeleton);
+                    activeSkeletons.add(skeleton.getUniqueId());
                 }
             }
         }, 20L);

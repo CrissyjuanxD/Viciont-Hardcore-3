@@ -23,7 +23,7 @@ import java.util.Random;
 public class BuffBreeze implements Listener {
     private final JavaPlugin plugin;
     private final NamespacedKey buffBreezeKey;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
     private final Random random = new Random();
     private final HelmetNetheriteEssence helmetNetheriteEssence;
 

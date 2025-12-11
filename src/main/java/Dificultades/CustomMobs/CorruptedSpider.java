@@ -21,7 +21,7 @@ import java.util.Objects;
 public class CorruptedSpider implements Listener {
     private final JavaPlugin plugin;
     private final NamespacedKey corrupedtedspiderKey;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
     private final MobSoundManager soundManager;
 
     public CorruptedSpider(JavaPlugin plugin) {

@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent; // Importante para detectar cambio de dimensión
 import org.bukkit.inventory.ItemRarity;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -107,16 +108,30 @@ public class NightVisionHelmet implements Listener {
         }
     }
 
+    // Nuevo Evento: Detectar cambio de mundo para actualizar el color si tiene la visión activa
+    @EventHandler
+    public void onWorldChange(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
+
+        // Si tiene la bossbar activa, la actualizamos
+        if (bossBarMap.containsKey(uuid)) {
+            BossBar bar = bossBarMap.get(uuid);
+            ChatColor color = getDimensionColor(player.getWorld());
+            bar.setTitle(color + "\uEAA5");
+        }
+    }
 
     private boolean isValidHelmet(ItemStack helmet) {
         return helmet != null && helmet.hasItemMeta()
                 && helmet.getItemMeta().hasDisplayName()
-                && helmet.getItemMeta().getDisplayName().equals(ChatColor.GOLD + "" + ChatColor.BOLD + "Casco de Visión Nocturna");
+                && (helmet.getItemMeta().getDisplayName().equals(ChatColor.GOLD + "" + ChatColor.BOLD + "Casco de Visión Nocturna") ||
+                helmet.getItemMeta().getDisplayName().equals(ChatColor.DARK_AQUA + "" + ChatColor.BOLD + "Casco de Visión Nocturna Mejorado"));
     }
 
     private void toggleNightVision(Player player, ItemStack helmet) {
         UUID uuid = player.getUniqueId();
-        
+
         if (cooldowns.containsKey(uuid)) {
             long elapsed = System.currentTimeMillis() - cooldowns.get(uuid);
             if (elapsed < 6000) {
@@ -131,6 +146,25 @@ public class NightVisionHelmet implements Listener {
         }
     }
 
+    // Método auxiliar para obtener el color según la dimensión
+    private ChatColor getDimensionColor(World world) {
+        switch (world.getEnvironment()) {
+            case NORMAL: // Overworld
+                return ChatColor.DARK_GREEN;
+            case NETHER: // Nether
+                return ChatColor.DARK_RED;
+            case THE_END: // The End
+                return ChatColor.DARK_PURPLE;
+            case CUSTOM: // Dimensiones custom
+                if (world.getName().equalsIgnoreCase("infested_caves")) {
+                    return ChatColor.AQUA;
+                }
+                return ChatColor.GRAY; // Color por defecto para custom
+            default:
+                return ChatColor.DARK_GREEN;
+        }
+    }
+
     private void activateNightVision(Player player, ItemStack helmet) {
         UUID uuid = player.getUniqueId();
 
@@ -139,7 +173,10 @@ public class NightVisionHelmet implements Listener {
         player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 20, 0, false, false));
         player.playSound(player.getLocation(), "custom.vision_nocturna", SoundCategory.VOICE, 1.0f, 1.4f);
 
-        BossBar bar = Bukkit.createBossBar(ChatColor.DARK_GREEN + "\uEAA5", BarColor.WHITE, BarStyle.SOLID);
+        // Aquí obtenemos el color dinámico
+        ChatColor dimensionColor = getDimensionColor(player.getWorld());
+
+        BossBar bar = Bukkit.createBossBar(dimensionColor + "\uEAA5", BarColor.WHITE, BarStyle.SOLID);
         bar.addPlayer(player);
         bar.setVisible(true);
         bossBarMap.put(uuid, bar);
@@ -154,15 +191,17 @@ public class NightVisionHelmet implements Listener {
                     return;
                 }
 
+                // Opcional: Actualizar el color periódicamente si cambian de mundo sin el evento
+                // ChatColor currentColor = getDimensionColor(player.getWorld());
+                // if (!bar.getTitle().startsWith(currentColor.toString())) {
+                //     bar.setTitle(currentColor + "\uEAA5");
+                // }
+
                 ticks += 20;
 
                 if (ticks % 100 == 0) {
                     damageHelmet(player.getInventory().getHelmet(), player);
                 }
-
-    /*            if (ticks >= 20 * 250) {
-                    deactivateNightVision(player, false);
-                }*/
             }
         };
 
@@ -172,12 +211,15 @@ public class NightVisionHelmet implements Listener {
 
 
     private void damageHelmet(ItemStack helmet, Player player) {
+        if (helmet == null) return; // Seguridad extra
+
         helmet.setDurability((short) (helmet.getDurability() + 1));
 
         if (helmet.getType().getMaxDurability() - helmet.getDurability() <= 1) {
             player.getInventory().setHelmet(null);
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
             player.sendMessage(ChatColor.DARK_PURPLE + "✧ ¡Tu casco de visión nocturna se ha roto!");
+            deactivateNightVision(player, false); // Importante desactivar la visión si se rompe
         }
     }
 
@@ -200,7 +242,7 @@ public class NightVisionHelmet implements Listener {
 
         cooldowns.put(uuid, System.currentTimeMillis());
         player.setCooldown(Material.IRON_HELMET, 100);
-
+        player.setCooldown(Material.NETHERITE_HELMET, 100); // Añadido cooldown para la versión netherite también
     }
 
     @EventHandler
@@ -217,6 +259,8 @@ public class NightVisionHelmet implements Listener {
     @EventHandler
     public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        deactivateNightVision(player, false);
+        if (activeTasks.containsKey(player.getUniqueId())) {
+            deactivateNightVision(player, false);
+        }
     }
 }

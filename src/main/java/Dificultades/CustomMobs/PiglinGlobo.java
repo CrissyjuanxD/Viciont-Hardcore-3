@@ -18,7 +18,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 public class PiglinGlobo implements Listener {
     private final JavaPlugin plugin;
     private final NamespacedKey piglinGloboKey;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
     private final ChestplateNetheriteEssence chestplateNetheriteEssence;
 
     public PiglinGlobo(JavaPlugin plugin) {

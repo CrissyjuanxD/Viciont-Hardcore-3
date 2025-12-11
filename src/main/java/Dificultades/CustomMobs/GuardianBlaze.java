@@ -13,6 +13,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
 import java.util.*;
@@ -23,7 +24,12 @@ public class GuardianBlaze implements Listener {
     private final NamespacedKey guardianblazeKey;
     private final NamespacedKey lastAttackKey;
     private final Random random = new Random();
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
+
+    // --- OPTIMIZACIÓN: Manager Interno Estático ---
+    private static final Set<UUID> activeBlazes = new HashSet<>();
+    private static BukkitTask mainTask;
+    // ---------------------------------------------
 
     public GuardianBlaze(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -35,11 +41,20 @@ public class GuardianBlaze implements Listener {
         if (!eventsRegistered) {
             Bukkit.getPluginManager().registerEvents(this, plugin);
             eventsRegistered = true;
+            // Escanear por si hubo un reload
+            scanExistingBlazes();
+            startGlobalTask();
         }
     }
 
     public void revert() {
         if (eventsRegistered) {
+            // Limpiar tarea global
+            if (mainTask != null && !mainTask.isCancelled()) {
+                mainTask.cancel();
+                mainTask = null;
+            }
+
             for (World world : Bukkit.getWorlds()) {
                 for (Entity entity : world.getEntities()) {
                     if (entity instanceof Blaze blaze && isGuardianBlaze(blaze)) {
@@ -47,7 +62,18 @@ public class GuardianBlaze implements Listener {
                     }
                 }
             }
+            activeBlazes.clear();
             eventsRegistered = false;
+        }
+    }
+
+    private void scanExistingBlazes() {
+        for (World world : Bukkit.getWorlds()) {
+            for (Entity entity : world.getEntitiesByClass(Blaze.class)) {
+                if (isGuardianBlaze((Blaze) entity)) {
+                    activeBlazes.add(entity.getUniqueId());
+                }
+            }
         }
     }
 
@@ -69,69 +95,78 @@ public class GuardianBlaze implements Listener {
         blaze.getPersistentDataContainer().set(guardianblazeKey, PersistentDataType.BYTE, (byte) 1);
         blaze.getPersistentDataContainer().set(lastAttackKey, PersistentDataType.LONG, 0L);
 
-        startBehavior(blaze);
+        // Registrar en el sistema optimizado
+        activeBlazes.add(blaze.getUniqueId());
+        startGlobalTask();
     }
 
-    private void startBehavior(Blaze blaze) {
-        // Movimiento y ataque melee
-        new BukkitRunnable() {
+    // --- TAREA GLOBAL ÚNICA (Reemplaza startBehavior) ---
+    private void startGlobalTask() {
+        if (mainTask != null && !mainTask.isCancelled()) return;
+
+        // Ejecutamos cada 10 ticks (0.5s) que es suficiente para IA de movimiento
+        mainTask = new BukkitRunnable() {
             @Override
             public void run() {
-                if (!blaze.isValid()) {
-                    cancel();
-                    return;
-                }
+                if (activeBlazes.isEmpty()) return;
 
-                Player target = getClosestPlayer(blaze, 20);
-                if (target != null) {
-                    Vector direction = target.getLocation().toVector().subtract(blaze.getLocation().toVector()).normalize();
-                    blaze.setVelocity(direction.multiply(0.35));
+                Iterator<UUID> it = activeBlazes.iterator();
+                while (it.hasNext()) {
+                    UUID uuid = it.next();
+                    Entity entity = Bukkit.getEntity(uuid);
 
-                    // Ataque melee con cooldown de 2 segundos
-                    if (blaze.getLocation().distance(target.getLocation()) <= 2) {
-                        long currentTime = System.currentTimeMillis();
-                        long lastAttack = blaze.getPersistentDataContainer().get(lastAttackKey, PersistentDataType.LONG);
+                    // Limpieza automática
+                    if (entity == null || !entity.isValid() || entity.isDead()) {
+                        if (entity != null && !entity.isValid()) it.remove();
+                        continue;
+                    }
 
-                        if (currentTime - lastAttack >= 2000) { // 2 segundos de cooldown
-                            blaze.attack(target);
-                            blaze.getPersistentDataContainer().set(lastAttackKey, PersistentDataType.LONG, currentTime);
-                        }
+                    if (entity instanceof Blaze blaze) {
+                        processBlazeAI(blaze);
                     }
                 }
             }
         }.runTaskTimer(plugin, 0L, 10L);
-
-        // Ataques especiales cada 8 segundos
-        new BukkitRunnable() {
-            int attackCycle = 0;
-
-            @Override
-            public void run() {
-                if (!blaze.isValid()) {
-                    cancel();
-                    return;
-                }
-
-                attackCycle++;
-
-                if (attackCycle % 8 == 0) {
-                    if (random.nextBoolean()) {
-                        launchHorizontalFireballAttack(blaze);
-                    } else {
-                        spawnCircleParticles(blaze);
-                    }
-                }
-            }
-        }.runTaskTimer(plugin, 0L, 20L);
     }
 
+    private void processBlazeAI(Blaze blaze) {
+        // 1. Lógica de Movimiento y Melee
+        Player target = getClosestPlayer(blaze, 20);
+        if (target != null) {
+            Vector direction = target.getLocation().toVector().subtract(blaze.getLocation().toVector()).normalize();
+            blaze.setVelocity(direction.multiply(0.35));
+
+            if (blaze.getLocation().distance(target.getLocation()) <= 2) {
+                long currentTime = System.currentTimeMillis();
+                // Usamos getOrDefault para evitar nulos
+                Long lastAttackObj = blaze.getPersistentDataContainer().get(lastAttackKey, PersistentDataType.LONG);
+                long lastAttack = (lastAttackObj != null) ? lastAttackObj : 0L;
+
+                if (currentTime - lastAttack >= 2000) {
+                    blaze.attack(target);
+                    blaze.getPersistentDataContainer().set(lastAttackKey, PersistentDataType.LONG, currentTime);
+                }
+            }
+        }
+
+        // 2. Lógica de Ataque Especial (Cada 8 segundos aprox = 160 ticks)
+        // Usamos ticksLived para sincronizar sin variables extra
+        if (blaze.getTicksLived() % 160 == 0) {
+            if (random.nextBoolean()) {
+                launchHorizontalFireballAttack(blaze);
+            } else {
+                spawnCircleParticles(blaze);
+            }
+        }
+    }
+
+    // Las tareas de ataques especiales son temporales (duran poco), así que está bien dejarlas como Runnables individuales
     private void launchHorizontalFireballAttack(Blaze blaze) {
         List<Player> targets = getPlayersInLineOfSight(blaze, 20);
         if (targets.isEmpty()) return;
 
         new BukkitRunnable() {
             int rounds = 0;
-
             @Override
             public void run() {
                 if (rounds >= 3 || !blaze.isValid()) {
@@ -139,7 +174,6 @@ public class GuardianBlaze implements Listener {
                     return;
                 }
 
-                // Sonidos: Blaze shoot con pitch bajo + Note block banjo con pitch bajo (cada ronda)
                 blaze.getWorld().playSound(blaze.getLocation(), Sound.ENTITY_BLAZE_SHOOT, 2.0f, 0.3f);
                 blaze.getWorld().playSound(blaze.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASEDRUM, 2.0f, 0.8f);
 
@@ -148,28 +182,22 @@ public class GuardianBlaze implements Listener {
                         launchHorizontalFireballs(blaze, target);
                     }
                 }
-
                 rounds++;
             }
-        }.runTaskTimer(plugin, 0L, 20L); // Cada segundo (20 ticks)
+        }.runTaskTimer(plugin, 0L, 20L);
     }
 
     private void launchHorizontalFireballs(Blaze blaze, Player target) {
         Location blazeLoc = blaze.getLocation().clone().add(0, 2.5, 0);
         Vector baseDirection = target.getLocation().toVector().subtract(blazeLoc.toVector()).normalize();
-
-        // Vector perpendicular para crear la línea horizontal
         Vector rightVector = baseDirection.clone().crossProduct(new Vector(0, 1, 0)).normalize();
 
         for (int i = 0; i < 3; i++) {
             Vector direction = baseDirection.clone();
             Location spawnLoc = blazeLoc.clone();
-
-            // Posición horizontal: izquierda, centro, derecha
-            double offset = (i - 1) * 1.5; // -1.5, 0, 1.5
+            double offset = (i - 1) * 1.5;
             spawnLoc.add(rightVector.clone().multiply(offset));
 
-            // Usar SmallFireball para que sean más pequeñas como las del blaze vanilla
             SmallFireball fireball = blaze.getWorld().spawn(spawnLoc, SmallFireball.class);
             fireball.setDirection(direction.normalize());
             fireball.setVelocity(direction.multiply(2.0));
@@ -214,17 +242,18 @@ public class GuardianBlaze implements Listener {
                     for (Entity entity : blaze.getWorld().getNearbyEntities(blaze.getLocation(), radius, 2, radius)) {
                         if (entity instanceof Player player && !damagedPlayers.contains(player)) {
                             player.damage(4, blaze);
-                            player.setFireTicks(Integer.MAX_VALUE); // Quemadura infinita
+                            player.setFireTicks(Integer.MAX_VALUE);
                             damagedPlayers.add(player);
                         }
                     }
                 }
-
                 cycles++;
             }
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
+    // Optimización leve: streams pueden ser costosos si hay muchos jugadores,
+    // pero getPlayers() suele ser una lista pequeña. Está aceptable.
     private Player getClosestPlayer(Blaze blaze, double radius) {
         return blaze.getWorld().getPlayers().stream()
                 .filter(p -> p.getLocation().distance(blaze.getLocation()) <= radius)
@@ -244,8 +273,6 @@ public class GuardianBlaze implements Listener {
     private boolean hasLineOfSight(Blaze blaze, Player player) {
         Location blazeEye = blaze.getEyeLocation();
         Location playerEye = player.getEyeLocation();
-
-        // Verificar línea de vista usando rayTrace
         return blaze.getWorld().rayTraceBlocks(blazeEye, playerEye.toVector().subtract(blazeEye.toVector()).normalize(),
                 blazeEye.distance(playerEye)) == null;
     }
@@ -256,16 +283,15 @@ public class GuardianBlaze implements Listener {
             if (event.getCause() == EntityDamageEvent.DamageCause.PROJECTILE) {
                 event.setCancelled(true);
             } else if (event.getEntity() instanceof Player player) {
-                // Knockback reducido significativamente
                 Vector knockback = player.getLocation().toVector().subtract(blaze.getLocation().toVector()).normalize();
-                knockback.setY(0.3); // Reducido de 0.5 a 0.3
-                player.setVelocity(knockback.multiply(0.8)); // Reducido de 1.5 a 0.8
+                knockback.setY(0.3);
+                player.setVelocity(knockback.multiply(0.8));
             }
         }
     }
 
     @EventHandler
-    public void onEntityDamage(EntityDamageEvent event) {
+    public void onEntityDamageEnvironment(EntityDamageEvent event) {
         if (event.getEntity() instanceof Blaze blaze && isGuardianBlaze(blaze)) {
             if (event.getCause() == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION ||
                     event.getCause() == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) {
@@ -288,7 +314,6 @@ public class GuardianBlaze implements Listener {
     public void onFireballExplode(EntityExplodeEvent event) {
         if (event.getEntity() instanceof SmallFireball fireball &&
                 fireball.getPersistentDataContainer().has(new NamespacedKey(plugin, "custom_fireball"), PersistentDataType.BYTE)) {
-
             Location loc = fireball.getLocation();
             fireball.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, loc, 2);
             fireball.getWorld().playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 1.2f);
@@ -308,10 +333,12 @@ public class GuardianBlaze implements Listener {
             event.getDrops().clear();
             blaze.getWorld().playSound(blaze.getLocation(), Sound.ENTITY_BLAZE_DEATH, SoundCategory.HOSTILE, 2.0f, 0.6f);
 
+            // IMPORTANTE: Limpiar de la lista activa al morir
+            activeBlazes.remove(blaze.getUniqueId());
+
             if (random.nextInt(100) < 90) {
                 event.getDrops().add(new ItemStack(Material.NETHERITE_SCRAP, getRandomNetheriteScrapAmount()));
             }
-
             if (random.nextBoolean()) {
                 event.getDrops().add(BlazeItems.createBlazeRod());
             }

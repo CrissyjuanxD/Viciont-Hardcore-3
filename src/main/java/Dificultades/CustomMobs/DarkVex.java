@@ -16,10 +16,21 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.UUID;
+
 public class DarkVex extends DarkMobSB implements Listener {
-    private boolean eventsRegistered = false;
+
+    // --- OPTIMIZACIÓN INTERNA ---
+    private static final Set<UUID> activeMobs = new HashSet<>();
+    private static BukkitTask particleTask;
+
+    private static boolean eventsRegistered = false;
 
     public DarkVex(JavaPlugin plugin) {
         super(plugin, "dark_vex");
@@ -31,6 +42,7 @@ public class DarkVex extends DarkMobSB implements Listener {
         if (!eventsRegistered) {
             Bukkit.getPluginManager().registerEvents(this, plugin);
             eventsRegistered = true;
+            startGlobalParticleTask();
         }
     }
 
@@ -43,6 +55,11 @@ public class DarkVex extends DarkMobSB implements Listener {
                     }
                 }
             }
+            if (particleTask != null) {
+                particleTask.cancel();
+                particleTask = null;
+            }
+            activeMobs.clear();
             eventsRegistered = false;
         }
     }
@@ -50,6 +67,10 @@ public class DarkVex extends DarkMobSB implements Listener {
     public Vex spawnDarkVex(Location location) {
         Vex vex = (Vex) location.getWorld().spawnEntity(location, EntityType.VEX);
         applyDarkVexAttributes(vex);
+
+        activeMobs.add(vex.getUniqueId());
+        startGlobalParticleTask();
+
         return vex;
     }
 
@@ -72,37 +93,41 @@ public class DarkVex extends DarkMobSB implements Listener {
         vex.addPotionEffect(new PotionEffect(
                 PotionEffectType.RESISTANCE,
                 PotionEffect.INFINITE_DURATION,
-                1,
-                false, false
+                1, false, false
         ));
 
         vex.getPersistentDataContainer().set(mobKey, PersistentDataType.BYTE, (byte) 1);
-
-        startParticleTask(vex);
     }
 
-    private void startParticleTask(Vex vex) {
-        new BukkitRunnable() {
+    private void startGlobalParticleTask() {
+        if (particleTask != null && !particleTask.isCancelled()) return;
+
+        particleTask = new BukkitRunnable() {
             @Override
             public void run() {
-                if (vex.isDead() || !vex.isValid()) {
-                    this.cancel();
-                    return;
+                if (activeMobs.isEmpty()) return;
+
+                Iterator<UUID> it = activeMobs.iterator();
+                while (it.hasNext()) {
+                    UUID uuid = it.next();
+                    Entity entity = Bukkit.getEntity(uuid);
+
+                    if (entity == null || !entity.isValid() || entity.isDead()) {
+                        if (entity != null && !entity.isValid()) it.remove();
+                        continue;
+                    }
+
+                    entity.getWorld().spawnParticle(
+                            Particle.LARGE_SMOKE,
+                            entity.getLocation(),
+                            5, 0.3, 0.3, 0.3, 0.05
+                    );
+                    entity.getWorld().spawnParticle(
+                            Particle.SOUL_FIRE_FLAME,
+                            entity.getLocation(),
+                            3, 0.3, 0.3, 0.3, 0.05
+                    );
                 }
-
-                vex.getWorld().spawnParticle(
-                        Particle.LARGE_SMOKE,
-                        vex.getLocation(),
-                        5,
-                        0.3, 0.3, 0.3, 0.05
-                );
-
-                vex.getWorld().spawnParticle(
-                        Particle.SOUL_FIRE_FLAME,
-                        vex.getLocation(),
-                        3,
-                        0.3, 0.3, 0.3, 0.05
-                );
             }
         }.runTaskTimer(plugin, 0L, 5L);
     }
@@ -134,12 +159,9 @@ public class DarkVex extends DarkMobSB implements Listener {
             event.getDrops().clear();
 
             vex.getWorld().playSound(vex.getLocation(), Sound.ENTITY_WARDEN_DEATH, 1.5f, 1.2f);
-            vex.getWorld().spawnParticle(
-                    Particle.SOUL,
-                    vex.getLocation(),
-                    30,
-                    0.5, 0.5, 0.5, 0.3
-            );
+            vex.getWorld().spawnParticle(Particle.SOUL, vex.getLocation(), 30, 0.5, 0.5, 0.5, 0.3);
+
+            activeMobs.remove(vex.getUniqueId());
         }
     }
 
@@ -148,13 +170,7 @@ public class DarkVex extends DarkMobSB implements Listener {
         if (isCustomMob(event.getEntity())) {
             Vex vex = (Vex) event.getEntity();
             vex.getWorld().playSound(vex.getLocation(), Sound.ENTITY_WARDEN_HURT, 1.2f, 1.1f);
-
-            vex.getWorld().spawnParticle(
-                    Particle.DAMAGE_INDICATOR,
-                    vex.getLocation(),
-                    15,
-                    0.5, 0.5, 0.5, 0.1
-            );
+            vex.getWorld().spawnParticle(Particle.DAMAGE_INDICATOR, vex.getLocation(), 15, 0.5, 0.5, 0.5, 0.1);
         }
     }
 

@@ -9,37 +9,67 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="23b0ad47-a402-4788-8284-bb6d2e5ca004" name="Changes" comment="(VERSION 1.5.10) Se reorganizo toda la clase principal, se añadio el gameplay de &quot;Corrupcion Ansiosa&quot; falta pulir, se añadio sistema de efectos Custom &quot;Confusion&quot; - &quot;Corrupture&quot;">
-      <change afterPath="$PROJECT_DIR$/src/main/java/Bosses/AreaZone.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/Bosses/BaseBoss.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/Bosses/QueenBeeHandler.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/Commands/DebugArenaCommand.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/Commands/testtiastcommand.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/CorrupcionAnsiosaConsumiblesListener.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/Handlers/ToastHandler.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/items/CorrupcionAnsiosaItems.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+    <list default="true" id="23b0ad47-a402-4788-8284-bb6d2e5ca004" name="Changes" comment="(VERSION 1.6.0) Mensajes Custom en Adavancements - Nuevo sistema de Bosses (falta mejorar) - Añadido Items que suben la Corrpcion Ansiosa - Mejoras de Corrupcion Ansiosa - Arreglo de Bugs de DayFourChanges - Arreglos en Iceologers (falta arreglar Angel de Hielo) - NightmareMechanic ya no se activa por totmes, solo al dormir en una cama a partir del dia 12">
+      <change afterPath="$PROJECT_DIR$/src/main/java/Bosses/HellishBeeHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/Commands/LootCommand.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedBee.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/Dificultades/Features/AltarActivateEvent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/Dificultades/Features/AltarFunctions.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/Handlers/LootManager.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/InfestedCaves/InfestedCommands.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/InfestedCaves/InfestedGenerator.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/InfestedCaves/InfestedListeners.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/InfestedCaves/InfestedPopulator.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/InfestedCaves/PortalManager.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/InfestedCaves/StructureManager.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/RunicSmithing/RunicCraftEvent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/RunicSmithing/RunicManager.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/RunicSmithing/RunicRecipe.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/RunicSmithing/RunicSmithingGUI.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/items/InfestedCaveItems.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Casino/SlotMachine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Casino/SlotMachine.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Commands/EggSpawnerCommand.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Commands/ItemsCommands.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Commands/ItemsCommands.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Commands/NightmareCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Commands/NightmareCommand.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Armors/NightVisionHelmet.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Armors/NightVisionHelmet.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Bosses/AreaZone.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Bosses/AreaZone.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Bosses/BaseBoss.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Bosses/BaseBoss.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Bosses/QueenBeeHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Bosses/QueenBeeHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Commands/GiveSpawnerCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Commands/GiveSpawnerCommand.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/Commands/SpawnMobs.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Commands/SpawnMobs.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/CorrupcionAnsiosaCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/CorrupcionAnsiosaCommand.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/CorrupcionAnsiosaManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/CorrupcionAnsiosaManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/PlayerCorruptionData.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/CorrupcionAnsiosa/PlayerCorruptionData.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/BatBoom.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/BatBoom.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/Bombita.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/Bombita.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/BuffBreeze.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/BuffBreeze.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedCreeper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedCreeper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedDrowned.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedDrowned.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedInfernalSpider.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedInfernalSpider.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedMagmaCube_Descartado.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedSkeleton.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedSkeleton.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedSpider.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedSpider.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedZombies.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/CorruptedZombies.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/DarkCreeper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/DarkCreeper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/DarkPhantom_Descartado.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/DarkSkeleton.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/DarkSkeleton.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/DarkVex.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/DarkVex.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/EspectralCreeper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/EspectralCreeper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/EspectralGhast.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/EspectralGhast.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/EspectralSilverfish.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/EspectralSilverfish.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/FastRavager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/FastRavager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/GuardianBlaze.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/GuardianBlaze.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/GuardianCorruptedSkeleton.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/GuardianCorruptedSkeleton.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/HellishBeeHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/HellishBeeHandler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/Iceologer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/Iceologer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/NMSUtils.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/QueenBeeHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/QueenBeeHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/InfernalBeast.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/InfernalBeast.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/InfernalCreeper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/InfernalCreeper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/InvertedGhast.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/InvertedGhast.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/NetheriteVexGuardian.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/NetheriteVexGuardian.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/PiglinGlobo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/PiglinGlobo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/SpectralEye.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/SpectralEye.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/ToxicSpider.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/ToxicSpider.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/WhiteEnderman.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/CustomMobs/WhiteEnderman.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayEightChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayEightChanges.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayFourChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayFourChanges.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/Features/BedEvents.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/Features/BedEvents.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/Features/NightmareMechanic.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/Features/NightmareMechanic.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission1.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission1.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission4.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission4.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission6.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Events/MissionSystem/Mission6.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayOneChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayOneChanges.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DaySixteenChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DaySixteenChanges.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Dificultades/DayTwoChanges.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Dificultades/DayTwoChanges.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/Handlers/CustomSpawnerHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Handlers/CustomSpawnerHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Handlers/NormalTotemHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Handlers/NormalTotemHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/items/EmblemItems.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/items/EmblemItems.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/vct/hardcore3/ViciontHardcore3.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/vct/hardcore3/ViciontHardcore3.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/resources/plugin.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/plugin.yml" afterDir="false" />
     </list>
@@ -105,7 +135,7 @@
     &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
     &quot;project.structure.side.proportion&quot;: &quot;0.33448276&quot;,
     &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.lookFeel&quot;,
     &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
@@ -356,7 +386,26 @@
       <workItem from="1763571806201" duration="5834000" />
       <workItem from="1763853217408" duration="584000" />
       <workItem from="1763874556213" duration="16000" />
-      <workItem from="1764313184001" duration="2105000" />
+      <workItem from="1764313184001" duration="2418000" />
+      <workItem from="1764391234382" duration="2838000" />
+      <workItem from="1764447503955" duration="631000" />
+      <workItem from="1764486341622" duration="2194000" />
+      <workItem from="1764526469669" duration="7105000" />
+      <workItem from="1764561190373" duration="8331000" />
+      <workItem from="1764611120150" duration="7318000" />
+      <workItem from="1764695659336" duration="14217000" />
+      <workItem from="1764814491842" duration="12508000" />
+      <workItem from="1764876613015" duration="24063000" />
+      <workItem from="1764964528771" duration="1996000" />
+      <workItem from="1764966807115" duration="826000" />
+      <workItem from="1764970391228" duration="2120000" />
+      <workItem from="1764982363648" duration="2779000" />
+      <workItem from="1764997068478" duration="2428000" />
+      <workItem from="1765009270672" duration="1759000" />
+      <workItem from="1765153110723" duration="4022000" />
+      <workItem from="1765318061899" duration="1017000" />
+      <workItem from="1765337213847" duration="830000" />
+      <workItem from="1765404132371" duration="11915000" />
     </task>
     <task id="LOCAL-00001" summary="MUCHOS MUCHISIMOS CAMBIOS (vERSION 1.5.2)">
       <option name="closed" value="true" />
@@ -438,7 +487,15 @@
       <option name="project" value="LOCAL" />
       <updated>1762759663230</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="(VERSION 1.6.0) Mensajes Custom en Adavancements - Nuevo sistema de Bosses (falta mejorar) - Añadido Items que suben la Corrpcion Ansiosa - Mejoras de Corrupcion Ansiosa - Arreglo de Bugs de DayFourChanges - Arreglos en Iceologers (falta arreglar Angel de Hielo) - NightmareMechanic ya no se activa por totmes, solo al dormir en una cama a partir del dia 12">
+      <option name="closed" value="true" />
+      <created>1764315620991</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1764315620991</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -454,6 +511,7 @@
     <MESSAGE value="(VERSION 1.5.8) Cambios Menores" />
     <MESSAGE value="(VERSION 1.5.9) Se añadieron nuevas clases de Mobs, CustomSpawner completamente terminado, libro de habilidades falta por corregir, correcion de bugs en eventos, nuevas titulos cuando empieza una deathstorm (falta mejorar)" />
     <MESSAGE value="(VERSION 1.5.10) Se reorganizo toda la clase principal, se añadio el gameplay de &quot;Corrupcion Ansiosa&quot; falta pulir, se añadio sistema de efectos Custom &quot;Confusion&quot; - &quot;Corrupture&quot;" />
-    <option name="LAST_COMMIT_MESSAGE" value="(VERSION 1.5.10) Se reorganizo toda la clase principal, se añadio el gameplay de &quot;Corrupcion Ansiosa&quot; falta pulir, se añadio sistema de efectos Custom &quot;Confusion&quot; - &quot;Corrupture&quot;" />
+    <MESSAGE value="(VERSION 1.6.0) Mensajes Custom en Adavancements - Nuevo sistema de Bosses (falta mejorar) - Añadido Items que suben la Corrpcion Ansiosa - Mejoras de Corrupcion Ansiosa - Arreglo de Bugs de DayFourChanges - Arreglos en Iceologers (falta arreglar Angel de Hielo) - NightmareMechanic ya no se activa por totmes, solo al dormir en una cama a partir del dia 12" />
+    <option name="LAST_COMMIT_MESSAGE" value="(VERSION 1.6.0) Mensajes Custom en Adavancements - Nuevo sistema de Bosses (falta mejorar) - Añadido Items que suben la Corrpcion Ansiosa - Mejoras de Corrupcion Ansiosa - Arreglo de Bugs de DayFourChanges - Arreglos en Iceologers (falta arreglar Angel de Hielo) - NightmareMechanic ya no se activa por totmes, solo al dormir en una cama a partir del dia 12" />
   </component>
 </project>

@@ -98,6 +98,16 @@ public class QueenBeeHandler extends BaseBoss implements Listener {
     }
 
     @Override
+    protected int getArenaHeightUp() {
+        return 30;
+    }
+
+    @Override
+    protected int getArenaHeightDown() {
+        return 5;
+    }
+
+    @Override
     protected AreaZone.Shape getArenaShape() {
         return AreaZone.Shape.SQUARE;
     }

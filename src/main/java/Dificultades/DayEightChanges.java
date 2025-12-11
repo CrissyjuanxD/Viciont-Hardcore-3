@@ -5,6 +5,8 @@ import Blocks.CorruptedAncientDebris;
 import Dificultades.CustomMobs.*;
 import Enchants.EssenceFactory;
 import Handlers.DayHandler;
+import RunicSmithing.RunicManager;
+import RunicSmithing.RunicRecipe;
 import items.*;
 import org.bukkit.*;
 import org.bukkit.block.Biome;
@@ -37,7 +39,6 @@ public class DayEightChanges implements Listener {
     private final Random random = new Random();
     private boolean isApplied = false;
 
-    private final CorruptedMagmaCube_Descartado corruptedMagmaCubeDescartado;
     private final BuffBreeze buffBreeze;
     private final InvertedGhast invertedGhast;
     private final NetheriteVexGuardian netheriteVexGuardian;
@@ -60,7 +61,6 @@ public class DayEightChanges implements Listener {
     public DayEightChanges(JavaPlugin plugin, DayHandler handler) {
         this.plugin = plugin;
         this.dayHandler = handler;
-        this.corruptedMagmaCubeDescartado = new CorruptedMagmaCube_Descartado(plugin);;
         this.buffBreeze = new BuffBreeze(plugin);
         this.invertedGhast = new InvertedGhast(plugin);
         this.netheriteVexGuardian = new NetheriteVexGuardian(plugin);
@@ -85,13 +85,12 @@ public class DayEightChanges implements Listener {
         if (!isApplied) {
             isApplied = true;
             Bukkit.getPluginManager().registerEvents(this, plugin);
-            corruptedMagmaCubeDescartado.apply();
             buffBreeze.apply();
             netheriteVexGuardian.apply();
             imperialBrute.apply();
             infernalBeast.apply();
             CustomCorruptedNetheriteCraft();
-            registerCorruptedArmorUpgrades();
+            registerCorruptedArmor();
            /* mobCapManager.setMobCap(110);*/
         }
     }
@@ -99,7 +98,6 @@ public class DayEightChanges implements Listener {
     public void revert() {
         if (isApplied) {
             isApplied = false;
-            corruptedMagmaCubeDescartado.revert();
             buffBreeze.revert();
             netheriteVexGuardian.revert();
             imperialBrute.revert();
@@ -321,7 +319,7 @@ public class DayEightChanges implements Listener {
         Bukkit.addRecipe(ItemcorruptedSoul);
     }
 
-    private void registerCorruptedArmorUpgrades() {
+    private void registerCorruptedArmorUpgrades2() {
         // Helmet upgrade
         SmithingTransformRecipe corruptedHelmetRecipe = new SmithingTransformRecipe(
                 new NamespacedKey(plugin, "corrupted_helmet_upgrade"),
@@ -363,6 +361,47 @@ public class DayEightChanges implements Listener {
         Bukkit.addRecipe(corruptedChestplateRecipe);
         Bukkit.addRecipe(corruptedLeggingsRecipe);
         Bukkit.addRecipe(corruptedBootsRecipe);
+    }
+
+    public void registerCorruptedArmor() {
+        RunicManager.clearRecipes();
+
+        ItemStack corruptedHelmetRecipe = CorruptedArmor.createCorruptedHelmet();
+        RunicRecipe HelmetRecipe = new RunicRecipe("helmet_netherite_upgrade", corruptedHelmetRecipe);
+
+        HelmetRecipe.addIngredient(1, 1, new ItemStack(Material.NETHERITE_HELMET));
+        HelmetRecipe.addIngredient(3, 1, corruptedUpgrades.createHelmetNetheriteUpgrade());
+        HelmetRecipe.addIngredient(5, 1, new ItemStack(Material.ECHO_SHARD));
+        HelmetRecipe.addIngredient(7, 1, CorruptedNetheriteItems.createCorruptedNetheriteIngot());
+
+        ItemStack corruptedChestplateRecipe = CorruptedArmor.createCorruptedChestplate();
+        RunicRecipe ChestplateRecipe = new RunicRecipe("corrupted_chestplate_upgrade", corruptedChestplateRecipe);
+
+        ChestplateRecipe.addIngredient(1, 1, new ItemStack(Material.NETHERITE_CHESTPLATE));
+        ChestplateRecipe.addIngredient(3, 1, corruptedUpgrades.createChestplateNetheriteUpgrade());
+        ChestplateRecipe.addIngredient(5, 1, new ItemStack(Material.ECHO_SHARD));
+        ChestplateRecipe.addIngredient(7, 1, CorruptedNetheriteItems.createCorruptedNetheriteIngot());
+
+        ItemStack corruptedLeggingsRecipe = CorruptedArmor.createCorruptedLeggings();
+        RunicRecipe LeggingsRecipe = new RunicRecipe("corrupted_leggings_upgrade", corruptedLeggingsRecipe);
+
+        LeggingsRecipe.addIngredient(1, 1, new ItemStack(Material.NETHERITE_LEGGINGS));
+        LeggingsRecipe.addIngredient(3, 1, corruptedUpgrades.createLeggingsNetheriteUpgrade());
+        LeggingsRecipe.addIngredient(5, 1, new ItemStack(Material.ECHO_SHARD));
+        LeggingsRecipe.addIngredient(7, 1, CorruptedNetheriteItems.createCorruptedNetheriteIngot());
+
+        ItemStack corruptedBootsRecipe = CorruptedArmor.createCorruptedBoots();
+        RunicRecipe BootsRecipe = new RunicRecipe("corrupted_boots_upgrade", corruptedBootsRecipe);
+
+        BootsRecipe.addIngredient(1, 1, new ItemStack(Material.NETHERITE_BOOTS));
+        BootsRecipe.addIngredient(3, 1, corruptedUpgrades.createBootsNetheriteUpgrade());
+        BootsRecipe.addIngredient(5, 1, new ItemStack(Material.ECHO_SHARD));
+        BootsRecipe.addIngredient(7, 1, CorruptedNetheriteItems.createCorruptedNetheriteIngot());
+
+        RunicManager.registerRecipe(HelmetRecipe);
+        RunicManager.registerRecipe(ChestplateRecipe);
+        RunicManager.registerRecipe(LeggingsRecipe);
+        RunicManager.registerRecipe(BootsRecipe);
     }
 
     @EventHandler

@@ -15,7 +15,7 @@ import org.bukkit.potion.PotionEffectType;
 public class FastRavager implements Listener {
     private final JavaPlugin plugin;
     private final NamespacedKey FastRavagerKey;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
 
     public FastRavager(JavaPlugin plugin) {
         this.plugin = plugin;

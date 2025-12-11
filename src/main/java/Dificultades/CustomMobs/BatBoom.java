@@ -20,7 +20,7 @@ import org.bukkit.util.Vector;
 public class BatBoom implements Listener {
     private final JavaPlugin plugin;
     private final NamespacedKey batBoomKey;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
 
     public BatBoom(JavaPlugin plugin) {
         this.plugin = plugin;

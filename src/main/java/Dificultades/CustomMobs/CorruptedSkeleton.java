@@ -36,7 +36,7 @@ public class CorruptedSkeleton implements Listener {
     private final NamespacedKey corruptedKey;
     private final NamespacedKey variantKey;
     private final NamespacedKey arrowVariantKey;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
     private final Random random = new Random();
     private final DayHandler dayHandler;
 
@@ -467,20 +467,6 @@ public class CorruptedSkeleton implements Listener {
         }
 
         skeleton.getWorld().playSound(skeleton.getLocation(), Sound.ENTITY_SKELETON_DEATH, 1f, 0.6f);
-    }
-
-    public void startTask() {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                for (World world : Bukkit.getWorlds()) {
-                    for (Entity entity : world.getEntitiesByClass(Skeleton.class)) {
-                        Skeleton sk = (Skeleton) entity;
-                        sk.getPersistentDataContainer().has(corruptedKey, PersistentDataType.BYTE);
-                    }
-                }
-            }
-        }.runTaskTimer(plugin, 0L, 100L);
     }
 
     public NamespacedKey getCorruptedKey() {

@@ -305,6 +305,12 @@ public class GiveSpawnerCommand implements CommandExecutor, TabCompleter {
                     description = "Genera Drowned Corruptos";
                     customModelData = 1035;
                     break;
+
+                case "corruptedbee":
+                    displayName = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Spawner de Corrupted Bee";
+                    description = "Genera Abejas Corruptas";
+                    customModelData = 1036;
+                    break;
                 default:
                     return null;
             }
@@ -388,6 +394,7 @@ public class GiveSpawnerCommand implements CommandExecutor, TabCompleter {
             suggestions.add("darkskeleton");
             suggestions.add("infernalbeast");
             suggestions.add("corrupteddrowned");
+            suggestions.add("corruptedbee");
         } else if (args.length == 2) {
             if (args[0].equalsIgnoreCase("vanilla")) {
                 for (EntityType type : EntityType.values()) {

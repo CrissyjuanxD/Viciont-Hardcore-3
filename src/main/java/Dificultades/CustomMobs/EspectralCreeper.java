@@ -16,7 +16,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class EspectralCreeper extends EspectralMobsTP implements Listener {
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
 
     public EspectralCreeper(JavaPlugin plugin) {
         super(plugin, "ender_creeper");

@@ -20,7 +20,7 @@ import org.bukkit.util.Vector;
 public class WhiteEnderman implements Listener {
     private final JavaPlugin plugin;
     private final NamespacedKey whiteEndermanKey;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
 
     public WhiteEnderman(JavaPlugin plugin) {
         this.plugin = plugin;

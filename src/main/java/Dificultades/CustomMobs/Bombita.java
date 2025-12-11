@@ -16,7 +16,7 @@ import org.bukkit.potion.PotionEffectType;
 public class Bombita implements Listener {
     private final JavaPlugin plugin;
     private final NamespacedKey bombitaKey;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
 
     public Bombita(JavaPlugin plugin) {
         this.plugin = plugin;

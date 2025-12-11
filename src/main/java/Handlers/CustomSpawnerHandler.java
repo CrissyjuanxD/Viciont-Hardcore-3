@@ -1,5 +1,6 @@
 package Handlers;
 
+import Bosses.HellishBeeHandler;
 import Bosses.QueenBeeHandler;
 import Dificultades.CustomMobs.*;
 import org.bukkit.*;
@@ -54,14 +55,13 @@ public class CustomSpawnerHandler implements Listener {
     private final CorruptedZombies corruptedZombieSpawner;
     private final CorruptedSpider corruptedSpider;
     /*private final QueenBeeHandler queenBeeHandler;*/
-    private final HellishBeeHandler hellishBeeHandler;
+    /*private final HellishBeeHandler hellishBeeHandler;*/
     private final InfestedBeeHandler infestedBeeHandler;
     private final GuardianBlaze guardianBlaze;
     private final GuardianCorruptedSkeleton guardianCorruptedSkeleton;
     private final CorruptedSkeleton corruptedSkeleton;
     private final CorruptedInfernalSpider corruptedInfernalSpider;
     private final CorruptedCreeper corruptedCreeper;
-    private final CorruptedMagmaCube_Descartado corruptedMagmaCubeDescartado;
     private final PiglinGlobo piglinGloboSpawner;
     private final BuffBreeze buffBreeze;
     private final InvertedGhast invertedGhast;
@@ -78,12 +78,12 @@ public class CustomSpawnerHandler implements Listener {
     private final EspectralCreeper espectralCreeper;
     private final EspectralSilverfish espectralSilverfish;
     private final GuardianShulker_Descartado guardianShulkerDescartado;
-    private final DarkPhantom_Descartado darkPhantomDescartado;
     private final DarkCreeper darkCreeper;
     private final DarkVex darkVex;
     private final DarkSkeleton darkSkeleton;
     private final InfernalBeast infernalBeast;
     private final CorruptedDrowned corruptedDrowned;
+    private final CorruptedBee corruptedBee;
 
     public enum SpawnMode {
         VANILLA("Vanilla", Material.SPAWNER),
@@ -155,14 +155,13 @@ public class CustomSpawnerHandler implements Listener {
         this.corruptedZombieSpawner = new CorruptedZombies(plugin);
         this.corruptedSpider = new CorruptedSpider(plugin);
         /*this.queenBeeHandler = new QueenBeeHandler(plugin);*/
-        this.hellishBeeHandler = new HellishBeeHandler(plugin);
+        /*this.hellishBeeHandler = new HellishBeeHandler(plugin);*/
         this.infestedBeeHandler = new InfestedBeeHandler(plugin);
         this.guardianBlaze = new GuardianBlaze(plugin);
         this.guardianCorruptedSkeleton = new GuardianCorruptedSkeleton(plugin);
         this.corruptedSkeleton = new CorruptedSkeleton(plugin, dayHandler);
         this.corruptedInfernalSpider = new CorruptedInfernalSpider(plugin);
         this.corruptedCreeper = new CorruptedCreeper(plugin);
-        this.corruptedMagmaCubeDescartado = new CorruptedMagmaCube_Descartado(plugin);
         this.piglinGloboSpawner = new PiglinGlobo(plugin);
         this.buffBreeze = new BuffBreeze(plugin);
         this.invertedGhast = new InvertedGhast(plugin);
@@ -179,12 +178,12 @@ public class CustomSpawnerHandler implements Listener {
         this.espectralCreeper = new EspectralCreeper(plugin);
         this.espectralSilverfish = new EspectralSilverfish(plugin);
         this.guardianShulkerDescartado = new GuardianShulker_Descartado(plugin);
-        this.darkPhantomDescartado = new DarkPhantom_Descartado(plugin);
         this.darkCreeper = new DarkCreeper(plugin);
         this.darkVex = new DarkVex(plugin);
         this.darkSkeleton = new DarkSkeleton(plugin);
         this.infernalBeast = new InfernalBeast(plugin);
         this.corruptedDrowned = new CorruptedDrowned(plugin);
+        this.corruptedBee = new CorruptedBee(plugin);
 
         // Inicializar el sistema de spawn personalizado
         startCustomSpawnTask();
@@ -826,7 +825,7 @@ public class CustomSpawnerHandler implements Listener {
                 QueenBeeHandler.spawn(plugin, location);
                 break;
             case "hellishbee":
-                hellishBeeHandler.spawnHellishBee(location);
+                HellishBeeHandler.spawn(plugin, location);
                 break;
             case "infestedbee":
                 infestedBeeHandler.spawnInfestedBee(location);
@@ -845,9 +844,6 @@ public class CustomSpawnerHandler implements Listener {
                 break;
             case "corruptedcreeper":
                 corruptedCreeper.spawnCorruptedCreeper(location);
-                break;
-            case "corruptedmagma":
-                corruptedMagmaCubeDescartado.spawnCorruptedMagmaCube(location);
                 break;
             case "piglinglobo":
                 piglinGloboSpawner.spawnPiglinGlobo(location);
@@ -897,9 +893,6 @@ public class CustomSpawnerHandler implements Listener {
             case "guardianshulker":
                 guardianShulkerDescartado.spawnGuardianShulker(location);
                 break;
-            case "darkphantom":
-                darkPhantomDescartado.spawnDarkPhantom(location);
-                break;
             case "darkcreeper":
                 darkCreeper.spawnDarkCreeper(location);
                 break;
@@ -914,6 +907,9 @@ public class CustomSpawnerHandler implements Listener {
                 break;
             case "corrupteddrowned":
                 corruptedDrowned.spawnCorruptedDrowned(location);
+                break;
+            case "corruptedbee":
+                corruptedBee.spawnCorruptedBee(location);
                 break;
             default:
                 plugin.getLogger().warning("Tipo de mob desconocido en spawner: " + mobType);
@@ -941,6 +937,7 @@ public class CustomSpawnerHandler implements Listener {
             case "queenbee":
             case "hellishbee":
             case "infestedbee":
+            case "corruptedbee":
                 return EntityType.BEE;
             case "guardianblaze":
                 return EntityType.BLAZE;
@@ -949,8 +946,6 @@ public class CustomSpawnerHandler implements Listener {
             case "corruptedskeleton":
             case "darkskeleton":
                 return EntityType.SKELETON;
-            case "corruptedmagma":
-                return EntityType.MAGMA_CUBE;
             case "buffbreeze":
                 return EntityType.BREEZE;
             case "invertedghast":
@@ -976,7 +971,6 @@ public class CustomSpawnerHandler implements Listener {
                 return EntityType.SILVERFISH;
             case "guardianshulker":
                 return EntityType.SHULKER;
-            case "darkphantom":
             case "spectraleeye":
                 return EntityType.PHANTOM;
             case "corrupteddrowned":
@@ -1058,6 +1052,8 @@ public class CustomSpawnerHandler implements Listener {
                 return "Infernal Beast";
             case "corrupteddrowned":
                 return "Corrupted Drowned";
+            case "corruptedbee":
+                return "Corrupted Bee";
             default:
                 return null;
         }

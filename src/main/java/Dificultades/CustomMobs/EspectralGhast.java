@@ -14,7 +14,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class EspectralGhast extends EspectralMobsTP implements Listener {
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
 
     public EspectralGhast(JavaPlugin plugin) {
         super(plugin, "ender_ghast");

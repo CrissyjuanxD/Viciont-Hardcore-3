@@ -7,7 +7,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerMoveEvent; // IMPORT ELIMINADO (Opcional, si limpias imports)
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
@@ -20,7 +20,7 @@ import java.util.*;
 public class CorruptedInfernalSpider implements Listener {
     private final JavaPlugin plugin;
     private final NamespacedKey corrupedInfernaltedspiderKey;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
     private final Random random = new Random();
 
     private final List<SpiderEffect> possibleEffects = Arrays.asList(
@@ -110,6 +110,7 @@ public class CorruptedInfernalSpider implements Listener {
         if (event.getEntity() instanceof Spider spider && event.getTarget() instanceof Player) {
 
             if (spider.getPersistentDataContainer().has(corrupedInfernaltedspiderKey, PersistentDataType.BYTE)) {
+                // Dispara UNA VEZ cuando te ve (targetea). Está bien.
                 if (random.nextDouble() < 0.2) {
                     launchFireballAttack(spider, (Player) event.getTarget());
                 }
@@ -125,6 +126,8 @@ public class CorruptedInfernalSpider implements Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
+                if (!spider.isValid() || spider.isDead() || !target.isOnline()) return;
+
                 Fireball fireball = spider.launchProjectile(Fireball.class);
                 Vector direction = target.getLocation().toVector().subtract(spider.getLocation().toVector()).normalize();
                 fireball.setDirection(direction);
@@ -167,33 +170,8 @@ public class CorruptedInfernalSpider implements Listener {
         return spider.getPersistentDataContainer().has(corrupedInfernaltedspiderKey, PersistentDataType.BYTE);
     }
 
-        private record SpiderEffect(String name, PotionEffectType type, int amplifier) {
+    private record SpiderEffect(String name, PotionEffectType type, int amplifier) {
     }
 
-    @EventHandler
-    public void onPlayerMove(PlayerMoveEvent event) {
-        Player player = event.getPlayer();
-        Location from = event.getFrom();
-        Location to = event.getTo();
-
-        if (from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ()) {
-            return;
-        }
-
-        Location playerLocation = player.getLocation();
-        double maxDistanceSquared = 30 * 30;
-
-        for (Entity entity : player.getNearbyEntities(30, 30, 30)) {
-            if (entity instanceof Spider spider &&
-                    spider.getCustomName() != null &&
-                    spider.getCustomName().equals(ChatColor.RED + "" + ChatColor.BOLD + "Corrupted Infernal Spider") &&
-                    !spider.getPersistentDataContainer().has(corrupedInfernaltedspiderKey, PersistentDataType.BYTE)) {
-
-                if (playerLocation.distanceSquared(spider.getLocation()) <= maxDistanceSquared) {
-                    transformspawnCorruptedInfernalSpider(spider);
-                }
-            }
-        }
-    }
-
+    // ELIMINADO: onPlayerMove (Causaba lag severo)
 }

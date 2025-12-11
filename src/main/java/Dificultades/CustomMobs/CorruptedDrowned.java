@@ -29,7 +29,7 @@ public class CorruptedDrowned implements Listener {
     private final TridenteEspectral tridenteEspectral;
     private final NamespacedKey corruptedDrownedKey;
     private final NamespacedKey spectralTridentKey;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
     private final Random random = new Random();
     private final Set<Drowned> activeCorruptedDrowneds = new HashSet<>();
 

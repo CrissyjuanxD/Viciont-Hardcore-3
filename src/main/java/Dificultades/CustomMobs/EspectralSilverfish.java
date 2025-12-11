@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Random;
 
 public class EspectralSilverfish extends EspectralMobsTP implements Listener {
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
     private final Random random = new Random();
     private final NamespacedKey projectileKey;
 

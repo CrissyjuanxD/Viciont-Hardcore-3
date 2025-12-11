@@ -97,7 +97,13 @@ public abstract class BaseBoss {
     //          ARENA
     // ===========================
     private void setupArena() {
-        this.areaZone = new AreaZone(spawnLocation, getArenaRadius(), getArenaShape());
+        this.areaZone = new AreaZone(
+                spawnLocation,
+                getArenaRadius(),
+                getArenaHeightUp(),
+                getArenaHeightDown(),
+                getArenaShape()
+        );
     }
 
     private void updatePlayers() {
@@ -223,7 +229,9 @@ public abstract class BaseBoss {
     //         ABSTRACTOS
     // ===========================
     protected abstract String getBossTitle();     // nombre del boss
-    protected abstract int getArenaRadius();      // radio arena
+    protected abstract int getArenaRadius();
+    protected abstract int getArenaHeightUp();
+    protected abstract int getArenaHeightDown();
     protected abstract AreaZone.Shape getArenaShape(); // tipo arena (CUADRADA / CIRCULAR)
 
     protected abstract void onStart();    // cuando inicia

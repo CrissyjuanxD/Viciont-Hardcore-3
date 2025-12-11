@@ -29,7 +29,7 @@ import net.md_5.bungee.api.ChatColor;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import Handlers.DayHandler;
-
+import Dificultades.Features.AltarActivateEvent;
 
 import java.util.*;
 
@@ -44,6 +44,9 @@ public class DayFourChanges implements Listener {
     private final CorruptedInfernalSpider corruptedInfernalSpider;
     private final CorruptedZombies corruptedZombies;
     private final CorruptedSpider corruptedSpider;
+    private final CorruptedBee corruptedBee;
+    private final Bombita bombita;
+    private final Iceologer iceologer;
     /*private final QueenBeeHandler queenBeeHandler;*/
     private final DayHandler dayHandler;
 
@@ -59,6 +62,9 @@ public class DayFourChanges implements Listener {
         /*this.queenBeeHandler = new QueenBeeHandler(plugin);*/
         this.corruptedZombies = new CorruptedZombies(plugin);
         this.corruptedSpider = new CorruptedSpider(plugin);
+        this.corruptedBee = new CorruptedBee(plugin);
+        this.bombita = new Bombita(plugin);
+        this.iceologer= new Iceologer(plugin);
         this.uuidKey = new NamespacedKey(plugin, "creator_uuid");
         this.upgradeKey = new NamespacedKey(plugin, "is_upgrade");
 
@@ -74,7 +80,7 @@ public class DayFourChanges implements Listener {
             blazespawmer.apply();
             guardianCorruptedSkeleton.apply();
             corruptedInfernalSpider.apply();
-
+            corruptedBee.apply();
         }
     }
 
@@ -84,6 +90,7 @@ public class DayFourChanges implements Listener {
             blazespawmer.revert();
             guardianCorruptedSkeleton.revert();
             corruptedInfernalSpider.revert();
+            corruptedBee.revert();
 
             Bukkit.removeRecipe(new NamespacedKey(plugin, "fragment_upgrade"));
             Bukkit.removeRecipe(new NamespacedKey(plugin, "duplicador"));
@@ -98,167 +105,39 @@ public class DayFourChanges implements Listener {
         }
     }
 
-    private final Material[][][] altarLayers = {
-            // Layer 1
-            {
-                    {Material.HONEY_BLOCK, Material.HONEYCOMB_BLOCK, Material.HONEYCOMB_BLOCK, Material.HONEYCOMB_BLOCK, Material.HONEY_BLOCK},
-                    {Material.HONEYCOMB_BLOCK, Material.HONEY_BLOCK, Material.HONEYCOMB_BLOCK, Material.HONEY_BLOCK, Material.HONEYCOMB_BLOCK},
-                    {Material.HONEYCOMB_BLOCK, Material.HONEYCOMB_BLOCK, Material.HONEYCOMB_BLOCK, Material.HONEYCOMB_BLOCK, Material.HONEYCOMB_BLOCK},
-                    {Material.HONEYCOMB_BLOCK, Material.HONEY_BLOCK, Material.HONEYCOMB_BLOCK, Material.HONEY_BLOCK, Material.HONEYCOMB_BLOCK},
-                    {Material.HONEY_BLOCK, Material.HONEYCOMB_BLOCK, Material.HONEYCOMB_BLOCK, Material.HONEYCOMB_BLOCK, Material.HONEY_BLOCK}
-            },
-
-            // Layer 2
-            {
-                    {Material.HONEY_BLOCK, Material.AIR, Material.AIR, Material.AIR, Material.HONEY_BLOCK},
-                    {Material.AIR, Material.AIR, Material.TORCH, Material.AIR, Material.AIR},
-                    {Material.AIR, Material.TORCH, Material.HONEYCOMB_BLOCK, Material.TORCH, Material.AIR},
-                    {Material.AIR, Material.AIR, Material.TORCH, Material.AIR, Material.AIR},
-                    {Material.HONEY_BLOCK, Material.AIR, Material.AIR, Material.AIR, Material.HONEY_BLOCK}
-            },
-
-            // Layer 3
-            {
-                    {Material.AIR, Material.AIR, Material.AIR, Material.AIR, Material.AIR},
-                    {Material.AIR, Material.AIR, Material.AIR, Material.AIR, Material.AIR},
-                    {Material.AIR, Material.AIR, Material.BEE_NEST, Material.AIR, Material.AIR},
-                    {Material.AIR, Material.AIR, Material.AIR, Material.AIR, Material.AIR},
-                    {Material.AIR, Material.AIR, Material.AIR, Material.AIR, Material.AIR}
-            },
-
-            // Layer 4
-            {
-                    {Material.AIR, Material.AIR, Material.AIR, Material.AIR, Material.AIR},
-                    {Material.AIR, Material.AIR, Material.AIR, Material.AIR, Material.AIR},
-                    {Material.AIR, Material.AIR, Material.HONEY_BLOCK, Material.AIR, Material.AIR},
-                    {Material.AIR, Material.AIR, Material.AIR, Material.AIR, Material.AIR},
-                    {Material.AIR, Material.AIR, Material.AIR, Material.AIR, Material.AIR}
-            }
-    };
-
-    private void checkAltarLayers(Location location, Player player) {
-        int baseY = location.getBlockY();
-
-        for (int y = 0; y < altarLayers.length; y++) {
-            player.sendMessage(ChatColor.GOLD + "Layer " + (y + 1) + ":");
-            StringBuilder layerOutput = new StringBuilder();
-
-            for (int x = -2; x <= 2; x++) {
-                for (int z = -2; z <= 2; z++) {
-                    Material expected = altarLayers[y][x + 2][z + 2];
-                    Material actual = Objects.requireNonNull(location.getWorld()).getBlockAt(
-                            location.getBlockX() + x,
-                            baseY - 2 + y,
-                            location.getBlockZ() + z
-                    ).getType();
-
-                    if (expected == actual) {
-                        layerOutput.append(ChatColor.GREEN).append(getSymbol(expected)).append(" ");
-                    } else {
-                        layerOutput.append(ChatColor.RED).append(getSymbol(expected)).append(" ");
-                    }
-                }
-                player.sendMessage(layerOutput.toString());
-                layerOutput.setLength(0);
-            }
-        }
-    }
-
-    private String getSymbol(Material material) {
-        switch (material) {
-            case HONEY_BLOCK -> {
-                return "HB";
-            }
-            case HONEYCOMB_BLOCK -> {
-                return "HC";
-            }
-            case TORCH -> {
-                return "T";
-            }
-            case BEE_NEST -> {
-                return "N";
-            }
-            case AIR -> {
-                return "A";
-            }
-            default -> {
-                return "?";
-            }
-        }
-    }
-
-    private boolean isOnCooldown(Location loc) {
-        long currentTime = System.currentTimeMillis();
-        long lastUsed = altarCooldowns.getOrDefault(loc, 0L);
-        if (currentTime - lastUsed < 2000) return true;
-        altarCooldowns.put(loc, currentTime);
-        return false;
-    }
-
     @EventHandler
-    public void onPlayerInteract(PlayerInteractEvent event) {
+    public void onAltarActivate(AltarActivateEvent event) {
         if (!isApplied) return;
-        if (event.getHand() != EquipmentSlot.HAND) return;
 
-        if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            Block block = event.getClickedBlock();
+        if (event.getAltarType().equals("queen_bee")) {
             Player player = event.getPlayer();
+            Location loc = event.getLocation();
 
-            if (block != null && block.getType() == Material.BEE_NEST) {
-                if (isOnCooldown(block.getLocation())) return;
-                Location altarLocation = block.getLocation();
+            // Lógica específica del boss (Bad Omen, etc.)
+            if (player.getPotionEffect(PotionEffectType.BAD_OMEN) != null) {
 
-                checkAltarLayers(altarLocation, player);
-
-                if (isValidQueenBeeAltar(altarLocation)) {
-                    if (player.getPotionEffect(PotionEffectType.BAD_OMEN) != null) {
-                        if (isQueenBeeSpawned(altarLocation)) {
-                            player.sendMessage(ChatColor.RED + "۞ Ya se ha invocado una Reina Abeja en este altar.");
-                        } else {
-                            spawnQueenBee(altarLocation);
-                            player.removePotionEffect(PotionEffectType.BAD_OMEN);
-                            int radius = 50;
-                            for (Player nearbyPlayer : Bukkit.getOnlinePlayers()) {
-                                if (nearbyPlayer.getWorld().equals(altarLocation.getWorld()) &&
-                                        nearbyPlayer.getLocation().distanceSquared(altarLocation) <= radius * radius) {
-
-                                    nearbyPlayer.playSound(altarLocation, Sound.ENTITY_BEE_STING, 5.0f, 0.1f);
-                                    nearbyPlayer.playSound(altarLocation, Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 5.0f, 0.1f);
-                                    nearbyPlayer.playSound(altarLocation, "minecraft:custom.emuerte" , 5.0f, 0.1f);
-                                    nearbyPlayer.playSound(altarLocation, "minecraft:custom.music2_skybattle", SoundCategory.RECORDS, 1.0f, 0.1f);
-                                }
-                            }
-                            player.getWorld().setStorm(true);
-                            player.getWorld().setWeatherDuration(2000);
-                        }
-                    } else {
-                        player.sendMessage(ChatColor.RED + "۞ Necesitas el efecto Bad Omen para invocar a la Reina Abeja.");
-                    }
+                // Verificar si ya hay un boss vivo cerca (opcional, tu lógica antigua lo tenía)
+                if (isQueenBeeSpawned(loc)) {
+                    player.sendMessage(ChatColor.RED + "۞ Ya hay una Reina viva cerca.");
+                    // No ponemos cooldown porque falló la invocación
+                    return;
                 }
+
+                // INVOCACIÓN
+                spawnQueenBee(loc);
+
+                // Consumir el Bad Omen
+                player.removePotionEffect(PotionEffectType.BAD_OMEN);
+
+                // ESTABLECER EL COOLDOWN PARA ESTE ALTAR (en segundos)
+                // Por ejemplo: 20 minutos = 1200 segundos
+                event.setCooldownSeconds(300);
+
+            } else {
+                player.sendMessage(ChatColor.RED + "۞ Necesitas Bad Omen para activar este altar.");
+                // No seteamos cooldown, el evento termina sin activar el timer
             }
         }
-    }
-
-    private boolean isValidQueenBeeAltar(Location location) {
-        int baseY = location.getBlockY();
-
-        for (int y = 0; y < altarLayers.length; y++) {
-            for (int x = -2; x <= 2; x++) {
-                for (int z = -2; z <= 2; z++) {
-                    Material expected = altarLayers[y][x + 2][z + 2];
-                    Material actual = Objects.requireNonNull(location.getWorld()).getBlockAt(
-                            location.getBlockX() + x,
-                            baseY - 2 + y,
-                            location.getBlockZ() + z
-                    ).getType();
-
-                    if (expected != actual) {
-                        return false;
-                    }
-                }
-            }
-        }
-        return true;
     }
 
 
@@ -277,7 +156,7 @@ public class DayFourChanges implements Listener {
 
         Location center = altarLocation.clone().add(0.5, 0.5, 0.5);
         int totalSteps = 100;
-        int finalY = 7;
+        int finalY = 4;
 
         new BukkitRunnable() {
             int step = 0;
@@ -320,32 +199,10 @@ public class DayFourChanges implements Listener {
 
                     QueenBeeHandler.spawn(plugin, spawnLocation);
 
-                    destroyAltarStructure(altarLocation);
-
                     cancel();
                 }
             }
         }.runTaskTimer(plugin, 0L, 1L);
-    }
-
-    private void destroyAltarStructure(Location baseLocation) {
-        int baseY = baseLocation.getBlockY();
-        World world = baseLocation.getWorld();
-        if (world == null) return;
-
-        for (int y = 0; y < altarLayers.length; y++) {
-            for (int x = -2; x <= 2; x++) {
-                for (int z = -2; z <= 2; z++) {
-                    Location blockLoc = new Location(
-                            world,
-                            baseLocation.getBlockX() + x,
-                            baseY - 2 + y,
-                            baseLocation.getBlockZ() + z
-                    );
-                    world.getBlockAt(blockLoc).setType(Material.AIR);
-                }
-            }
-        }
     }
 
     //-----------------------------------------
@@ -385,11 +242,15 @@ public class DayFourChanges implements Listener {
     public void onPlayerMove(PlayerMoveEvent event) {
         if (!isApplied) return;
 
+        if (event.getFrom().getBlockX() == event.getTo().getBlockX() &&
+                event.getFrom().getBlockY() == event.getTo().getBlockY() &&
+                event.getFrom().getBlockZ() == event.getTo().getBlockZ()) {
+            return;
+        }
+
         Player player = event.getPlayer();
         Location loc = player.getLocation();
-
         Block blockBelow = loc.clone().subtract(0, 0.1, 0).getBlock();
-
         Block standingBlock = loc.getBlock();
 
         if (blockBelow.getType() == Material.FIRE ||
@@ -741,13 +602,15 @@ public class DayFourChanges implements Listener {
                 ItemStack pepitaInfernal = EmblemItems.createPepitaInfernal();
                 event.getBlock().getWorld().dropItemNaturally(event.getBlock().getLocation(), pepitaInfernal);
 
-                String[] mobs = {"bombita", "iceologer", "corruptedzombie", "corruptedspider", "corruptedinfernalspider"};
-                String randomMob = mobs[(int) (Math.random() * mobs.length)];
-
                 Location loc = event.getBlock().getLocation();
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                        "spawnvct " + randomMob + " " +
-                                loc.getX() + " " + loc.getY() + " " + loc.getZ());
+                int roll = random.nextInt(5);
+                switch (roll) {
+                    case 0 -> bombita.spawnBombita(loc);
+                    case 1 -> iceologer.spawnIceologer(loc);
+                    case 2 -> corruptedZombies.spawnCorruptedZombie(loc);
+                    case 3 -> corruptedSpider.spawnCorruptedSpider(loc);
+                    case 4 -> corruptedInfernalSpider.spawnCorruptedInfernalSpider(loc);
+                }
             }
         }
     }

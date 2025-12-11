@@ -1,5 +1,6 @@
 package Commands;
 
+import Bosses.HellishBeeHandler;
 import Bosses.QueenBeeHandler;
 import Dificultades.CustomMobs.*;
 import org.bukkit.Bukkit;
@@ -23,13 +24,12 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
     private final Iceologer iceologerSpawner;
     private final CorruptedZombies corruptedZombieSpawner;
     private final CorruptedSpider corruptedSpider;
-    private final HellishBeeHandler hellishBeeHandler;
+    /*private final HellishBeeHandler hellishBeeHandler;*/
     private final GuardianBlaze guardianBlaze;
     private final GuardianCorruptedSkeleton guardianCorruptedSkeleton;
     private final CorruptedSkeleton corruptedSkeleton;
     private final CorruptedInfernalSpider corruptedInfernalSpider;
     private final CorruptedCreeper corruptedCreeper;
-    private final CorruptedMagmaCube_Descartado corruptedMagmaCubeDescartado;
     private final PiglinGlobo piglinGloboSpawner;
     private final BuffBreeze buffBreeze;
     private final InvertedGhast invertedGhast;
@@ -47,13 +47,13 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
     private final EspectralCreeper espectralCreeper;
     private final EspectralSilverfish espectralSilverfish;
     private final GuardianShulker_Descartado guardianShulkerDescartado;
-    private final DarkPhantom_Descartado darkPhantomDescartado;
     private final DarkCreeper darkCreeper;
     private final DarkVex darkVex;
     private final DarkSkeleton darkSkeleton;
     private final InfestedBeeHandler infestedBeeHandler;
     private final InfernalBeast infernalBeast;
     private final CorruptedDrowned corruptedDrowned;
+    private final CorruptedBee corruptedBee;
     private final DayHandler dayHandler;
 
     private final CustomDolphin customDolphin;
@@ -64,7 +64,7 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
         this.iceologerSpawner = new Iceologer(plugin);
         this.corruptedZombieSpawner = new CorruptedZombies(plugin);
         this.corruptedSpider = new CorruptedSpider(plugin);
-        this.hellishBeeHandler = new HellishBeeHandler(plugin);
+        /*this.hellishBeeHandler = new HellishBeeHandler(plugin);*/
         this.guardianBlaze = new GuardianBlaze(plugin);
         this.guardianCorruptedSkeleton = new GuardianCorruptedSkeleton(plugin);
         this.dayHandler = dayHandler;
@@ -72,7 +72,6 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
         this.customDolphin = new CustomDolphin(plugin);
         this.corruptedInfernalSpider = new CorruptedInfernalSpider(plugin);
         this.corruptedCreeper = new CorruptedCreeper(plugin);
-        this.corruptedMagmaCubeDescartado = new CorruptedMagmaCube_Descartado(plugin);
         this.piglinGloboSpawner = new PiglinGlobo(plugin);
         this.buffBreeze = new BuffBreeze(plugin);
         this.invertedGhast = new InvertedGhast(plugin);
@@ -90,13 +89,13 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
         this.espectralCreeper = new EspectralCreeper(plugin);
         this.espectralSilverfish = new EspectralSilverfish(plugin);
         this.guardianShulkerDescartado = new GuardianShulker_Descartado(plugin);
-        this.darkPhantomDescartado = new DarkPhantom_Descartado(plugin);
         this.darkCreeper = new DarkCreeper(plugin);
         this.darkVex = new DarkVex(plugin);
         this.darkSkeleton = new DarkSkeleton(plugin);
         this.infestedBeeHandler = new InfestedBeeHandler(plugin);
         this.infernalBeast = new InfernalBeast(plugin);
         this.corruptedDrowned = new CorruptedDrowned(plugin);
+        this.corruptedBee = new CorruptedBee(plugin);
         plugin.getCommand("spawnvct").setExecutor(this);
         plugin.getCommand("spawnvct").setTabCompleter(this);
     }
@@ -162,7 +161,7 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
                 break;
 
             case "hellishbee":
-                hellishBeeHandler.spawnHellishBee(location);
+                HellishBeeHandler.spawn(plugin, location);
                 sender.sendMessage("¡Hellish Bee ha sido spawneada en " + locationToString(location) + "!");
                 break;
 
@@ -206,11 +205,6 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
             case "corruptedcreeper":
                 corruptedCreeper.spawnCorruptedCreeper(location);
                 sender.sendMessage("¡Corrupted Creeper ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "corruptedmagma":
-                corruptedMagmaCubeDescartado.spawnCorruptedMagmaCube(location);
-                sender.sendMessage("¡Corrupted Magma Cube ha sido spawneado en " + locationToString(location) + "!");
                 break;
 
             case "piglinglobo":
@@ -298,11 +292,6 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
                 sender.sendMessage("¡Guardian Shulker ha sido spawneado en " + locationToString(location) + "!");
                 break;
 
-            case "darkphantom":
-                darkPhantomDescartado.spawnDarkPhantom(location);
-                sender.sendMessage("¡Dark Phantom ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
             case "darkcreeper":
                 darkCreeper.spawnDarkCreeper(location);
                 sender.sendMessage("¡Dark Creeper ha sido spawneado en " + locationToString(location) + "!");
@@ -331,6 +320,11 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
             case "corrupteddrowned":
                 corruptedDrowned.spawnCorruptedDrowned(location);
                 sender.sendMessage("¡Corrupted Drowned ha sido spawneado en " + locationToString(location) + "!");
+                break;
+
+            case "corruptedbee":
+                corruptedBee.spawnCorruptedBee(location);
+                sender.sendMessage("¡Corrupted Bee ha sido spawneada en " + locationToString(location) + "!");
                 break;
 
             default:
@@ -362,7 +356,6 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
             suggestions.add("customdolphin");
             suggestions.add("corruptedinfernalspider");
             suggestions.add("corruptedcreeper");
-            suggestions.add("corruptedmagma");
             suggestions.add("piglinglobo");
             suggestions.add("buffbreeze");
             suggestions.add("invertedghast");
@@ -380,13 +373,13 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
             suggestions.add("endercreeper");
             suggestions.add("endersilverfish");
             suggestions.add("guardianshulker");
-            suggestions.add("darkphantom");
             suggestions.add("darkcreeper");
             suggestions.add("darkvex");
             suggestions.add("darkskeleton");
             suggestions.add("infestedbee");
             suggestions.add("infernalbeast");
             suggestions.add("corrupteddrowned");
+            suggestions.add("corruptedbee");
         } else if (args.length == 2 && args[0].equalsIgnoreCase("corruptedskeleton")) {
             for (CorruptedSkeleton.Variant variant : CorruptedSkeleton.Variant.values()) {
                 suggestions.add(variant.name().toLowerCase());

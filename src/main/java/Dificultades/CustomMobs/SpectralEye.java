@@ -37,7 +37,7 @@ public class SpectralEye implements Listener {
     private Team greenGlowTeam;
     private final SuccessNotification successNotification;
     private final ErrorNotification errorNotification;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
 
     private final Map<UUID, Integer> sneakAttempts = new HashMap<>();
     private final Map<UUID, Boolean> activeBombs = new HashMap<>();

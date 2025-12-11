@@ -17,9 +17,22 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
+
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.UUID;
 
 public class DarkSkeleton extends DarkMobSB implements Listener {
-    private boolean eventsRegistered = false;
+
+    // --- OPTIMIZACIÓN INTERNA ---
+    // Una lista estática para trackear todos los DarkSkeletons vivos
+    private static final Set<UUID> activeMobs = new HashSet<>();
+    // Una sola tarea estática para manejar las partículas de TODOS
+    private static BukkitTask particleTask;
+
+    private static boolean eventsRegistered = false;
 
     public DarkSkeleton(JavaPlugin plugin) {
         super(plugin, "dark_skeleton");
@@ -31,11 +44,13 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
         if (!eventsRegistered) {
             Bukkit.getPluginManager().registerEvents(this, plugin);
             eventsRegistered = true;
+            startGlobalParticleTask(); // Iniciamos la tarea global al activar el evento
         }
     }
 
     public void revert() {
         if (eventsRegistered) {
+            // Limpiar mobs del mundo
             for (World world : Bukkit.getWorlds()) {
                 for (Entity entity : world.getEntities()) {
                     if (isCustomMob(entity)) {
@@ -43,6 +58,12 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
                     }
                 }
             }
+            // Detener la tarea global y limpiar la lista
+            if (particleTask != null) {
+                particleTask.cancel();
+                particleTask = null;
+            }
+            activeMobs.clear();
             eventsRegistered = false;
         }
     }
@@ -50,6 +71,12 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
     public Skeleton spawnDarkSkeleton(Location location) {
         Skeleton skeleton = (Skeleton) location.getWorld().spawnEntity(location, EntityType.SKELETON);
         applyDarkSkeletonAttributes(skeleton);
+
+        // Registrar este mob en la lista optimizada
+        activeMobs.add(skeleton.getUniqueId());
+        // Asegurar que la tarea esté corriendo (por si acaso)
+        startGlobalParticleTask();
+
         return skeleton;
     }
 
@@ -80,31 +107,45 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
 
         skeleton.getPersistentDataContainer().set(mobKey, PersistentDataType.BYTE, (byte) 1);
 
-        startParticleTask(skeleton);
+        // NOTA: Ya no llamamos a startParticleTask(skeleton) aquí.
     }
 
-    private void startParticleTask(Skeleton skeleton) {
-        new BukkitRunnable() {
+    // --- TAREA GLOBAL OPTIMIZADA (1 sola task para 100 esqueletos) ---
+    private void startGlobalParticleTask() {
+        if (particleTask != null && !particleTask.isCancelled()) return;
+
+        particleTask = new BukkitRunnable() {
             @Override
             public void run() {
-                if (skeleton.isDead() || !skeleton.isValid()) {
-                    this.cancel();
-                    return;
+                if (activeMobs.isEmpty()) return;
+
+                Iterator<UUID> it = activeMobs.iterator();
+                while (it.hasNext()) {
+                    UUID uuid = it.next();
+                    Entity entity = Bukkit.getEntity(uuid);
+
+                    // Limpieza automática si el mob no existe o murió
+                    if (entity == null || !entity.isValid() || entity.isDead()) {
+                        if (entity != null && !entity.isValid()) {
+                            it.remove();
+                        }
+                        // Si es null (chunk descargado), podemos decidir mantenerlo o no.
+                        // Para máxima limpieza, aquí asumimos que si no está cargado no mostramos partículas.
+                        continue;
+                    }
+
+                    // Efectos visuales
+                    entity.getWorld().spawnParticle(
+                            Particle.LARGE_SMOKE,
+                            entity.getLocation().add(0, 1, 0),
+                            5, 0.3, 0.5, 0.3, 0.05
+                    );
+                    entity.getWorld().spawnParticle(
+                            Particle.SOUL_FIRE_FLAME,
+                            entity.getLocation(),
+                            3, 0.3, 0.3, 0.3, 0.05
+                    );
                 }
-
-                skeleton.getWorld().spawnParticle(
-                        Particle.LARGE_SMOKE,
-                        skeleton.getLocation().add(0, 1, 0),
-                        5,
-                        0.3, 0.5, 0.3, 0.05
-                );
-
-                skeleton.getWorld().spawnParticle(
-                        Particle.SOUL_FIRE_FLAME,
-                        skeleton.getLocation(),
-                        3,
-                        0.3, 0.3, 0.3, 0.05
-                );
             }
         }.runTaskTimer(plugin, 0L, 5L);
     }
@@ -122,12 +163,10 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
                             this.cancel();
                             return;
                         }
-
                         arrow.getWorld().spawnParticle(
                                 Particle.SQUID_INK,
                                 arrow.getLocation(),
-                                1,
-                                0, 0, 0, 0
+                                1, 0, 0, 0, 0
                         );
                     }
                 }.runTaskTimer(plugin, 0L, 1L);
@@ -144,22 +183,17 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
             if (event.getEntity() instanceof LivingEntity target) {
                 target.addPotionEffect(new PotionEffect(
                         PotionEffectType.DARKNESS,
-                        600,
-                        0,
-                        false, true
+                        600, 0, false, true
                 ));
-
                 target.getWorld().spawnParticle(
                         Particle.SOUL_FIRE_FLAME,
                         target.getLocation(),
-                        15,
-                        0.5, 0.5, 0.5, 0.1
+                        15, 0.5, 0.5, 0.5, 0.1
                 );
                 target.getWorld().playSound(
                         target.getLocation(),
                         Sound.ENTITY_WARDEN_SONIC_CHARGE,
-                        1.0f,
-                        1.5f
+                        1.0f, 1.5f
                 );
             }
         }
@@ -175,9 +209,11 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
             skeleton.getWorld().spawnParticle(
                     Particle.SOUL,
                     skeleton.getLocation(),
-                    50,
-                    0.5, 0.5, 0.5, 0.3
+                    50, 0.5, 0.5, 0.5, 0.3
             );
+
+            // Remover de la lista optimizada
+            activeMobs.remove(skeleton.getUniqueId());
         }
     }
 
@@ -190,8 +226,7 @@ public class DarkSkeleton extends DarkMobSB implements Listener {
             skeleton.getWorld().spawnParticle(
                     Particle.DAMAGE_INDICATOR,
                     skeleton.getLocation(),
-                    20,
-                    0.5, 0.5, 0.5, 0.1
+                    20, 0.5, 0.5, 0.5, 0.1
             );
         }
     }

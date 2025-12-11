@@ -24,6 +24,8 @@ import Events.Skybattle.EventoHandler;
 import Events.UltraWitherBattle.UltraWitherEvent;
 import Habilidades.*;
 import Handlers.*;
+import InfestedCaves.*;
+import RunicSmithing.RunicSmithingGUI;
 import Security.PingMonitor.PingMonitor;
 import SlotMachine.SlotMachineManager;
 import Structures.StructureCommand;
@@ -40,6 +42,8 @@ import mobcap.commands.MobCapTabCompleter;
 import mobcap.config.MobCapConfig;
 import mobcap.spawn.CustomSpawnManager;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
+import org.bukkit.WorldCreator;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -92,6 +96,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private ShopCommand shopCommand;
 
     private FlashlightManager flashlightManager;
+    private AltarFunctions altarFunctions;
 
     // ------------------------------------------------------------------------
     //  Corrupción Ansiosa / Tótems / Items
@@ -159,7 +164,6 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     // ------------------------------------------------------------------------
     //  Mobs / Bosses / Bloques / Armaduras / Dimensiones
     // ------------------------------------------------------------------------
-
     private RemoveParticlesCreeper removeParticlesCreeper;
     private CorruptedZombies corruptedZombies;
     private CorruptedInfernalSpider corruptedinfernalSpider;
@@ -167,7 +171,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private CorruptedCreeper corruptedCreeper;
     private CustomBoat customBoat;
 
-    private HellishBeeHandler hellishBeeHandler;
+    /*private HellishBeeHandler hellishBeeHandler;*/
     private InfestedBeeHandler infestedBeeHandler;
     /*private QueenBeeHandler queenBeeHandler;*/
     private UltraWitherBossHandler ultraWitherBossHandler;
@@ -182,11 +186,17 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
     private CorruptedEnd corruptedEnd;
 
+    public static final String WORLD_NAME = "infested_caves";
+    private InfestedGenerator generator;
+    private PortalManager portalManager;
+    private InfestedListeners listeners;
+    private StructureManager structureManager;
+
     // ------------------------------------------------------------------------
     //  Cambios por día
     // ------------------------------------------------------------------------
 
-    private DayOneChanges dayOneChanges;
+/*    private DayOneChanges dayOneChanges;
     private DayTwoChanges dayTwoChanges;
     private DayFourChanges dayFourChanges;
     private DayFiveChange dayFiveChanges;
@@ -199,7 +209,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private DayThirteenChanges dayThirteenChanges;
     private DayFourteenChanges dayFourteenChanges;
     private DayFifteenChanges dayFifteenChanges;
-    private DaySixteenChanges daySixteenChanges;
+    private DaySixteenChanges daySixteenChanges;*/
 
     // ------------------------------------------------------------------------
     //  Ciclo de vida del plugin
@@ -219,12 +229,13 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         initItemsSystem();
         initMissionSystem();
         initChatTeamsAndFirstJoinSystem();
+        initAltarSystem();
         initGeneralCommandsAndCustomSpawners();
         initAsyncAndUtilitySystems();
         initEnchantSystem();
         initAnimationAndTitleSystem();
         initStructureSystem();
-        initDayChangesSystem();
+        /*initDayChangesSystem();*/
         initGameplaySystem();
         initLootSystem();
         initEventsSystem();
@@ -239,6 +250,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         initHabilidadesSystem();
         initPublicCommandSystem();
         initCorruptedEndSystem();
+        initInfestedCavesDimension();
 
         getLogger().info("ViciontHardcore3 habilitado completamente.");
     }
@@ -392,7 +404,6 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         getLogger().info("Corrupción Ansiosa inicializada correctamente.");
     }
 
-
     private void initItemsSystem() {
         // Tótems protección de ítems Armor y Herramientas
         doubleLifeTotemHandler = new DoubleLifeTotem(this);
@@ -473,6 +484,13 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         Objects.requireNonNull(this.getCommand("givevct")).setTabCompleter(itemsCommands);
 
         Bukkit.getPluginManager().registerEvents(customSpawnerHandler, this);
+
+        //revive
+        ReviveCommand reviveCommand = new ReviveCommand(this);
+        ReviveCoordsCommand reviveCoordsCommand = new ReviveCoordsCommand(this);
+        this.getCommand("revive").setExecutor(reviveCommand);
+        this.getCommand("revive").setTabCompleter(reviveCommand);
+        this.getCommand("revivecoords").setExecutor(reviveCoordsCommand);
     }
 
     private void initAsyncAndUtilitySystems() {
@@ -491,12 +509,22 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         // Comando giveessence
         GiveEssenceCommand giveEssenceCommand = new GiveEssenceCommand();
         Objects.requireNonNull(this.getCommand("giveessence")).setExecutor(giveEssenceCommand);
+
+        LootManager lootManager = new LootManager(this);
+
+        getCommand("LootTableVC").setExecutor(new LootCommand(lootManager));
+    }
+
+    private void initAltarSystem() {
+        this.altarFunctions = new AltarFunctions(this);
+        getLogger().info("Sistema de Altares y Cooldowns persistentes cargado.");
     }
 
     private void initEnchantSystem() {
         new EnhancedEnchantmentTable(this);
         Bukkit.getPluginManager().registerEvents(new EnhancedEnchantmentGUI(this), this);
         Bukkit.getPluginManager().registerEvents(new EnchantDelete(this), this);
+        new RunicSmithingGUI(this);
     }
 
     private void initAnimationAndTitleSystem() {
@@ -541,7 +569,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         new StructureCommand(this);
     }
 
-    private void initDayChangesSystem() {
+    /*private void initDayChangesSystem() {
         dayOneChanges = new DayOneChanges(this, dayHandler);
         dayTwoChanges = new DayTwoChanges(this);
         dayFourChanges = new DayFourChanges(this, dayHandler);
@@ -556,7 +584,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         dayFourteenChanges = new DayFourteenChanges(this, dayHandler);
         dayFifteenChanges = new DayFifteenChanges(this, dayHandler);
         daySixteenChanges = new DaySixteenChanges(this, dayHandler);
-    }
+    }*/
 
     private void initGameplaySystem() {
         //Nightmare
@@ -693,7 +721,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         Bukkit.getPluginManager().registerEvents(removeParticlesCreeper, this);
         //Booses
         infestedBeeHandler = new InfestedBeeHandler(this);
-        hellishBeeHandler = new HellishBeeHandler(this);
+        /*hellishBeeHandler = new HellishBeeHandler(this);*/
         /*queenBeeHandler = new QueenBeeHandler(this);*/
         ultraWitherBossHandler = new UltraWitherBossHandler(this);
 
@@ -761,8 +789,32 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         }.runTaskTimer(this, 40L, 20L);
     }
 
+    private void initInfestedCavesDimension() {
+        this.generator = new InfestedGenerator(this);
+        this.structureManager = new StructureManager(this);
+        this.portalManager = new PortalManager(this);
+
+        this.listeners = new InfestedListeners(this, portalManager, structureManager);
+
+        getCommand("infestedPortal").setExecutor(new InfestedCommands(this, portalManager));
+        getCommand("infestedPortalOverworld").setExecutor(new InfestedCommands(this, portalManager));
+        getCommand("InfestedForest").setExecutor(new InfestedCommands(this, portalManager));
+
+        getServer().getPluginManager().registerEvents(listeners, this);
+        getServer().getPluginManager().registerEvents(portalManager, this);
+
+        // 5. Crear la dimensión
+        createInfestedWorld();
+
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            structureManager.loadSchematics();
+        }, 20L);
+
+        getLogger().info("Infested Caves ha sido habilitado correctamente.");
+    }
+
     // ------------------------------------------------------------------------
-    //  Limpieza de bosses
+    //  Metodos
     // ------------------------------------------------------------------------
 
     private void cleanupBossHandlers() {
@@ -776,7 +828,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
             infestedBeeHandler = null;
         }
 
-        if (hellishBeeHandler != null) {
+/*        if (hellishBeeHandler != null) {
             try {
                 hellishBeeHandler.shutdown();
                 getLogger().info("HellishBeeHandler limpiado correctamente");
@@ -784,7 +836,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
                 getLogger().warning("Error al limpiar HellishBeeHandler: " + e.getMessage());
             }
             hellishBeeHandler = null;
-        }
+        }*/
 
 /*        if (queenBeeHandler != null) {
             try {
@@ -806,7 +858,6 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
             ultraWitherBossHandler = null;
         }
     }
-
     // ------------------------------------------------------------------------
     //  Eventos básicos (join / quit / world load)
     // ------------------------------------------------------------------------
@@ -833,6 +884,21 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
             Bukkit.getScheduler().runTaskLater(this, () -> {
                 mobCapManager.handleNewWorld(event.getWorld());
             }, 20L);
+        }
+    }
+
+    public void createInfestedWorld() {
+        if (Bukkit.getWorld(WORLD_NAME) == null) {
+            WorldCreator creator = new WorldCreator(WORLD_NAME);
+            creator.generator(generator);
+            World world = creator.createWorld();
+
+            if (world != null) {
+                // Evitar ciclo día/noche si quieres que sea oscuro siempre
+                world.setGameRule(org.bukkit.GameRule.DO_DAYLIGHT_CYCLE, false);
+                world.setTime(18000); // Medianoche
+                getLogger().info("Dimensión " + WORLD_NAME + " cargada/creada.");
+            }
         }
     }
 
@@ -875,4 +941,8 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     public CustomEffectManager getEffectManager() {
         return effectManager;
     }
+
+    public PortalManager getPortalManager() { return portalManager; }
+
+    public StructureManager getStructureManager() { return structureManager; }
 }

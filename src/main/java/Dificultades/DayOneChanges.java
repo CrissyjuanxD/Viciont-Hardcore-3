@@ -70,11 +70,7 @@
         @EventHandler
         public void onCreatureSpawn(CreatureSpawnEvent event) {
             if (!isApplied) return;
-            int currentDay = dayHandler.getCurrentDay();
-
-
-
-            if (currentDay >= 4) {
+            if (dayHandler.getCurrentDay() >= 4) {
                 return;
             }
             handleCorruptedZombieConversion(event);

@@ -266,6 +266,31 @@ commands:
   testtoast:
     description: Prueba un toast personalizado
     usage: /<command>
+  infestedPortal:
+    description: Pone o quita un portal hacia la dimensión Infested Caves.
+    usage: /infestedPortal <summon/remove>
+    permission: viciont_hardcore3.command.infestedPortal
+    permission-message: No tienes permiso para usar este comando.
+  infestedPortalOverworld:
+    description: Pone o quita un portal de regreso al Overworld.
+    usage: /infestedPortalOverworld <summon/remove>
+    permission: viciont_hardcore3.command.infestedPortalOverworld
+    permission-message: No tienes permiso para usar este comando.
+  InfestedForest:
+    description: Comando administrativo para enviar/sacar jugadores.
+    usage: /InfestedForest <join/leave> <jugador/@a>
+    permission: viciont_hardcore3.command.InfestedForest
+    permission-message: No tienes permiso para usar este comando.
+  LootTableVC:
+    description: Da una loot table personalizada a un jugador.
+    usage: /LootTableVC <nombre_tabla>
+    permission: viciont_hardcore3.command.LootTableVC
+    permission-message: No tienes permiso para usar este comando.
+  altarvct:
+    description: Comando para administrar los Altares.
+    usage: /altarvct <info|create|addcooldown|delcooldown>
+    permission: viciont_hardcore3.command.altarcreate
+    permission-message: No tienes permiso para usar este comando.
 depend:
   - NBTAPI
 softdepend:

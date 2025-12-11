@@ -20,6 +20,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
 
@@ -28,10 +29,31 @@ import java.util.*;
 public class ToxicSpider implements Listener {
     private final JavaPlugin plugin;
     private final NamespacedKey ultraCorruptedSpiderKey;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
     private final Random random = new Random();
+    // La remoción de webs es lenta y no crítica, map está bien
     private final Map<UUID, BukkitRunnable> webTasks = new HashMap<>();
     private final Map<UUID, BossBar> activeBossBars = new HashMap<>();
+
+    // --- OPTIMIZACIÓN DE PROYECTILES ---
+    private static final List<ProjectileData> activeProjectiles = new ArrayList<>();
+    private static BukkitTask projectileTask;
+
+    private static class ProjectileData {
+        final BlockDisplay display;
+        final Vector direction;
+        final ProjectileType type;
+        int ticksAlive = 0;
+
+        ProjectileData(BlockDisplay display, Vector direction, ProjectileType type) {
+            this.display = display;
+            this.direction = direction;
+            this.type = type;
+        }
+    }
+
+    private enum ProjectileType { WEB, POISON }
+    // -----------------------------------
 
     private final List<SpiderEffect> possibleEffects = Arrays.asList(
             new SpiderEffect("Velocidad", PotionEffectType.SPEED, 3),
@@ -52,6 +74,7 @@ public class ToxicSpider implements Listener {
         if (!eventsRegistered) {
             Bukkit.getPluginManager().registerEvents(this, plugin);
             eventsRegistered = true;
+            startProjectileTask();
         }
     }
 
@@ -65,6 +88,13 @@ public class ToxicSpider implements Listener {
                 }
             }
 
+            // Limpiar proyectiles custom
+            for (ProjectileData pd : activeProjectiles) {
+                pd.display.remove();
+            }
+            activeProjectiles.clear();
+            if (projectileTask != null) projectileTask.cancel();
+
             for (BukkitRunnable task : webTasks.values()) {
                 task.cancel();
             }
@@ -73,6 +103,63 @@ public class ToxicSpider implements Listener {
             eventsRegistered = false;
         }
     }
+
+    private void startProjectileTask() {
+        if (projectileTask != null && !projectileTask.isCancelled()) return;
+
+        // Tarea rápida (1 tick) para mover proyectiles suavemente
+        projectileTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (activeProjectiles.isEmpty()) return;
+
+                Iterator<ProjectileData> it = activeProjectiles.iterator();
+                while (it.hasNext()) {
+                    ProjectileData pd = it.next();
+
+                    if (pd.display.isDead() || !pd.display.isValid() || pd.ticksAlive >= 100) {
+                        pd.display.remove();
+                        it.remove();
+                        continue;
+                    }
+
+                    // Movimiento
+                    pd.display.teleport(pd.display.getLocation().add(pd.direction));
+                    pd.ticksAlive++;
+
+                    // Partículas
+                    if (pd.type == ProjectileType.WEB) {
+                        pd.display.getWorld().spawnParticle(Particle.POOF, pd.display.getLocation(), 3, 0.1, 0.1, 0.1, 0.02);
+                    } else {
+                        pd.display.getWorld().spawnParticle(Particle.WITCH, pd.display.getLocation(), 2, 0.1, 0.1, 0.1, 0.01);
+                    }
+
+                    // Colisión simple
+                    double radius = (pd.type == ProjectileType.WEB) ? 1.5 : 1.0;
+                    boolean hit = false;
+
+                    for (Entity nearby : pd.display.getNearbyEntities(radius, radius, radius)) {
+                        if (nearby instanceof Player hitPlayer) {
+                            if (pd.type == ProjectileType.WEB) {
+                                handleWebHit(hitPlayer, pd.display.getLocation());
+                            } else {
+                                handlePoisonHit(hitPlayer);
+                            }
+                            hit = true;
+                            break; // Solo golpea al primero
+                        }
+                    }
+
+                    if (hit) {
+                        pd.display.remove();
+                        it.remove();
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 1L);
+    }
+
+    // ... Resto de métodos de spawn (spawnToxicSpider, etc) sin cambios ...
 
     public CaveSpider spawnToxicSpider(Location location) {
         CaveSpider spider = (CaveSpider) location.getWorld().spawnEntity(location, EntityType.CAVE_SPIDER);
@@ -117,19 +204,15 @@ public class ToxicSpider implements Listener {
         spider.getPersistentDataContainer().set(ultraCorruptedSpiderKey, PersistentDataType.BYTE, (byte) 1);
     }
 
+    // ... Event handlers (onSpiderHit, etc) sin cambios ...
+
     @EventHandler
     public void onSpiderHit(EntityDamageByEntityEvent event) {
         if (event.getDamager() instanceof CaveSpider spider &&
                 isToxicSpider(spider) &&
                 event.getEntity() instanceof LivingEntity target) {
 
-            target.addPotionEffect(new PotionEffect(
-                    PotionEffectType.POISON,
-                    600,
-                    1,
-                    true,
-                    true
-            ));
+            target.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 600, 1, true, true));
 
             if (target instanceof Player player) {
                 if (!player.isBlocking()) {
@@ -164,7 +247,6 @@ public class ToxicSpider implements Listener {
                 }
             }
         }
-
         if (targets.isEmpty()) return;
 
         int projectiles = 2 + random.nextInt(3);
@@ -193,40 +275,8 @@ public class ToxicSpider implements Listener {
                     .normalize()
                     .multiply(1);
 
-            new BukkitRunnable() {
-                int ticks = 0;
-                Location currentLoc = webProjectile.getLocation().clone();
-
-                @Override
-                public void run() {
-                    if (webProjectile.isDead() || ticks >= 100) {
-                        webProjectile.remove();
-                        this.cancel();
-                        return;
-                    }
-
-                    currentLoc.add(direction);
-                    webProjectile.teleport(currentLoc);
-
-                    webProjectile.getWorld().spawnParticle(
-                            Particle.POOF,
-                            webProjectile.getLocation(),
-                            3,
-                            0.1, 0.1, 0.1, 0.02
-                    );
-
-                    for (Entity nearby : webProjectile.getNearbyEntities(1.5, 1.5, 1.5)) {
-                        if (nearby instanceof Player hitPlayer) {
-                            handleWebHit(hitPlayer, webProjectile.getLocation());
-                            webProjectile.remove();
-                            this.cancel();
-                            return;
-                        }
-                    }
-
-                    ticks++;
-                }
-            }.runTaskTimer(plugin, 0L, 1L);
+            // Agregar al manager
+            activeProjectiles.add(new ProjectileData(webProjectile, direction, ProjectileType.WEB));
         }
     }
 
@@ -253,65 +303,16 @@ public class ToxicSpider implements Listener {
 
         spider.getWorld().playSound(spider.getLocation(), Sound.ENTITY_WITCH_THROW, 1.0f, 0.7f);
 
-        new BukkitRunnable() {
-            int ticks = 0;
-            Location currentLoc = poisonProjectile.getLocation().clone();
-
-            @Override
-            public void run() {
-                if (poisonProjectile.isDead() || ticks >= 100) {
-                    poisonProjectile.remove();
-                    this.cancel();
-                    return;
-                }
-
-                currentLoc.add(direction);
-                poisonProjectile.teleport(currentLoc);
-
-                poisonProjectile.getWorld().spawnParticle(
-                        Particle.WITCH,
-                        poisonProjectile.getLocation(),
-                        2,
-                        0.1, 0.1, 0.1, 0.01
-                );
-
-                for (Entity nearby : poisonProjectile.getNearbyEntities(1.0, 1.0, 1.0)) {
-                    if (nearby instanceof Player hitPlayer) {
-                        handlePoisonHit(hitPlayer);
-                        poisonProjectile.remove();
-                        this.cancel();
-                        return;
-                    }
-                }
-
-                ticks++;
-            }
-        }.runTaskTimer(plugin, 0L, 1L);
+        // Agregar al manager
+        activeProjectiles.add(new ProjectileData(poisonProjectile, direction, ProjectileType.POISON));
     }
 
-
     private void handleWebHit(Player player, Location impactLocation) {
-        if (player.getGameMode() != GameMode.SURVIVAL && player.getGameMode() != GameMode.ADVENTURE) {
-            return;
-        }
+        if (player.getGameMode() != GameMode.SURVIVAL && player.getGameMode() != GameMode.ADVENTURE) return;
 
         if (player.isBlocking()) {
-            player.addPotionEffect(new PotionEffect(
-                    PotionEffectType.SLOWNESS,
-                    100,
-                    2,
-                    true,
-                    true
-            ));
-
-            player.addPotionEffect(new PotionEffect(
-                    PotionEffectType.WEAKNESS,
-                    100,
-                    1,
-                    true,
-                    true
-            ));
-
+            player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 100, 2, true, true));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 100, 1, true, true));
             player.getWorld().playSound(player.getLocation(), Sound.ITEM_SHIELD_BLOCK, 1.0f, 0.8f);
             return;
         }
@@ -322,22 +323,18 @@ public class ToxicSpider implements Listener {
 
     private void createWebCube(Location center) {
         Location centeredLocation = center.getBlock().getLocation().add(0.5, 0, 0.5);
-
         for (int x = -1; x <= 1; x++) {
             for (int y = -1; y <= 1; y++) {
                 for (int z = -1; z <= 1; z++) {
                     Location blockLoc = centeredLocation.clone().add(x, y, z);
-
                     if (blockLoc.getBlock().getType().isAir() ||
                             blockLoc.getBlock().getType() == Material.WATER ||
                             blockLoc.getBlock().getType() == Material.LAVA) {
-
                         blockLoc.getBlock().setType(Material.COBWEB);
                     }
                 }
             }
         }
-
         if (center.getBlock().getType().isAir()) {
             center.getBlock().setType(Material.COBWEB);
         }
@@ -345,7 +342,6 @@ public class ToxicSpider implements Listener {
 
     private void scheduleWebRemoval(Location center) {
         UUID taskId = UUID.randomUUID();
-
         BukkitRunnable task = new BukkitRunnable() {
             @Override
             public void run() {
@@ -359,68 +355,47 @@ public class ToxicSpider implements Listener {
                         }
                     }
                 }
-
                 webTasks.remove(taskId);
             }
         };
-
         webTasks.put(taskId, task);
         task.runTaskLater(plugin, 1200L);
     }
 
     private void handlePoisonHit(Player player) {
-        if (player.getGameMode() != GameMode.SURVIVAL && player.getGameMode() != GameMode.ADVENTURE) {
-            return;
-        }
+        if (player.getGameMode() != GameMode.SURVIVAL && player.getGameMode() != GameMode.ADVENTURE) return;
 
-        // Aplicar veneno nivel 6 por 1 minuto
-        player.addPotionEffect(new PotionEffect(
-                PotionEffectType.POISON,
-                1200, // 60 segundos
-                5,     // Nivel 6 (0-based)
-                true,
-                true
-        ));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 1200, 5, true, true));
 
-        // Si ya tiene una bossbar activa, la removemos primero
         if (activeBossBars.containsKey(player.getUniqueId())) {
             BossBar existingBar = activeBossBars.get(player.getUniqueId());
             existingBar.removeAll();
             activeBossBars.remove(player.getUniqueId());
         }
 
-        // Crear BossBar
-        BossBar bossBar = Bukkit.createBossBar(
-                "\uEAA7",
-                BarColor.WHITE,
-                BarStyle.SOLID
-        );
+        BossBar bossBar = Bukkit.createBossBar("\uEAA7", BarColor.WHITE, BarStyle.SOLID);
         bossBar.addPlayer(player);
         bossBar.setVisible(true);
         bossBar.setProgress(1.0);
 
-        // Sonidos
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1.0f, 1.5f);
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_PLAYER_HURT_FREEZE, 0.8f, 0.5f);
 
-        // Animación de BossBar
+        // Esta tarea es temporal para el jugador, aceptable
         new BukkitRunnable() {
             double timeLeft = 15.0;
             final UUID playerUUID = player.getUniqueId();
 
             @Override
             public void run() {
-                // Si el jugador se desconectó, cancelamos
                 if (!player.isOnline()) {
                     bossBar.removeAll();
                     activeBossBars.remove(playerUUID);
                     this.cancel();
                     return;
                 }
-
-                timeLeft -= 1.0; // Reducimos 1 segundo cada iteración
-                double progress = Math.max(0.0, timeLeft / 15.0); // Aseguramos que no sea negativo
-
+                timeLeft -= 1.0;
+                double progress = Math.max(0.0, timeLeft / 15.0);
                 bossBar.setProgress(progress);
 
                 if (timeLeft <= 0) {
@@ -429,16 +404,16 @@ public class ToxicSpider implements Listener {
                     this.cancel();
                 }
             }
-        }.runTaskTimer(plugin, 0L, 20L); // Ejecutar cada segundo (20 ticks)
+        }.runTaskTimer(plugin, 0L, 20L);
 
         activeBossBars.put(player.getUniqueId(), bossBar);
     }
 
+    // ... Resto de eventos de daño/muerte sin cambios ...
     @EventHandler
     public void onDeath(EntityDeathEvent event) {
         if (event.getEntity() instanceof CaveSpider spider && isToxicSpider(spider)) {
             Location loc = spider.getLocation();
-
             double baseDropChance = 0.40;
             double lootingBonus = 0;
             double doubleDropChance = 0;
@@ -447,34 +422,24 @@ public class ToxicSpider implements Listener {
                 ItemStack weapon = spider.getKiller().getInventory().getItemInMainHand();
                 if (weapon != null && weapon.getEnchantments().containsKey(Enchantment.LOOTING)) {
                     int lootingLevel = weapon.getEnchantmentLevel(Enchantment.LOOTING);
-
                     switch (lootingLevel) {
-                        case 1:
-                            lootingBonus = 0.10;
-                            break;
-                        case 2:
-                            lootingBonus = 0.20;
-                            break;
-                        case 3:
+                        case 1 -> lootingBonus = 0.10;
+                        case 2 -> lootingBonus = 0.20;
+                        case 3 -> {
                             lootingBonus = 0.25;
                             doubleDropChance = 0.30;
-                            break;
+                        }
                     }
                 }
             }
 
-            double totalDropChance = baseDropChance + lootingBonus;
-
-            if (Math.random() <= totalDropChance) {
+            if (Math.random() <= (baseDropChance + lootingBonus)) {
                 ItemStack eye = ItemsTotems.createToxicSpiderEye();
-
                 if (doubleDropChance > 0 && Math.random() <= doubleDropChance) {
                     eye.setAmount(2);
                 }
-
                 spider.getWorld().dropItemNaturally(loc, eye);
             }
-
             spider.getWorld().playSound(spider.getLocation(), Sound.ENTITY_SPIDER_DEATH, 2.0f, 1.8f);
         }
     }

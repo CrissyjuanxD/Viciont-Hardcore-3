@@ -20,7 +20,7 @@ import java.util.*;
 public class InvertedGhast implements Listener {
     private final JavaPlugin plugin;
     private final NamespacedKey invertedGhastKey;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
     private final Map<UUID, BossBar> playerBossBars = new HashMap<>();
     private final Map<UUID, BukkitRunnable> hallucinationTasks = new HashMap<>();
 

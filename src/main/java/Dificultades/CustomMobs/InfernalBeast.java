@@ -24,7 +24,7 @@ public class InfernalBeast implements Listener {
     private final JavaPlugin plugin;
     private final NamespacedKey infernalBeastKey;
     private final NamespacedKey hellspawnHoglinKey;
-    private boolean eventsRegistered = false;
+    private static boolean eventsRegistered = false;
     private final LegginsNetheriteEssence legginsNetheriteEssence;
     private final Random random = new Random();
 
