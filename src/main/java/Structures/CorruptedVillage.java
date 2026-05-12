@@ -1,16 +1,21 @@
 package Structures;
 
+import TitleListener.RuletaAnimation; // Asegúrate de importar tu clase de animación
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.World.Environment;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Arrays;
 
 public class CorruptedVillage extends BaseStructure {
-    public CorruptedVillage(JavaPlugin plugin) {
+    private final RuletaAnimation ruletaAnimation; // Inyectamos la animación
+
+    public CorruptedVillage(JavaPlugin plugin, RuletaAnimation ruletaAnimation) {
         super(plugin, Arrays.asList("CorruptedVillageFV1.schem", "CorruptedVillageFV2.schem", "CorruptedVillageFV3.schem", "CorruptedVillageFV4.schem"));
+        this.ruletaAnimation = ruletaAnimation;
     }
 
     @Override
@@ -34,11 +39,15 @@ public class CorruptedVillage extends BaseStructure {
                     if (!pasteStructure(potentialLocation, selectedSchematic)) {
                         sender.sendMessage(ChatColor.RED + "Error al pegar la estructura.");
                     } else {
-                        String coordinatesMessage = String.format(
-                                "ruletavct [\"\",{\"text\":\"\\n\"},{\"text\":\"\\u06de Estructura \\u27a4\",\"bold\":true,\"color\":\"#6E02A5\"},{\"text\":\"\\n\\n\"},{\"text\":\"Se ha generado una Corrupted Village flotante\\nen las coordenadas:\",\"color\":\"#A56CD7\"},{\"text\":\" %d %d %d\",\"color\":\"gold\"}]",
+                        String jsonMessage = String.format(
+                                "[\"\",{\"text\":\"\\n\"},{\"text\":\"\\u06de Estructura \\u25ba \",\"bold\":true,\"color\":\"#6E02A5\"},{\"text\":\"\\n\\n\"},{\"text\":\"Se ha generado una Corrupted Village flotante\\nen las coordenadas:\\n\",\"color\":\"#A175D6\"},{\"text\":\"%d %d %d\",\"color\":\"gold\"},{\"text\":\"\\n \"}]",
                                 potentialLocation.getBlockX(), potentialLocation.getBlockY(), potentialLocation.getBlockZ()
                         );
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), coordinatesMessage);
+
+                        // Llamada nativa directa a la animación
+                        for (Player player : Bukkit.getOnlinePlayers()) {
+                            ruletaAnimation.playAnimation(player, "morado", "off", "center", jsonMessage);
+                        }
                     }
                 });
             });
@@ -87,15 +96,14 @@ public class CorruptedVillage extends BaseStructure {
                 }
             }
         }
-
         return false;
     }
 
     private int generateRandomCoordinate() {
         int coordinate;
         do {
-            coordinate = random.nextInt(6001) - 3000; // -3000 a 3000
-        } while (coordinate >= -300 && coordinate <= 300); // Excluir -300 a 300
+            coordinate = random.nextInt(6001) - 3000;
+        } while (coordinate >= -300 && coordinate <= 300);
         return coordinate;
     }
 }

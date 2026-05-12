@@ -316,36 +316,35 @@ public class DeathStormHandler implements Listener {
         }
     }
 
-
     private void spawnRandomLightning(World world) {
         int currentDay = dayHandler.getCurrentDay();
 
         int minStrikes, maxStrikes;
         long intervalTicks;
+        // ... (Tu lógica de if/else de días se mantiene igual) ...
         if (currentDay >= 20) {
-            minStrikes = 6;
-            maxStrikes = 15;
-            intervalTicks = 100L;
+            minStrikes = 6; maxStrikes = 15; intervalTicks = 100L;
         } else if (currentDay >= 15) {
-            minStrikes = 4;
-            maxStrikes = 7;
-            intervalTicks = 400L;
+            minStrikes = 4; maxStrikes = 7; intervalTicks = 400L;
         } else {
-            minStrikes = 1;
-            maxStrikes = 1;
-            intervalTicks = 2500L;
+            minStrikes = 1; maxStrikes = 1; intervalTicks = 2500L;
         }
 
         int lightningCount = random.nextInt(maxStrikes - minStrikes + 1) + minStrikes;
 
-        // Optimización: usar array en lugar de Collection para mejor rendimiento
-        Player[] players = world.getPlayers().toArray(new Player[0]);
-        if (players.length == 0) return;
+        // Recopilación de datos en Hilo Principal (SEGURO)
+        List<Player> players = world.getPlayers();
+        if (players.isEmpty()) return;
 
-        // Pre-calcular chunks de jugadores de forma más eficiente
+        // OPTIMIZACIÓN: Pre-calcular TODOS los chunks de jugadores UNA VEZ
+        Set<Chunk> allPlayerChunks = new HashSet<>();
         Map<Location, Integer> chunkPlayerMap = new HashMap<>();
+
         for (Player player : players) {
-            Location chunkCenter = player.getLocation().getChunk().getBlock(8, 0, 8).getLocation();
+            Chunk c = player.getLocation().getChunk();
+            allPlayerChunks.add(c); // Guardamos para la validación posterior
+
+            Location chunkCenter = c.getBlock(8, 0, 8).getLocation();
             chunkPlayerMap.merge(chunkCenter, 1, Integer::sum);
         }
 
@@ -355,46 +354,47 @@ public class DeathStormHandler implements Listener {
 
         if (chunkPlayerMap.isEmpty()) return;
 
-        // Ejecutar en el hilo principal
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            new BukkitRunnable() {
-                int strikesRemaining = lightningCount;
-                final Iterator<Location> locationIterator = chunkPlayerMap.keySet().iterator();
+        // Lógica de Rayos
+        new BukkitRunnable() {
+            int strikesRemaining = lightningCount;
+            // Convertimos a lista para acceso aleatorio o usamos iterador
+            final List<Location> targets = new ArrayList<>(chunkPlayerMap.keySet());
 
-                @Override
-                public void run() {
-                    if (strikesRemaining <= 0 || !isDeathStormActive) {
-                        cancel();
-                        return;
-                    }
-
-                    if (locationIterator.hasNext()) {
-                        Location chunkCenter = locationIterator.next();
-                        spawnLightning(world, chunkCenter, currentDay >= 20);
-                    }
-
-                    strikesRemaining--;
+            @Override
+            public void run() {
+                if (strikesRemaining <= 0 || !isDeathStormActive || targets.isEmpty()) {
+                    cancel();
+                    return;
                 }
-            }.runTaskTimer(plugin, 4, intervalTicks);
-        });
+
+                // Selección aleatoria de objetivo para que no sea siempre en orden
+                Location chunkCenter = targets.get(random.nextInt(targets.size()));
+
+                // Pasamos el set pre-calculado 'allPlayerChunks'
+                spawnLightning(world, chunkCenter, currentDay >= 20, allPlayerChunks);
+
+                strikesRemaining--;
+            }
+        }.runTaskTimer(plugin, 4, intervalTicks);
     }
 
-    private void spawnLightning(World world, Location location, boolean afterDay20) {
-        Location lightningLocation = findSafeLightningLocationOptimized(world, location, afterDay20, 100);
+    // Añadir el parámetro playerChunksCache
+    private void spawnLightning(World world, Location location, boolean afterDay20, Set<Chunk> playerChunksCache) {
+        // Pasamos el caché aquí
+        Location lightningLocation = findSafeLightningLocationOptimized(world, location, afterDay20, 20, playerChunksCache);
+        // He bajado maxAttempts a 20. 100 es excesivo y causa lag si no encuentra sitio.
+
         Chunk targetChunk = lightningLocation.getChunk();
         int currentDay = dayHandler.getCurrentDay();
 
         recentlyStruckChunks.add(targetChunk);
 
-        // Programar eliminación del chunk del caché
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             recentlyStruckChunks.remove(targetChunk);
         }, CHUNK_COOLDOWN / 50);
 
-        // Siempre efecto visual
         world.strikeLightningEffect(lightningLocation);
 
-        // Solo romper bloques a partir del día 15 (excepto obsidiana y bedrock)
         if (currentDay >= 15) {
             Block block = world.getBlockAt(lightningLocation);
             if (block.getType() != Material.OBSIDIAN && block.getType() != Material.BEDROCK) {
@@ -403,16 +403,8 @@ public class DeathStormHandler implements Listener {
         }
     }
 
-    private Location findSafeLightningLocationOptimized(World world, Location center, boolean afterDay20, int maxAttempts) {
-        // Cache para chunks de jugadores si afterDay20 es false
-        Set<Chunk> playerChunks = null;
-        if (!afterDay20) {
-            playerChunks = new HashSet<>();
-            for (Player player : world.getPlayers()) {
-                playerChunks.add(player.getLocation().getChunk());
-            }
-        }
-
+    // Método optimizado
+    private Location findSafeLightningLocationOptimized(World world, Location center, boolean afterDay20, int maxAttempts, Set<Chunk> playerChunksCache) {
         for (int attempts = 0; attempts < maxAttempts; attempts++) {
             double angle = random.nextDouble() * 2 * Math.PI;
             double distance = random.nextDouble() * (13 * 16);
@@ -420,16 +412,24 @@ public class DeathStormHandler implements Listener {
             double x = center.getX() + Math.cos(angle) * distance;
             double z = center.getZ() + Math.sin(angle) * distance;
 
-            Location loc = new Location(world, x, 0, z);
-            loc.setY(world.getHighestBlockYAt(loc));
+            // Usar getHighestBlockYAt puede cargar chunks.
+            // Verificamos si el chunk está cargado antes de llamar a getHighestBlockYAt para evitar lag de I/O.
+            int checkX = (int) x;
+            int checkZ = (int) z;
 
-            if (!afterDay20) {
-                Chunk chunk = loc.getChunk();
-                if (!playerChunks.contains(chunk)) {
+            if (world.isChunkLoaded(checkX >> 4, checkZ >> 4)) {
+                Location loc = new Location(world, x, 0, z);
+                loc.setY(world.getHighestBlockYAt(loc));
+
+                if (!afterDay20) {
+                    Chunk chunk = loc.getChunk();
+                    // Usamos el caché en lugar de recalcular
+                    if (!playerChunksCache.contains(chunk)) {
+                        return loc;
+                    }
+                } else {
                     return loc;
                 }
-            } else {
-                return loc;
             }
         }
         return center;

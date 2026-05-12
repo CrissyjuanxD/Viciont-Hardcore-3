@@ -24,7 +24,6 @@ public class CorrupcionAnsiosaManager {
     public CorrupcionAnsiosaManager(Plugin plugin) {
         this.plugin = plugin;
 
-        // Crear la carpeta del plugin si no existe
         if (!plugin.getDataFolder().exists()) {
             plugin.getDataFolder().mkdirs();
         }
@@ -35,7 +34,6 @@ public class CorrupcionAnsiosaManager {
     }
 
     public void loadData() {
-        // Crear el archivo si no existe
         if (!dataFile.exists()) {
             try {
                 dataFile.createNewFile();
@@ -48,14 +46,12 @@ public class CorrupcionAnsiosaManager {
 
         dataConfig = YamlConfiguration.loadConfiguration(dataFile);
 
-        // Establecer valores por defecto si el archivo está vacío
         if (!dataConfig.contains("enabled")) {
             dataConfig.set("enabled", true);
         }
 
         enabled = dataConfig.getBoolean("enabled", true);
 
-        // Cargar datos de jugadores existentes
         if (dataConfig.contains("players")) {
             for (String key : dataConfig.getConfigurationSection("players").getKeys(false)) {
                 try {
@@ -68,14 +64,12 @@ public class CorrupcionAnsiosaManager {
             }
         }
 
-        saveData(); // Guardar para asegurar que la estructura sea correcta
+        saveData();
     }
 
     public void saveData() {
         try {
             dataConfig.set("enabled", enabled);
-
-            // Limpiar sección de jugadores antes de guardar
             dataConfig.set("players", null);
 
             for (UUID uuid : playerData.keySet()) {
@@ -93,7 +87,6 @@ public class CorrupcionAnsiosaManager {
         return playerData.computeIfAbsent(player.getUniqueId(), k -> new PlayerCorruptionData(100.0));
     }
 
-    // Método para inicializar datos de un jugador si no existen
     public void initializePlayerData(Player player) {
         if (!playerData.containsKey(player.getUniqueId())) {
             playerData.put(player.getUniqueId(), new PlayerCorruptionData(100.0));
@@ -150,7 +143,6 @@ public class CorrupcionAnsiosaManager {
         return getPlayerData(player).getCorruption();
     }
 
-    // Método para obtener todos los datos (útil para comandos con @a)
     public HashMap<UUID, PlayerCorruptionData> getAllPlayerData() {
         return new HashMap<>(playerData);
     }
@@ -160,8 +152,10 @@ public class CorrupcionAnsiosaManager {
     }
 
     public static void sendCorruptionChange(Player player, double change) {
-
         String symbol = "\u06de";
+
+        // EL SECRETO ESTÁ AQUÍ: Empezamos con \u200B puro y le añadimos el resto como hijos
+        Component root = Component.text("\u200B");
 
         Component prefix = Component.text(symbol + " ")
                 .color(TextColor.fromHexString("#B228E7"))
@@ -180,9 +174,9 @@ public class CorrupcionAnsiosaManager {
                     .decorate(TextDecoration.BOLD);
         }
 
-        Component finalMsg = prefix.append(amount);
+        // Armamos el mensaje final uniendo la raíz invisible con los componentes coloridos
+        Component finalMsg = root.append(prefix).append(amount);
 
         player.sendActionBar(finalMsg);
     }
-
 }

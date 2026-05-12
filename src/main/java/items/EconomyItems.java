@@ -2,7 +2,10 @@ package items;
 
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemRarity;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -59,7 +62,7 @@ public class EconomyItems {
         ItemStack item = new ItemStack(Material.ECHO_SHARD);
         ItemMeta meta = item.getItemMeta();
 
-        meta.setDisplayName(ChatColor.of("#ffffcc") + "" + ChatColor.BOLD + "Mochila");
+        meta.setDisplayName(ChatColor.GREEN + "" + ChatColor.BOLD + "Mochila Nivel 1");
         meta.setCustomModelData(2020);
 
         List<String> lore = new ArrayList<>();
@@ -70,6 +73,8 @@ public class EconomyItems {
 
         meta.setLore(lore);
         meta.setRarity(ItemRarity.EPIC);
+        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         item.setItemMeta(meta);
         return item;
     }
@@ -78,7 +83,7 @@ public class EconomyItems {
         ItemStack item = new ItemStack(Material.ECHO_SHARD);
         ItemMeta meta = item.getItemMeta();
 
-        meta.setDisplayName(ChatColor.GREEN + "" + ChatColor.BOLD + "Mochila");
+        meta.setDisplayName(ChatColor.BLUE + "" + ChatColor.BOLD + "Mochila Nivel 2");
         meta.setCustomModelData(2021);
 
         List<String> lore = new ArrayList<>();
@@ -89,6 +94,8 @@ public class EconomyItems {
 
         meta.setLore(lore);
         meta.setRarity(ItemRarity.EPIC);
+        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         item.setItemMeta(meta);
         return item;
     }
@@ -97,7 +104,7 @@ public class EconomyItems {
         ItemStack item = new ItemStack(Material.ECHO_SHARD);
         ItemMeta meta = item.getItemMeta();
 
-        meta.setDisplayName(ChatColor.RED + "" + ChatColor.BOLD + "Mochila");
+        meta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "Mochila Nivel 3");
         meta.setCustomModelData(2022);
 
         List<String> lore = new ArrayList<>();
@@ -108,6 +115,8 @@ public class EconomyItems {
 
         meta.setLore(lore);
         meta.setRarity(ItemRarity.EPIC);
+        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         item.setItemMeta(meta);
         return item;
     }
@@ -116,7 +125,7 @@ public class EconomyItems {
         ItemStack item = new ItemStack(Material.ECHO_SHARD);
         ItemMeta meta = item.getItemMeta();
 
-        meta.setDisplayName(ChatColor.BLUE + "" + ChatColor.BOLD + "Mochila");
+        meta.setDisplayName(ChatColor.RED + "" + ChatColor.BOLD + "Mochila Nivel 4");
         meta.setCustomModelData(2023);
 
         List<String> lore = new ArrayList<>();
@@ -127,6 +136,8 @@ public class EconomyItems {
 
         meta.setLore(lore);
         meta.setRarity(ItemRarity.EPIC);
+        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         item.setItemMeta(meta);
         return item;
     }
@@ -135,7 +146,7 @@ public class EconomyItems {
         ItemStack item = new ItemStack(Material.ECHO_SHARD);
         ItemMeta meta = item.getItemMeta();
 
-        meta.setDisplayName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Mochila");
+        meta.setDisplayName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Mochila Nivel 5");
         meta.setCustomModelData(2024);
 
         List<String> lore = new ArrayList<>();
@@ -146,63 +157,8 @@ public class EconomyItems {
 
         meta.setLore(lore);
         meta.setRarity(ItemRarity.EPIC);
-        item.setItemMeta(meta);
-        return item;
-    }
-
-    public static ItemStack createBlackMochila() {
-        ItemStack item = new ItemStack(Material.ECHO_SHARD);
-        ItemMeta meta = item.getItemMeta();
-
-        meta.setDisplayName(ChatColor.BLACK + "" + ChatColor.BOLD + "Mochila");
-        meta.setCustomModelData(2025);
-
-        List<String> lore = new ArrayList<>();
-        lore.add(" ");
-        lore.add(ChatColor.GRAY + "Uso:");
-        lore.add(ChatColor.GRAY + "> " + ChatColor.WHITE + "Click derecho");
-        lore.add(" ");
-
-        meta.setLore(lore);
-        meta.setRarity(ItemRarity.EPIC);
-        item.setItemMeta(meta);
-        return item;
-    }
-
-    public static ItemStack createWhiteMochila() {
-        ItemStack item = new ItemStack(Material.ECHO_SHARD);
-        ItemMeta meta = item.getItemMeta();
-
-        meta.setDisplayName(ChatColor.WHITE + "" + ChatColor.BOLD + "Mochila");
-        meta.setCustomModelData(2026);
-
-        List<String> lore = new ArrayList<>();
-        lore.add(" ");
-        lore.add(ChatColor.GRAY + "Uso:");
-        lore.add(ChatColor.GRAY + "> " + ChatColor.WHITE + "Click derecho");
-        lore.add(" ");
-
-        meta.setLore(lore);
-        meta.setRarity(ItemRarity.EPIC);
-        item.setItemMeta(meta);
-        return item;
-    }
-
-    public static ItemStack createYellowMochila() {
-        ItemStack item = new ItemStack(Material.ECHO_SHARD);
-        ItemMeta meta = item.getItemMeta();
-
-        meta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.BOLD + "Mochila");
-        meta.setCustomModelData(2027);
-
-        List<String> lore = new ArrayList<>();
-        lore.add(" ");
-        lore.add(ChatColor.GRAY + "Uso:");
-        lore.add(ChatColor.GRAY + "> " + ChatColor.WHITE + "Click derecho");
-        lore.add(" ");
-
-        meta.setLore(lore);
-        meta.setRarity(ItemRarity.EPIC);
+        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         item.setItemMeta(meta);
         return item;
     }
@@ -315,6 +271,10 @@ public class EconomyItems {
         meta.setRarity(ItemRarity.EPIC);
         item.setItemMeta(meta);
         return item;
+    }
+
+    public static boolean isMaterialMochila(org.bukkit.Material material) {
+        return material == Material.ECHO_SHARD;
     }
 
     public static void applyPanicAppleEffects(Player player) {

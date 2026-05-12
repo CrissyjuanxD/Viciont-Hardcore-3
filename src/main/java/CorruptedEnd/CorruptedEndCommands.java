@@ -15,17 +15,14 @@ import java.util.Random;
 public class CorruptedEndCommands implements CommandExecutor {
     private final JavaPlugin plugin;
     private final PortalManager portalManager;
-    private final LootManager lootManager;
 
-    public CorruptedEndCommands(JavaPlugin plugin, PortalManager portalManager, LootManager lootManager) {
+    public CorruptedEndCommands(JavaPlugin plugin, PortalManager portalManager) {
         this.plugin = plugin;
         this.portalManager = portalManager;
-        this.lootManager = lootManager;
     }
 
     public void registerCommands() {
         plugin.getCommand("spawnportalce").setExecutor(this);
-        plugin.getCommand("givelootable").setExecutor(this);
     }
 
     @Override
@@ -33,8 +30,6 @@ public class CorruptedEndCommands implements CommandExecutor {
         switch (command.getName().toLowerCase()) {
             case "spawnportalce":
                 return handleSpawnPortal(sender, args);
-            case "givelootable":
-                return handleGiveLootable(sender, args);
         }
         return false;
     }
@@ -96,49 +91,6 @@ public class CorruptedEndCommands implements CommandExecutor {
             player.teleport(portalLocation);
             player.sendMessage(ChatColor.YELLOW + "Has sido teleportado al nuevo portal.");
         }
-
-        return true;
-    }
-
-    private boolean handleGiveLootable(CommandSender sender, String[] args) {
-        if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Uso: /givelootable <tipo> <jugador>");
-            sender.sendMessage(ChatColor.GRAY + "Tipos disponibles: corrupta, infestada");
-            return true;
-        }
-
-        if (!sender.hasPermission("corruptedend.giveloot")) {
-            sender.sendMessage(ChatColor.RED + "No tienes permisos para usar este comando.");
-            return true;
-        }
-
-        String lootType = args[0].toLowerCase();
-        String playerName = args[1];
-
-        Player targetPlayer = Bukkit.getPlayer(playerName);
-        if (targetPlayer == null) {
-            sender.sendMessage(ChatColor.RED + "Jugador no encontrado: " + playerName);
-            return true;
-        }
-
-        LootType type;
-        switch (lootType) {
-            case "corrupta":
-                type = LootType.CAJA_CORRUPTA;
-                break;
-            case "infestada":
-                type = LootType.CAJA_INFESTADA;
-                break;
-            default:
-                sender.sendMessage(ChatColor.RED + "Tipo de loot inválido. Usa: corrupta o infestada");
-                return true;
-        }
-
-        lootManager.giveLootChest(targetPlayer, type);
-
-        sender.sendMessage(ChatColor.GREEN + "Caja " + type.getDisplayName() +
-                " entregada a " + targetPlayer.getName());
-        targetPlayer.sendMessage(ChatColor.GOLD + "Has recibido una " + type.getDisplayName() + "!");
 
         return true;
     }

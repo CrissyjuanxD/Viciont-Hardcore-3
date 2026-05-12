@@ -1,7 +1,7 @@
 package Dificultades.Features;
 
 import Commands.TiempoCommand;
-import Events.DamageLogListener;
+import Handlers.DamageLogListener;
 import Handlers.DeathStormHandler;
 import TitleListener.SuccessNotification;
 import net.md_5.bungee.api.ChatColor;

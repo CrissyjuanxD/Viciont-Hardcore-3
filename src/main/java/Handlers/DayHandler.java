@@ -34,7 +34,7 @@
         public DayHandler(JavaPlugin plugin) {
             this.plugin = plugin;
             dayOneChanges = new DayOneChanges(plugin, this);
-            dayTwoChange = new DayTwoChanges(plugin);
+            dayTwoChange = new DayTwoChanges(plugin,this);
             dayFourChanges = new DayFourChanges(plugin,this);
             dayFiveChanges = new DayFiveChange(plugin, this);
             daySixChanges = new DaySixChanges(plugin, this);

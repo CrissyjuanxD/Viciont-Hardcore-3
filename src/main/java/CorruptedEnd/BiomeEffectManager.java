@@ -1,10 +1,13 @@
 package CorruptedEnd;
 
 import org.bukkit.*;
+import org.bukkit.block.Biome;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -31,70 +34,57 @@ public class BiomeEffectManager implements Listener {
             public void run() {
                 checkBiomeEffects();
             }
-        }.runTaskTimer(plugin, 0L, 20L);
+        }.runTaskTimer(plugin, 0L, 40L);
     }
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
+        // Optimización: Solo verificar si cambió de bloque
+        if (event.getFrom().getBlockX() == event.getTo().getBlockX() &&
+                event.getFrom().getBlockY() == event.getTo().getBlockY() &&
+                event.getFrom().getBlockZ() == event.getTo().getBlockZ()) return;
+
         Player player = event.getPlayer();
         if (!player.getWorld().getName().equals(CorruptedEnd.WORLD_NAME)) return;
 
-        // Verificar cambio de bloque para optimizar
-        if (event.getFrom().getBlock().equals(event.getTo().getBlock())) return;
+        // --- OPTIMIZACIÓN MASIVA: DETECCIÓN NATIVA ---
+        // Obtenemos el bioma directamente del juego (0 coste de CPU)
+        Biome vanillaBiome = player.getWorld().getBiome(player.getLocation());
+        BiomeType currentBiome = determineBiomeFromVanilla(vanillaBiome);
 
-        // Limitar verificaciones muy frecuentes
-        long currentTime = System.currentTimeMillis();
-        Long lastCheck = lastBiomeCheck.get(player.getUniqueId());
-        if (lastCheck != null && currentTime - lastCheck < 500) return; // 0.5 segundos
-
-        lastBiomeCheck.put(player.getUniqueId(), currentTime);
-
-        Location loc = event.getTo();
-        BiomeType currentBiome = determineBiome(loc);
         BiomeType previousBiome = playerBiomes.get(player.getUniqueId());
 
+        // Si entramos a un bioma nuevo
         if (currentBiome != previousBiome) {
             playerBiomes.put(player.getUniqueId(), currentBiome);
             onBiomeChange(player, previousBiome, currentBiome);
         }
     }
 
+    private BiomeType determineBiomeFromVanilla(Biome vanillaBiome) {
+        switch (vanillaBiome) {
+            case END_MIDLANDS:
+                return BiomeType.CELESTIAL_FOREST;
+
+            case SOUL_SAND_VALLEY:
+                return BiomeType.OBSIDIAN_PEAKS;
+
+            case END_HIGHLANDS:
+                return BiomeType.CRIMSON_WASTES;
+
+            case END_BARRENS:
+            default:
+                return BiomeType.SCULK_PLAINS;
+        }
+    }
+
     private void checkBiomeEffects() {
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (!player.getWorld().getName().equals(CorruptedEnd.WORLD_NAME)) continue;
-
             BiomeType currentBiome = playerBiomes.get(player.getUniqueId());
             if (currentBiome != null) {
                 applyBiomeEffects(player, currentBiome);
             }
-        }
-    }
-
-    private BiomeType determineBiome(Location location) {
-        // Verificar bloques en un área más amplia y a diferentes alturas
-        Map<Material, Integer> blockCounts = new HashMap<>();
-
-        for (int dx = -5; dx <= 5; dx++) {
-            for (int dz = -5; dz <= 5; dz++) {
-                for (int dy = -10; dy <= 10; dy++) { // Verificar más alturas
-                    Location checkLoc = location.clone().add(dx, dy, dz);
-                    if (checkLoc.getY() < 0 || checkLoc.getY() > 255) continue;
-
-                    Material blockType = checkLoc.getBlock().getType();
-                    blockCounts.put(blockType, blockCounts.getOrDefault(blockType, 0) + 1);
-                }
-            }
-        }
-
-        // Determinar bioma basado en bloques predominantes
-        if (blockCounts.getOrDefault(Material.BLUE_TERRACOTTA, 0) > 8) {
-            return BiomeType.CELESTIAL_FOREST;
-        } else if (blockCounts.getOrDefault(Material.OBSIDIAN, 0) > 12) {
-            return BiomeType.OBSIDIAN_PEAKS;
-        } else if (blockCounts.getOrDefault(Material.CRIMSON_HYPHAE, 0) > 8) {
-            return BiomeType.CRIMSON_WASTES;
-        } else {
-            return BiomeType.SCULK_PLAINS;
         }
     }
 
@@ -141,7 +131,6 @@ public class BiomeEffectManager implements Listener {
 
                 // Mensaje y partículas ocasionales
                 if (System.currentTimeMillis() % 3000 < 1000) {
-                    player.sendMessage(ChatColor.BLUE + "El frío celestial te congela...");
 
                     // Partículas de hielo
                     player.getWorld().spawnParticle(Particle.SNOWFLAKE,
@@ -151,7 +140,7 @@ public class BiomeEffectManager implements Listener {
 
             case OBSIDIAN_PEAKS:
                 // Efecto de oscuridad infinita
-                PotionEffect darkness = new PotionEffect(PotionEffectType.DARKNESS, Integer.MAX_VALUE, 0, false, false, false);
+                PotionEffect darkness = new PotionEffect(PotionEffectType.DARKNESS, 30, 0, false, false, false);
                 if (!player.hasPotionEffect(PotionEffectType.DARKNESS)) {
                     player.addPotionEffect(darkness);
                 }
@@ -172,21 +161,48 @@ public class BiomeEffectManager implements Listener {
                 if (frozenPlayers.contains(player.getUniqueId())) {
                     frozenPlayers.remove(player.getUniqueId());
                     player.setFreezeTicks(0); // Quitar congelación
-                    player.sendMessage(ChatColor.GREEN + "Ya no sientes el frío celestial.");
                 }
                 break;
             case OBSIDIAN_PEAKS:
                 // Remover efecto de oscuridad
                 player.removePotionEffect(PotionEffectType.DARKNESS);
-                player.sendMessage(ChatColor.YELLOW + "La oscuridad se desvanece...");
                 break;
         }
     }
 
-    // Método para limpiar jugadores que se desconectan
+    private void cleanPlayerEffects(Player player) {
+        UUID uuid = player.getUniqueId();
+
+        playerBiomes.remove(uuid);
+        frozenPlayers.remove(uuid);
+
+        // Limpiar efectos visuales y de poción
+        player.setFreezeTicks(0);
+
+        // Solo quitamos los efectos específicos de la dimensión para no borrar otros buffs
+        if (player.hasPotionEffect(PotionEffectType.NAUSEA)) {
+            player.removePotionEffect(PotionEffectType.NAUSEA);
+        }
+        if (player.hasPotionEffect(PotionEffectType.DARKNESS)) {
+            player.removePotionEffect(PotionEffectType.DARKNESS);
+        }
+    }
+
+    @EventHandler
+    public void onWorldChange(PlayerChangedWorldEvent event) {
+        // Si venía del Corrupted End y se fue a otro lado...
+        if (event.getFrom().getName().equals(CorruptedEnd.WORLD_NAME)) {
+            cleanPlayerEffects(event.getPlayer());
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        cleanPlayerEffects(event.getPlayer());
+    }
+
     public void cleanup() {
         playerBiomes.clear();
-        lastBiomeCheck.clear();
         frozenPlayers.clear();
     }
 }

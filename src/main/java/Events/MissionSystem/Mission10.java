@@ -3,8 +3,6 @@ package Events.MissionSystem;
 import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -14,7 +12,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import net.md_5.bungee.api.ChatColor;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,16 +58,7 @@ public class Mission10 implements Mission, Listener {
 
     @Override
     public void initializePlayerData(String playerName) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        data.set("players." + playerName + ".missions.10.totems.infernal", false);
-        data.set("players." + playerName + ".missions.10.totems.spider", false);
-        data.set("players." + playerName + ".missions.10.totems.life", false);
-
-        try {
-            data.save(missionHandler.getMissionFile());
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al inicializar datos de Misión 10: " + e.getMessage());
-        }
+        // No es necesario inicializar con JSON
     }
 
     @Override
@@ -80,18 +68,11 @@ public class Mission10 implements Mission, Listener {
 
     @EventHandler
     public void onCraftItem(CraftItemEvent event) {
-        if (!missionHandler.isMissionActive(10)) return;
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!missionHandler.isMissionActive(player, 10)) return;
 
-        if (!(event.getWhoClicked() instanceof Player)) return;
-
-        Player player = (Player) event.getWhoClicked();
-        String playerName = player.getName();
-
-        // Verificar si ya completó la misión
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        if (data.getBoolean("players." + playerName + ".missions.10.completed", false)) {
-            return;
-        }
+        MissionData data = missionHandler.getData(player, 10);
+        if (data.isCompleted()) return;
 
         ItemStack result = event.getCurrentItem();
         if (result == null || !result.hasItemMeta()) return;
@@ -112,33 +93,29 @@ public class Mission10 implements Mission, Listener {
         }
 
         if (totemType != null) {
-            if (!data.getBoolean("players." + playerName + ".missions.10.totems." + totemType, false)) {
-                data.set("players." + playerName + ".missions.10.totems." + totemType, true);
+            String dataKey = "totems_" + totemType; // Coincide con la GUI
 
-                try {
-                    data.save(missionHandler.getMissionFile());
+            if (!data.getProgressBool(dataKey)) {
+                data.setProgressValue(dataKey, true);
+                missionHandler.saveData(player, 10, data);
 
-                    String totemName = totemType.substring(0, 1).toUpperCase() + totemType.substring(1);
+                String totemName = totemType.substring(0, 1).toUpperCase() + totemType.substring(1);
 
-                    // Verificar si completó todos los totems
-                    boolean hasInfernal = data.getBoolean("players." + playerName + ".missions.10.totems.infernal", false);
-                    boolean hasSpider = data.getBoolean("players." + playerName + ".missions.10.totems.spider", false);
-                    boolean hasLife = data.getBoolean("players." + playerName + ".missions.10.totems.life", false);
+                boolean hasInfernal = data.getProgressBool("totems_infernal");
+                boolean hasSpider = data.getProgressBool("totems_spider");
+                boolean hasLife = data.getProgressBool("totems_life");
 
-                    if (hasInfernal && hasSpider && hasLife) {
-                        successNotification.showSuccess(player);
-                        missionHandler.completeMission(playerName, 10);
-                    } else {
-                        int completed = 0;
-                        if (hasInfernal) completed++;
-                        if (hasSpider) completed++;
-                        if (hasLife) completed++;
+                if (hasInfernal && hasSpider && hasLife) {
+                    successNotification.showSuccess(player);
+                    missionHandler.completeMission(player.getName(), 10);
+                } else {
+                    int completed = 0;
+                    if (hasInfernal) completed++;
+                    if (hasSpider) completed++;
+                    if (hasLife) completed++;
 
-                        player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Progreso de totems: " +
-                                ChatColor.of("#FFB6C1") + completed + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "3 " + ChatColor.of("#98FB98") + totemName);
-                    }
-                } catch (IOException e) {
-                    plugin.getLogger().severe("Error al guardar progreso de Misión 10: " + e.getMessage());
+                    player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Progreso de totems: " +
+                            ChatColor.of("#FFB6C1") + completed + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "3 " + ChatColor.of("#98FB98") + totemName);
                 }
             }
         }

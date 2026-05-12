@@ -1,150 +1,81 @@
 package CorruptedEnd;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.data.type.SculkShrieker;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 import java.util.Random;
 
 public class MobSpawnManager implements Listener {
     private final JavaPlugin plugin;
     private final Random random = new Random();
-    private BukkitRunnable spawnTask;
 
     public MobSpawnManager(JavaPlugin plugin) {
         this.plugin = plugin;
     }
 
     public void startSpawning() {
-        spawnTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                spawnNaturalMobs();
-            }
-        };
-        spawnTask.runTaskTimer(plugin, 100L, 100L); // Cada 5 segundos
+        // Ya no necesitamos un Task repetitivo. El generador maneja el spawn natural.
+        // Mantenemos este método vacío por compatibilidad si lo llamas desde la clase principal.
     }
 
-    public void stopSpawning() {
-        if (spawnTask != null) {
-            spawnTask.cancel();
+    @EventHandler
+    public void onMobSpawn(CreatureSpawnEvent event) {
+        if (!event.getLocation().getWorld().getName().equals(CorruptedEnd.WORLD_NAME)) return;
+
+        // Solo modificar spawns naturales o de chunk generation
+        if (event.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL &&
+                event.getSpawnReason() != CreatureSpawnEvent.SpawnReason.CHUNK_GEN) return;
+
+        LivingEntity entity = event.getEntity();
+
+        // Personalizar mobs naturales
+        if (entity.getType() == EntityType.ENDERMAN) {
+            // Ejemplo: Endermans corruptos más fuertes
+            if (random.nextBoolean()) {
+                entity.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, Integer.MAX_VALUE, 1));
+                entity.setCustomName("§5Corrupted Enderman");
+                entity.setCustomNameVisible(false);
+            }
+        } else if (entity.getType() == EntityType.PHANTOM) {
+            entity.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
         }
     }
 
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {
         if (!event.getWorld().getName().equals(CorruptedEnd.WORLD_NAME)) return;
+        if (!event.isNewChunk()) return; // Optimización: Solo procesar chunks nuevos
 
-        // Activar shriekers en chunks recién cargados
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            activateShriekersInChunk(event.getChunk());
-        }, 10L);
-    }
+        // Activar shriekers (Lógica existente optimizada)
+        plugin.getServer().getScheduler().runTask(plugin, () -> { // Correr sync pero en cola
+            World world = event.getChunk().getWorld();
+            int cx = event.getChunk().getX() * 16;
+            int cz = event.getChunk().getZ() * 16;
 
-    private void activateShriekersInChunk(org.bukkit.Chunk chunk) {
-        World world = chunk.getWorld();
-
-        for (int x = 0; x < 16; x++) {
-            for (int z = 0; z < 16; z++) {
-                for (int y = 0; y < world.getMaxHeight(); y++) {
-                    org.bukkit.block.Block block = chunk.getBlock(x, y, z);
-
-                    if (block.getType() == Material.SCULK_SHRIEKER) {
-                        if (block.getBlockData() instanceof SculkShrieker) {
-                            SculkShrieker shrieker = (SculkShrieker) block.getBlockData();
-                            shrieker.setCanSummon(true); // Permitir que spawnee Wardens
-                            block.setBlockData(shrieker);
+            // Escaneo rápido simplificado (buscar solo en superficies probables)
+            for (int x = 0; x < 16; x+=4) { // Saltos para optimizar búsqueda si es densa
+                for (int z = 0; z < 16; z+=4) {
+                    for (int y = 60; y < 150; y+=2) {
+                        if (event.getChunk().getBlock(x, y, z).getType() == Material.SCULK_SHRIEKER) {
+                            var block = event.getChunk().getBlock(x, y, z);
+                            if (block.getBlockData() instanceof SculkShrieker shrieker) {
+                                shrieker.setCanSummon(true);
+                                block.setBlockData(shrieker);
+                            }
                         }
                     }
                 }
             }
-        }
-    }
-
-    private void spawnNaturalMobs() {
-        World corruptedWorld = Bukkit.getWorld(CorruptedEnd.WORLD_NAME);
-        if (corruptedWorld == null || corruptedWorld.getPlayers().isEmpty()) return;
-
-        for (Player player : corruptedWorld.getPlayers()) {
-            if (random.nextInt(100) < 15) { // 15% probabilidad por intento
-                spawnMobNearPlayer(player);
-            }
-        }
-    }
-
-    private void spawnMobNearPlayer(Player player) {
-        Location playerLoc = player.getLocation();
-
-        // Buscar ubicación de spawn en el aire (para mobs voladores)
-        Location spawnLoc = findAirSpawnLocation(playerLoc);
-        if (spawnLoc == null) return;
-
-        // Seleccionar mob basado en probabilidades
-        EntityType mobType = selectMobType();
-
-        // Spawnear el mob
-        spawnLoc.getWorld().spawnEntity(spawnLoc, mobType);
-
-        plugin.getLogger().info("Spawneado " + mobType.name() + " cerca de " + player.getName());
-    }
-
-    private Location findAirSpawnLocation(Location playerLoc) {
-        World world = playerLoc.getWorld();
-        Random random = new Random();
-
-        for (int attempts = 0; attempts < 10; attempts++) {
-            // Buscar ubicación en un radio de 15-30 bloques
-            int distance = 15 + random.nextInt(15);
-            double angle = random.nextDouble() * Math.PI * 2;
-
-            int x = playerLoc.getBlockX() + (int) (Math.cos(angle) * distance);
-            int z = playerLoc.getBlockZ() + (int) (Math.sin(angle) * distance);
-
-            // Para mobs voladores, buscar espacio aéreo
-            for (int y = playerLoc.getBlockY() + 10; y <= playerLoc.getBlockY() + 30; y++) {
-                Location testLoc = new Location(world, x, y, z);
-
-                // Verificar que hay espacio libre (3 bloques de altura)
-                if (isAirSpace(testLoc, 3)) {
-                    return testLoc;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private boolean isAirSpace(Location loc, int height) {
-        for (int i = 0; i < height; i++) {
-            if (loc.clone().add(0, i, 0).getBlock().getType() != Material.AIR) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private EntityType selectMobType() {
-        int rand = random.nextInt(100);
-
-        if (rand < 40) {
-            return EntityType.VEX;
-        } else if (rand < 70) {
-            return EntityType.PHANTOM;
-        } else {
-            return EntityType.GHAST;
-        }
-    }
-
-    public void shutdown() {
-        stopSpawning();
+        });
     }
 }

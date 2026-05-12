@@ -4,8 +4,6 @@ import Handlers.ToastHandler;
 import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Spider;
@@ -19,7 +17,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.entity.LivingEntity;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -68,15 +65,7 @@ public class Mission6 implements Mission, Listener {
 
     @Override
     public void initializePlayerData(String playerName) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        data.set("players." + playerName + ".missions.6.corrupted_zombies_killed", 0);
-        data.set("players." + playerName + ".missions.6.corrupted_spiders_killed", 0);
-
-        try {
-            data.save(missionHandler.getMissionFile());
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al inicializar datos de Misión 6: " + e.getMessage());
-        }
+        // No es necesario inicializar con JSON
     }
 
     @Override
@@ -86,20 +75,14 @@ public class Mission6 implements Mission, Listener {
 
     @EventHandler
     public void onEntityDeath(EntityDeathEvent event) {
-        if (!missionHandler.isMissionActive(6)) return;
-
         Entity entity = event.getEntity();
         Player killer = ((LivingEntity) entity).getKiller();
 
         if (killer == null) return;
+        if (!missionHandler.isMissionActive(killer, 6)) return;
 
-        String playerName = killer.getName();
-
-        // Verificar si ya completó la misión
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        if (data.getBoolean("players." + playerName + ".missions.6.completed", false)) {
-            return;
-        }
+        MissionData data = missionHandler.getData(killer, 6);
+        if (data.isCompleted()) return;
 
         boolean isCorruptedZombie = entity instanceof Zombie &&
                 entity.getPersistentDataContainer().has(
@@ -112,53 +95,48 @@ public class Mission6 implements Mission, Listener {
                         PersistentDataType.BYTE);
 
         if (isCorruptedZombie) {
-            int zombiesKilled = data.getInt("players." + playerName + ".missions.6.corrupted_zombies_killed", 0);
-            zombiesKilled++;
-            data.set("players." + playerName + ".missions.6.corrupted_zombies_killed", zombiesKilled);
+            int zombiesKilled = data.getProgressInt("corrupted_zombies_killed");
+            if (zombiesKilled < 25) {
+                zombiesKilled++;
+                data.setProgressValue("corrupted_zombies_killed", zombiesKilled);
 
-           /* killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Corrupted Zombies eliminados: " +
-                    ChatColor.of("#FFB6C1") + zombiesKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "25");*/
-            toastHandler.sendToast(
-                    killer,
-                    ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") +
-                            "Corrupted Zombies: " + ChatColor.GREEN +
-                            zombiesKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.GRAY + "25",
-                    "Progreso de Misión: Exterminador de Corruptos Zombies",
-                    "minecraft:netherite_sword"
-            );
+                toastHandler.sendToast(
+                        killer,
+                        ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") +
+                                "Corrupted Zombies: " + ChatColor.GREEN +
+                                zombiesKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.GRAY + "25",
+                        "Progreso de Misión: Exterminador de Corruptos Zombies",
+                        "minecraft:netherite_sword"
+                );
+            }
 
         } else if (isCorruptedSpider) {
-            int spidersKilled = data.getInt("players." + playerName + ".missions.6.corrupted_spiders_killed", 0);
-            spidersKilled++;
-            data.set("players." + playerName + ".missions.6.corrupted_spiders_killed", spidersKilled);
+            int spidersKilled = data.getProgressInt("corrupted_spiders_killed");
+            if (spidersKilled < 25) {
+                spidersKilled++;
+                data.setProgressValue("corrupted_spiders_killed", spidersKilled);
 
-            /*killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Corrupted Spiders eliminadas: " +
-                    ChatColor.of("#FFB6C1") + spidersKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "25");*/
-            toastHandler.sendToast(
-                    killer,
-                    ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") +
-                            "Corrupted Spiders: " + ChatColor.GREEN +
-                            spidersKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.GRAY + "25",
-                    "Progreso de Misión: Exterminador de Corruptos Spiders",
-                    "minecraft:netherite_sword"
-            );
+                toastHandler.sendToast(
+                        killer,
+                        ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") +
+                                "Corrupted Spiders: " + ChatColor.GREEN +
+                                spidersKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.GRAY + "25",
+                        "Progreso de Misión: Exterminador de Corruptos Spiders",
+                        "minecraft:netherite_sword"
+                );
+            }
         } else {
             return;
         }
 
-        try {
-            data.save(missionHandler.getMissionFile());
+        missionHandler.saveData(killer, 6, data);
 
-            // Verificar si completó ambos objetivos
-            int zombiesKilled = data.getInt("players." + playerName + ".missions.6.corrupted_zombies_killed", 0);
-            int spidersKilled = data.getInt("players." + playerName + ".missions.6.corrupted_spiders_killed", 0);
+        // Verificar si completó ambos objetivos
+        if (data.getProgressInt("corrupted_zombies_killed") >= 25 &&
+                data.getProgressInt("corrupted_spiders_killed") >= 25) {
 
-            if (zombiesKilled >= 25 && spidersKilled >= 25) {
-                successNotification.showSuccess(killer);
-                missionHandler.completeMission(playerName, 6);
-            }
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al guardar progreso de Misión 6: " + e.getMessage());
+            successNotification.showSuccess(killer);
+            missionHandler.completeMission(killer.getName(), 6);
         }
     }
 }

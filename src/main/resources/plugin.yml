@@ -64,42 +64,25 @@ commands:
     usage: /structure <nombre>
     permission: vicionthardcore3.command.estructure
     permission-message: No tienes permiso para usar este comando.
-  start:
-    description: Start the game
-    usage: /start <evento1|skybattle|force|logros>
-    aliases: []
-    permission: viciont_hardcore3.command.start
-    permission-message: No tienes permiso para usar este comando.
-  end:
-    description: End the game
-    usage: /end <evento1|logros>
-    aliases: []
-    permission: viciont_hardcore3.command.end
-    permission-message: No tienes permiso para usar este comando.
-  evento1:
-    description: Administra participantes del evento1.
-    usage: /evento participantes <list|add|remove> [jugador]
-    aliases: [ ]
-    permission: viciont_hardcore3.command.evento1
-    permission-message: No tienes permiso para usar este comando.
-  reset:
-    description: Resetea el evento.
-    usage: /reset <logros>
-    aliases: []
-    permission: viciont_hardcore3.command.reset
+  lavaclash:
+    description: Comando principal del evento LavaClash
+    usage: /lavaclash <start|battle|force|reglas|resetpurple|end|list|add|remove>
+    permission: viciont_hardcore3.command.lavaclash
     permission-message: No tienes permiso para usar este comando.
   logros:
-    description: Comando para ver los logros.
+    description: Comando principal para el evento de Fiesta de Logros.
     usage: /logros
-  addlogro:
-    description: Añade un logro a un jugador.
-    usage: /addlogro <nombrelogro> <jugador> [item_lista|all]
-    permission: viciont_hardcore3.command.addlogro
+    permission: viciont_hardcore3.command.logros
     permission-message: No tienes permiso para usar este comando.
-  removelogro:
-    description: Remueve un logro a un jugador.
-    usage: /removelogro <nombrelogro> <jugador> [item_lista|all]
-    permission: viciont_hardcore3.command.removelogro
+  itemparty:
+    description: Comando principal del evento ItemParty
+    usage: /itemparty <start|end|reset|reload|castigo>
+    permission: viciont_hardcore3.command.itemparty
+    permission-message: No tienes permiso para usar este comando.
+  hotpotato:
+    description: Comando principal del evento HotPotato
+    usage: /hotpotato <start|force|reglas|battle|stop|list|add|remove|reload>
+    permission: viciont_hardcore3.command.hotpotato
     permission-message: No tienes permiso para usar este comando.
   magictp:
     description: Teletransporta jugadores a coordenadas especificadas con efectos especiales.
@@ -121,20 +104,10 @@ commands:
     usage: /spawnvct <mob> [jugador (opcional)] [x] [y] [z]
     permission: viciont_hardcore3.command.spawnvct
     permission-message: No tienes permiso para usar este comando.
-  addtiempo:
-    description: Añade un temporizador en la bossbar.
-    usage: /addtiempo [nombre opcional] <tiempo> [on/off]
+  timers:
+    description: Comando General para crear, editar, remover y ver timers.
+    usage: /timers <crear|editar|remover|lista>
     permission: viciont_hardcore3.command.addtiempo
-    permission-message: No tienes permiso para usar este comando.
-  removetiempo:
-    description: Elimina un temporizador de la bossbar.
-    usage: /removetiempo [nombre opcional]
-    permission: viciont_hardcore3.command.removetiempo
-    permission-message: No tienes permiso para usar este comando.
-  tiempoview:
-    description: Muestra los temporizadores activos en la bossbar.
-    usage: /tiempoview <jugador/all>
-    permission: viciont_hardcore3.command.tiempoview
     permission-message: No tienes permiso para usar este comando.
   givevct:
     description: Da un item especial del plugin a un jugador.
@@ -171,39 +144,14 @@ commands:
     usage: /reloadcustomspawn
     permission: viciont_hardcore3.command.givespawner
     permission-message: No tienes permiso para usar este comando.
-  activarmision:
-    description: Activa una misión específica
-    usage: /activarmision <número>
-    permission: viciont_hardcore3.missions.admin
-    permission-message: No tienes permiso para usar este comando.
-  desactivarmision:
-    description: Desactiva una misión específica
-    usage: /desactivarmision <número>
+  missions:
+    description: Comando administrativo para misiones.
+    usage: /missions
     permission: viciont_hardcore3.missions.admin
     permission-message: No tienes permiso para usar este comando.
   misiones:
     description: Abre la interfaz del sistema de misiones
     usage: /misiones
-  addmision:
-    description: Añade una misión completada a un jugador
-    usage: /addmision <jugador> <número>
-    permission: viciont_hardcore3.missions.admin
-    permission-message: No tienes permiso para usar este comando.
-  removemision:
-    description: Remueve una misión completada de un jugador
-    usage: /removemision <jugador> <número>
-    permission: viciont_hardcore3.missions.admin
-    permission-message: No tienes permiso para usar este comando.
-  penalizadosmisiones:
-    description: Muestra la lista de jugadores penalizados por misiones
-    usage: /penalizadosmisiones
-    permission: viciont_hardcore3.missions.admin
-    permission-message: No tienes permiso para usar este comando.
-  spawntienda:
-    description: Spawnea una tienda (aldeano) en las coordenadas especificadas
-    usage: /spawntienda <Monedas|Utilidades|Varios> [x] [y] [z]
-    permission: viciont_hardcore3.shop.admin
-    permission-message: No tienes permiso para usar este comando.
   spawnslotmachine:
     description: Spawn a slot machine at your location
     usage: /<command>
@@ -245,6 +193,8 @@ commands:
   habilidades:
     description: Muestra las habilidades desbloqueadas de un jugador
     usage: /habilidades <jugador>
+    Permission: viciont_hardcore3.command.habilidades
+    permission-message: No tienes permiso para usar este comando.
   reloadevent:
     description: Recarga configuraciones internas del plugin.
     usage: /reloadevent <itempartyconfig>
@@ -276,20 +226,74 @@ commands:
     usage: /infestedPortalOverworld <summon/remove>
     permission: viciont_hardcore3.command.infestedPortalOverworld
     permission-message: No tienes permiso para usar este comando.
-  InfestedForest:
+  InfestedCave:
     description: Comando administrativo para enviar/sacar jugadores.
-    usage: /InfestedForest <join/leave> <jugador/@a>
-    permission: viciont_hardcore3.command.InfestedForest
+    usage: /InfestedCave <join/leave> <jugador/@a>
+    permission: viciont_hardcore3.command.InfestedCave
+    permission-message: No tienes permiso para usar este comando.
+  icambient:
+    description: Controla el ambiente de Infested Caves
+    usage: /icambient <clown/daisy> <player>
+    permission: viciont_hardcore3.command.icambient
     permission-message: No tienes permiso para usar este comando.
   LootTableVC:
     description: Da una loot table personalizada a un jugador.
-    usage: /LootTableVC <nombre_tabla>
+    usage: /LootTableVC <spawn/give> <jugador/@a> <nombre_tabla>
     permission: viciont_hardcore3.command.LootTableVC
     permission-message: No tienes permiso para usar este comando.
   altarvct:
     description: Comando para administrar los Altares.
     usage: /altarvct <info|create|addcooldown|delcooldown>
     permission: viciont_hardcore3.command.altarcreate
+    permission-message: No tienes permiso para usar este comando.
+  giveInfestedSpawner:
+    description: Da un spawner personalizado de Infested Caves a un jugador.
+    usage: /giveInfestedSpawner
+    permission: viciont_hardcore3.command.giveInfestedSpawner
+    permission-message: No tienes permiso para usar este comando.
+  givestatue:
+    description: Comando para configurar las Estatuas de efectos.
+    usage: /givestatue
+    permission: viciont_hardcore3.command.givestatue
+    permission-message: No tienes permiso para usar este comando.
+  anuncio:
+    description: Envia un anuncio global con formato personalizado.
+    usage: /anuncio <mensaje>
+    permission: viciont_hardcore3.command.anuncio
+    permission-message: No tienes permiso para usar este comando.
+  viciontreload:
+    description: Recarga la configuración del plugin
+    usage: /quasoreload
+    permission: viciont_hardcore3.command.reload
+    permission-message: No tienes permiso para usar este comando.
+  spawnshop:
+    description: Spawnea una tienda (aldeano) en las coordenadas especificadas
+    usage: /spawnshop <nombre> [x] [y] [z]
+    permission: viciont_hardcore3.shop.admin
+    permission-message: No tienes permiso para usar este comando.
+  trade:
+    description: Comando para configurar trades de la ShopSystem
+    usage: /trade <item> <cantidad>
+    permission: viciont_hardcore3.command.trade
+    permission-message: No tienes permiso para usar este comando.
+  removeshop:
+    description: Elimina un aldeano de la ShopSystem
+    usage: /removeshop
+    permission: viciont_hardcore3.command.removeshop
+    permission-message: No tienes permiso para usar este comando.
+  mochilas:
+    description: Comando para administrar mochilas
+    usage: /mochilas <jugador>
+    permission: viciont_hardcore3.command.mochilas
+    permission-message: No tienes permiso para usar este comando.
+  delmochilas:
+    description: Elimina las mochilas de un jugador
+    usage: /delmochilas <jugador>
+    permission: viciont_hardcore3.command.mochilas
+  casino:
+    description: Abre la interfaz del casino
+    usage: /casino <set/reload/slot/remove> <blackjack/slot>
+    permission: viciont_hardcore3.command.casino
     permission-message: No tienes permiso para usar este comando.
 depend:
   - NBTAPI

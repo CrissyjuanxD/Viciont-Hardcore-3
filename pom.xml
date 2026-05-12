@@ -6,7 +6,7 @@
 
     <groupId>vct.hardcore3</groupId>
     <artifactId>VCTHardcore3</artifactId>
-    <version>1.5.10</version>
+    <version>1.6.3</version>
 
     <properties>
         <maven.compiler.source>20</maven.compiler.source>
@@ -80,6 +80,20 @@
             <artifactId>paper-api</artifactId>
             <version>1.21.1-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.viciontmedia</groupId>
+            <artifactId>ViciontMediaPlugin</artifactId>
+            <version>1.1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/ViciontMediaPlugin.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>com.viciontcinematics</groupId>
+            <artifactId>ViciontCinematicPlugin</artifactId>
+            <version>1.1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/ViciontCinematicPlugin.jar</systemPath>
         </dependency>
 
         <dependency>

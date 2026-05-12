@@ -322,7 +322,7 @@ public class StructureManager implements Listener {
                             random.nextInt(8) - 4
                     );
                     world.spawnParticle(Particle.SCULK_SOUL, particleLoc, 1, 0.2, 0.2, 0.2, 0.5f);
-                    world.spawnParticle(Particle.SCULK_CHARGE, particleLoc, 1, 0.1, 0.1, 0.1, 0.3f);
+                    world.spawnParticle(Particle.SCULK_CHARGE, particleLoc, 1, 0.1, 0.1, 0.1, 0.3f, 0.0f);
                 }
                 break;
         }

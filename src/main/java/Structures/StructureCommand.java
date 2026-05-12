@@ -1,5 +1,6 @@
 package Structures;
 
+import TitleListener.RuletaAnimation;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -12,15 +13,17 @@ import java.util.Map;
 public class StructureCommand implements CommandExecutor {
     private final JavaPlugin plugin;
     private final Map<String, Structure> structures = new HashMap<>();
+    private final RuletaAnimation ruletaAnimation;
 
-    public StructureCommand(JavaPlugin plugin) {
+    public StructureCommand(JavaPlugin plugin, RuletaAnimation ruletaAnimation) {
         this.plugin = plugin;
+        this.ruletaAnimation = ruletaAnimation;
         plugin.getCommand("structure").setExecutor(this);
 
         // Registrar estructuras
-        registerStructure(new CorruptedVillage(plugin));
-        registerStructure(new EndRing(plugin));
-        registerStructure(new GuardianBlazeZone(plugin));
+        registerStructure(new CorruptedVillage(plugin, ruletaAnimation));
+        registerStructure(new EndRing(plugin, ruletaAnimation));
+        registerStructure(new GuardianBlazeZone(plugin, ruletaAnimation));
     }
 
     private void registerStructure(Structure structure) {

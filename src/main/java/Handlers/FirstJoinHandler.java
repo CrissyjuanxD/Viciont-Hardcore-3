@@ -1,8 +1,9 @@
 package Handlers;
 
-import Commands.MissionSystemCommands;
 import CorrupcionAnsiosa.CorrupcionAnsiosaManager;
 import Events.AchievementParty.AchievementPartyHandler;
+import Events.MissionSystem.MissionHandler;
+import Handlers.Teams.TeamType;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -20,18 +21,34 @@ import java.io.IOException;
 
 public class FirstJoinHandler implements Listener {
     private final JavaPlugin plugin;
-    private final AchievementPartyHandler achievementHandler;
-    private final MissionSystemCommands missionSystemCommands;
+    private final MissionHandler missionHandler;
+/*    private final AchievementPartyHandler achievementHandler;*/
     private final CorrupcionAnsiosaManager corruptionManager;
+    private final DatabaseManager databaseManager;
+    private final TeamsHandler teamsHandler;
 
-    public FirstJoinHandler(JavaPlugin plugin, MissionSystemCommands missionSystemCommands, CorrupcionAnsiosaManager corruptionManager) {
+
+    public FirstJoinHandler(JavaPlugin plugin, MissionHandler missionHandler, CorrupcionAnsiosaManager corruptionManager, DatabaseManager databaseManager, TeamsHandler teamsHandler) {
         this.plugin = plugin;
-        this.achievementHandler = new AchievementPartyHandler(plugin);
-        this.missionSystemCommands = missionSystemCommands;
+        this.missionHandler = missionHandler;
+/*        this.achievementHandler = new AchievementPartyHandler(plugin);*/
         this.corruptionManager = corruptionManager;
+        this.databaseManager = databaseManager;
+        this.teamsHandler = teamsHandler;
     }
 
     @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        if (!databaseManager.hasJoinedBefore(player.getUniqueId())) {
+            databaseManager.registerPlayer(player.getUniqueId(), player.getName(), TeamType.Z_MIEMBRO.getId());
+            teamsHandler.addPlayerToTeam(player, TeamType.Z_MIEMBRO);
+
+            giveWelcomeKit(player);
+        }
+    }
+
+/*    @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
@@ -72,7 +89,7 @@ public class FirstJoinHandler implements Listener {
             // Para jugadores que ya han entrado antes, asegurar que tengan datos de corrupción
             corruptionManager.initializePlayerData(player);
         }
-    }
+    }*/
 
     private void giveWelcomeKit(Player player) {
         // Crear los items del kit

@@ -1,3 +1,4 @@
+/*
 package Bosses;
 
 import items.BootNetheriteEssence;
@@ -875,4 +876,4 @@ public class HellishBeeHandler extends BaseBoss implements Listener {
             if (p != null) p.playSound(p.getLocation(), s, vol, pitch);
         }
     }
-}
+}*/

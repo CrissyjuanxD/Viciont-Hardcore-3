@@ -1,20 +1,15 @@
 package Casino;
 
-import Armors.CopperArmor;
-import Armors.CorruptedArmor;
-import Armors.NightVisionHelmet;
-import Blocks.CorruptedAncientDebris;
-import Blocks.Endstalactitas;
-import Blocks.GuardianShulkerHeart;
-import Dificultades.CustomMobs.CustomBoat;
 import Dificultades.DayOneChanges;
-import Enchants.EnhancedEnchantmentTable;
-import Events.UltraWitherBattle.UltraWitherCompass;
+import Habilidades.HabilidadesBook;
 import items.*;
+import items.IceBow.IceBowItem;
+import net.md_5.bungee.api.ChatColor;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Display;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -23,6 +18,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -30,8 +26,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Transformation;
-import net.md_5.bungee.api.ChatColor;
-import org.joml.Vector3f;
+import org.joml.Quaternionf;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,107 +35,76 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class SlotMachine implements Listener {
     private final JavaPlugin plugin;
+    private final DoubleLifeTotem doubleLifeTotem;
+    private final EconomyIceTotem economyIceTotem;
+    private final EconomyFlyTotem economyFlyTotem;
+    private final IceBowItem iceBowItem;
+    private final CasinoManager manager;
+
+    // Título con colores del código antiguo
     private final String title = ChatColor.of("#FF6B35") + "" + ChatColor.BOLD + "Máquina Tragamonedas";
 
-    // Nuevos slots para GUI expandida
-    private final int[] animationSlots = {12, 13, 14, 21, 22, 23}; // Slots para animación
-    private final int[] resultSlots = {30, 31, 32};
-    private final int[] reel1Slots = {12, 21, 30}; // Primer rodillo (columna izquierda)
-    private final int[] reel2Slots = {13, 22, 31}; // Segundo rodillo (columna centro)
-    private final int[] reel3Slots = {14, 23, 32}; // Tercer rodillo (columna derecha)
-    private final int tokenSlot = 49; // Slot para fichas
-    private final int spinButton = 43; // Botón para girar
-    private final int closeButton = 0; // Botón cerrar
+    // Slots GUI
+    private final int[] reel1Slots = {12, 21, 30};
+    private final int[] reel2Slots = {13, 22, 31};
+    private final int[] reel3Slots = {14, 23, 32};
+
+    private final int tokenSlot = 49;
+    private final int spinButton = 43;
+    private final int closeButton = 0;
 
     private final Material[] symbols = {Material.COAL, Material.IRON_INGOT, Material.GOLD_INGOT, Material.DIAMOND, Material.EMERALD};
+
+    // Estados
     private final Map<UUID, Boolean> isSpinning = new ConcurrentHashMap<>();
     private final Map<Location, UUID> machineUsers = new ConcurrentHashMap<>();
     private final Map<Location, List<ItemDisplay>> activeDisplays = new ConcurrentHashMap<>();
     private final Map<Location, BukkitRunnable> activeAnimations = new ConcurrentHashMap<>();
-
-    // NUEVO: Mapa para mantener el estado de la animación
     private final Map<Location, AnimationState> animationStates = new ConcurrentHashMap<>();
+    private final Map<Location, Long> animationStartTimes = new ConcurrentHashMap<>();
 
     private final File configFile;
     private FileConfiguration config;
 
-    // Posiciones relativas para los ItemDisplay (representando los 3 rodillos)
-    private final double[] reelOffsets = {-0.7, 0.0, 0.7}; // X offset for each reel
-    private final double displayHeight = 2.5; // Height above the block
-
-    private final DoubleLifeTotem doubleLifeTotem;
-    private final LifeTotem lifeTotem;
-    private final SpiderTotem spiderTotem;
-    private final InfernalTotem infernalTotem;
-    private final EconomyIceTotem economyIceTotem;
-    private final EconomyFlyTotem economyFlyTotem;
-    private final BootNetheriteEssence bootNetheriteEssence;
-    private final LegginsNetheriteEssence legginsNetheriteEssence;
-    private final ChestplateNetheriteEssence chestplateNetheriteEssence;
-    private final HelmetNetheriteEssence helmetNetheriteEssence;
-    private final CorruptedUpgrades corruptedUpgrades;
-    private final CorruptedSoul corruptedSoul;
-    private final CorruptedAncientDebris corruptedAncientDebris;
-    private final GuardianShulkerHeart guardianShulkerHeart;
-    private final CustomBoat customBoat;
-    private final TridenteEspectral tridenteEspectral;
-
+    // Clase interna para el estado de animación
     private static class AnimationState {
-        Material[] finalResults = new Material[3]; // Resultados finales para cada rodillo
-        Material[][] currentSymbols = new Material[3][3]; // Símbolos actuales [rodillo][posición]
-        boolean[] reelStopped = new boolean[3]; // Estado de cada rodillo
+        Material[] finalResults = new Material[3];
+        Material[][] currentSymbols = new Material[3][3];
+        boolean[] reelStopped = new boolean[3];
         int currentTick = 0;
         int maxTicks = 60;
 
         public AnimationState() {
             Arrays.fill(reelStopped, false);
-            // Inicializar todos los símbolos
             for (int i = 0; i < 3; i++) {
-                for (int j = 0; j < 3; j++) {
-                    currentSymbols[i][j] = Material.COAL; // Valor por defecto
-                }
+                Arrays.fill(currentSymbols[i], Material.COAL);
             }
         }
 
-        public boolean isReelStopped(int reel) {
-            return reelStopped[reel];
-        }
-
+        public boolean isReelStopped(int reel) { return reelStopped[reel]; }
         public void stopReel(int reel) {
             reelStopped[reel] = true;
             currentSymbols[reel][2] = finalResults[reel];
         }
     }
 
-    public SlotMachine(JavaPlugin plugin) {
+    public SlotMachine(JavaPlugin plugin, CasinoManager manager) {
         this.plugin = plugin;
-        this.configFile = new File(plugin.getDataFolder(), "SlotMachine.yml");
-
+        this.manager = manager;
         this.doubleLifeTotem = new DoubleLifeTotem(plugin);
-        this.lifeTotem = new LifeTotem(plugin);
-        this.spiderTotem = new SpiderTotem(plugin);
-        this.infernalTotem = new InfernalTotem(plugin);
         this.economyIceTotem = new EconomyIceTotem(plugin);
         this.economyFlyTotem = new EconomyFlyTotem(plugin);
-        this.bootNetheriteEssence = new BootNetheriteEssence(plugin);
-        this.legginsNetheriteEssence = new LegginsNetheriteEssence(plugin);
-        this.chestplateNetheriteEssence = new ChestplateNetheriteEssence(plugin);
-        this.helmetNetheriteEssence = new HelmetNetheriteEssence(plugin);
-        this.corruptedUpgrades = new CorruptedUpgrades(plugin);
-        this.corruptedSoul = new CorruptedSoul(plugin);
-        this.corruptedAncientDebris = new CorruptedAncientDebris(plugin);
-        this.guardianShulkerHeart = new GuardianShulkerHeart(plugin);
-        this.customBoat = new CustomBoat(plugin);
-        this.tridenteEspectral = new TridenteEspectral(plugin);
+        this.iceBowItem = new IceBowItem(plugin);
+        this.configFile = new File(plugin.getDataFolder(), "SlotMachine.yml");
 
         loadConfig();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
+    public void reloadConfig() { loadConfig(); }
+
     private void loadConfig() {
-        if (!configFile.exists()) {
-            createDefaultConfig();
-        }
+        if (!configFile.exists()) createDefaultConfig();
         config = YamlConfiguration.loadConfiguration(configFile);
     }
 
@@ -148,239 +112,405 @@ public class SlotMachine implements Listener {
         try {
             configFile.getParentFile().mkdirs();
             configFile.createNewFile();
+            FileConfiguration def = YamlConfiguration.loadConfiguration(configFile);
 
-            FileConfiguration defaultConfig = YamlConfiguration.loadConfiguration(configFile);
+            // Probabilidad de ganar (Porcentaje 0 - 100)
+            def.set("SlotMachine.win_chance", 15.0);
 
-            // Configuración por defecto
-            defaultConfig.set("SlotMachine.minerales.two_out_of_three", Arrays.asList("coal 12", "iron_ingot 10", "gold_ingot 8"));
-            defaultConfig.set("SlotMachine.minerales.three_out_of_three", Arrays.asList("diamond 5", "netherite_scrap 3", "pepita_infernal 3", "corrupted_netherite_scrap 2"));
+            def.set("SlotMachine.minerales.three_out_of_three", Arrays.asList("diamond 5", "gold_ingot 10"));
+            def.set("SlotMachine.itemsvarios.three_out_of_three", Arrays.asList("golden_apple 2", "experience_bottle 16"));
+            def.set("SlotMachine.pociones.three_out_of_three", Arrays.asList("potion 1"));
+            def.set("SlotMachine.vithiums_fichas.three_out_of_three", Arrays.asList("vithiums_fichas 15"));
+            def.set("SlotMachine.totems.three_out_of_three", Arrays.asList("totem_of_undying 1"));
 
-            defaultConfig.set("SlotMachine.itemsvarios.two_out_of_three", Arrays.asList("bread 16", "cooked_beef 8"));
-            defaultConfig.set("SlotMachine.itemsvarios.three_out_of_three", Arrays.asList("totem_of_undying 1", "enchanted_golden_apple 2"));
-
-            defaultConfig.set("SlotMachine.pociones.two_out_of_three", Arrays.asList("potion 3", "splash_potion 2"));
-            defaultConfig.set("SlotMachine.pociones.three_out_of_three", Arrays.asList("ultra_pocion_resistencia_fuego 1"));
-
-            defaultConfig.set("SlotMachine.vithiums_fichas.two_out_of_three", Arrays.asList("vithiums_fichas 5", "vithiums_fichas 8"));
-            defaultConfig.set("SlotMachine.vithiums_fichas.three_out_of_three", Arrays.asList("vithiums_fichas 15", "vithiums_fichas 20"));
-
-            defaultConfig.set("SlotMachine.totems.two_out_of_three", Arrays.asList("totem_of_undying 1"));
-            defaultConfig.set("SlotMachine.totems.three_out_of_three", Arrays.asList("doubletotem 1", "lifetotem 1"));
-
-            // Configuración de probabilidades
-            defaultConfig.set("SlotMachine.probabilities.two_out_of_three", 0.15);
-            defaultConfig.set("SlotMachine.probabilities.three_out_of_three", 0.05);
-
-            defaultConfig.save(configFile);
+            def.save(configFile);
         } catch (IOException e) {
-            plugin.getLogger().severe("Error creando configuración de Slot Machine: " + e.getMessage());
+            plugin.getLogger().severe("Error SlotMachine config: " + e.getMessage());
         }
     }
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
-        if (event.getClickedBlock() == null || event.getClickedBlock().getType() != Material.ORANGE_GLAZED_TERRACOTTA) return;
+        if (event.getClickedBlock() == null) return;
+
+        Location loc = event.getClickedBlock().getLocation();
+
+        if (!manager.isTable(loc) || !manager.getTableType(loc).equals("slot")) return;
 
         event.setCancelled(true);
         Player player = event.getPlayer();
-        Location blockLoc = event.getClickedBlock().getLocation();
 
-        // Verificar si hay una animación en curso
-        BukkitRunnable currentAnimation = activeAnimations.get(blockLoc);
-        if (currentAnimation != null) {
-            UUID currentUser = machineUsers.get(blockLoc);
-            if (currentUser != null && currentUser.equals(player.getUniqueId())) {
-                openSlotMachine(player, blockLoc);
-            } else {
-                player.sendMessage(ChatColor.of("#FF6B6B") + "۞ La máquina está en uso y hay una animación en curso.");
+        if (activeAnimations.containsKey(loc) && animationStartTimes.containsKey(loc)) {
+            long timeElapsed = System.currentTimeMillis() - animationStartTimes.get(loc);
+            if (timeElapsed > 8000) {
+                forceCleanup(null, loc);
             }
+        }
+
+        if (machineUsers.containsKey(loc) && !machineUsers.get(loc).equals(player.getUniqueId())) {
+            Player user = Bukkit.getPlayer(machineUsers.get(loc));
+            String name = (user != null) ? user.getName() : "otro jugador";
+            player.sendMessage(ChatColor.of("#FF6B6B") + "۞ Esta máquina está siendo usada por " + name);
             return;
         }
 
-        // Verificar si la máquina ya está siendo usada
-        UUID currentUser = machineUsers.get(blockLoc);
-        if (currentUser != null) {
-            Player currentPlayer = Bukkit.getPlayer(currentUser);
-            if (currentPlayer != null && currentPlayer.isOnline()) {
-                player.sendMessage(ChatColor.of("#FF6B6B") + "۞ Esta máquina está siendo usada por " + currentPlayer.getName());
-                return;
-            } else {
-                machineUsers.remove(blockLoc);
-                cleanupDisplays(blockLoc);
-            }
-        }
-
-        // Verificar fichas
-        if (!hasVithiumTokens(player)) {
-            player.sendMessage(ChatColor.of("#FFB3BA") + "۞ Necesitas Vithium Fichas para usar la máquina tragamonedas.");
+        if (activeAnimations.containsKey(loc) && !isSpinning.getOrDefault(player.getUniqueId(), false)) {
+            player.sendMessage(ChatColor.of("#FF6B6B") + "۞ La máquina está terminando una animación. Espera un momento.");
             return;
         }
 
-        // Registrar usuario y abrir máquina
-        machineUsers.put(blockLoc, player.getUniqueId());
-        openSlotMachine(player, blockLoc);
-    }
+        machineUsers.put(loc, player.getUniqueId());
+        manager.setGameActive(loc, true);
 
-    private boolean hasVithiumTokens(Player player) {
-        ItemStack tokenItem = EconomyItems.createVithiumToken();
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.isSimilar(tokenItem)) {
-                return true;
-            }
-        }
-        return false;
+        openSlotMachine(player, loc);
     }
 
     private void openSlotMachine(Player player, Location machineLoc) {
         Inventory inv = Bukkit.createInventory(null, 54, title);
         setupGUI(inv, player, machineLoc);
         player.openInventory(inv);
-
-        // Guardar la ubicación de la máquina en metadata del jugador
         player.setMetadata("slot_machine_location", new org.bukkit.metadata.FixedMetadataValue(plugin, machineLoc));
-
-        // Sonido de apertura
         machineLoc.getWorld().playSound(machineLoc, Sound.BLOCK_CHEST_OPEN, 1.0f, 1.2f);
     }
 
     private void setupGUI(Inventory inv, Player player, Location machineLoc) {
-        // Botón de cerrar (slot 0)
-        ItemStack closeItem = new ItemStack(Material.BARRIER);
-        ItemMeta closeMeta = closeItem.getItemMeta();
-        closeMeta.setDisplayName(ChatColor.of("#FF6B6B") + "" + ChatColor.BOLD + "Cerrar");
-        closeMeta.setCustomModelData(1000);
-        closeItem.setItemMeta(closeMeta);
-        inv.setItem(closeButton, closeItem);
+        ItemStack close = new ItemStack(Material.BARRIER);
+        ItemMeta cm = close.getItemMeta();
+        cm.setDisplayName(ChatColor.of("#FF6B6B") + "" + ChatColor.BOLD + "Cerrar");
+        cm.setCustomModelData(1000);
+        close.setItemMeta(cm);
+        inv.setItem(closeButton, close);
 
-        // Slot para fichas (slot 49) - SIN ITEM POR DEFECTO
-        // Dejamos el slot vacío para evitar duplicaciones
-
-        // Botón de girar (slot 43)
-        ItemStack spinItem = new ItemStack(Material.LEVER);
-        ItemMeta spinMeta = spinItem.getItemMeta();
-        spinMeta.setDisplayName(ChatColor.of("#B5EAD7") + "" + ChatColor.BOLD + "¡GIRAR!");
-        spinMeta.setLore(Arrays.asList(
+        ItemStack spin = new ItemStack(Material.LEVER);
+        ItemMeta sm = spin.getItemMeta();
+        sm.setDisplayName(ChatColor.of("#B5EAD7") + "" + ChatColor.BOLD + "¡GIRAR!");
+        sm.setLore(Arrays.asList(
                 "",
-                ChatColor.of("#C7CEEA") + "Coloca una " + ChatColor.of("#FFD3A5") + "Vithium Ficha",
+                ChatColor.of("#C7CEEA") + "Coloca una " + ChatColor.of("#FFD3A5") + "DinoFicha",
                 ChatColor.of("#C7CEEA") + "en el slot inferior y haz clic aquí",
                 ""
         ));
-        spinMeta.setCustomModelData(1000);
-        spinItem.setItemMeta(spinMeta);
-        inv.setItem(spinButton, spinItem);
+        sm.setCustomModelData(1000);
+        spin.setItemMeta(sm);
+        inv.setItem(spinButton, spin);
 
-        // ARREGLADO: Verificar si hay animación en curso para este jugador y máquina
+        ItemStack leftLine = new ItemStack(Material.RED_DYE);
+        ItemMeta leftMeta = leftLine.getItemMeta();
+        leftMeta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "»» " + ChatColor.RED + "Línea de Premio" + ChatColor.GOLD + " »»");
+        leftMeta.setCustomModelData(1000);
+        leftLine.setItemMeta(leftMeta);
+
+        inv.setItem(27, leftLine);
+        inv.setItem(28, leftLine);
+        inv.setItem(29, leftLine);
+
+        ItemStack rightLine = new ItemStack(Material.RED_DYE);
+        ItemMeta rightMeta = rightLine.getItemMeta();
+        rightMeta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "«« " + ChatColor.RED + "Línea de Premio" + ChatColor.GOLD + " ««");
+        rightMeta.setCustomModelData(1000);
+        rightLine.setItemMeta(rightMeta);
+
+        inv.setItem(33, rightLine);
+        inv.setItem(34, rightLine);
+        inv.setItem(35, rightLine);
+
+        ItemStack glass = new ItemStack(Material.BLACK_DYE);
+        ItemMeta gm = glass.getItemMeta();
+        gm.setDisplayName(" ");
+        gm.setCustomModelData(1000);
+        glass.setItemMeta(gm);
+
+        for (int i = 0; i < 54; i++) {
+            if (inv.getItem(i) == null && i != tokenSlot && !isReelSlot(i)) {
+                inv.setItem(i, glass);
+            }
+        }
+
+        ItemStack tokenIndicator = new ItemStack(Material.ORANGE_DYE);
+        ItemMeta tokenMeta = tokenIndicator.getItemMeta();
+        tokenMeta.setDisplayName(ChatColor.of("#FFD3A5") + "" + ChatColor.BOLD + "Coloca DinoFicha Aquí");
+        tokenMeta.setCustomModelData(1000);
+        tokenIndicator.setItemMeta(tokenMeta);
+
+        int[] indicatorSlots = {39, 40, 41, 48, 50};
+        for (int slot : indicatorSlots) {
+            inv.setItem(slot, tokenIndicator);
+        }
+
         AnimationState animState = animationStates.get(machineLoc);
         if (animState != null && activeAnimations.containsKey(machineLoc) && isSpinning.getOrDefault(player.getUniqueId(), false)) {
             updateGUIFromAnimationState(inv, animState);
         } else {
-            // Inicializar cada posición con símbolos aleatorios diferentes
-            Random rand = new Random();
-            for (int reel = 0; reel < 3; reel++) {
-                int[] reelSlots = reel == 0 ? reel1Slots : (reel == 1 ? reel2Slots : reel3Slots);
-
-                for (int pos = 0; pos < 3; pos++) {
-                    Material symbol;
-                    do {
-                        symbol = symbols[rand.nextInt(symbols.length)];
-                        // Asegurarse de que no se repita el símbolo en la misma columna
-                    } while (pos > 0 && symbol == inv.getItem(reelSlots[pos-1]).getType());
-
-                    setSymbolInSlot(inv, reelSlots[pos], symbol, pos == 2); // El último slot es el resultado
+            Random r = new Random();
+            for (int i = 0; i < 3; i++) {
+                int[] reel = i == 0 ? reel1Slots : (i == 1 ? reel2Slots : reel3Slots);
+                for (int slot : reel) {
+                    setSymbolInSlot(inv, slot, symbols[r.nextInt(symbols.length)], false);
                 }
             }
         }
-
-        // Llenar espacios vacíos con paneles grises
-        for (int i = 0; i < inv.getSize(); i++) {
-            if (i != closeButton && i != tokenSlot && i != spinButton &&
-                    !isAnimationSlot(i) && !isResultSlot(i) && inv.getItem(i) == null) {
-
-                ItemStack frame = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
-                ItemMeta frameMeta = frame.getItemMeta();
-                frameMeta.setDisplayName(" ");
-                frameMeta.setCustomModelData(1000);
-                frame.setItemMeta(frameMeta);
-                inv.setItem(i, frame);
-            }
-        }
-
-        // Agregar indicador visual GRIS para el slot de fichas
-        ItemStack tokenIndicator = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
-        ItemMeta tokenMeta = tokenIndicator.getItemMeta();
-        tokenMeta.setDisplayName(ChatColor.of("#FFD3A5") + "" + ChatColor.BOLD + "Coloca Ficha Aquí");
-        tokenMeta.setLore(Arrays.asList(
-                "",
-                ChatColor.of("#C7CEEA") + "Arrastra una " + ChatColor.of("#FFD3A5") + "Vithium Ficha",
-                ChatColor.of("#C7CEEA") + "a este slot para apostar",
-                ""
-        ));
-        tokenMeta.setCustomModelData(1000);
-        tokenIndicator.setItemMeta(tokenMeta);
-
-        // Colocar indicadores alrededor del slot de ficha
-        int[] indicatorSlots = {40, 41, 42, 48, 50, 57, 58};
-        for (int slot : indicatorSlots) {
-            if (slot < 54) {
-                inv.setItem(slot, tokenIndicator);
-            }
-        }
     }
 
-    // ARREGLADO: Nuevo método que usa el estado de animación correctamente
-    private void updateGUIFromAnimationState(Inventory inv, AnimationState animState) {
-        for (int reel = 0; reel < 3; reel++) {
-            boolean isStopped = animState.isReelStopped(reel);
-            int[] reelSlots = reel == 0 ? reel1Slots : (reel == 1 ? reel2Slots : reel3Slots);
-
-            for (int pos = 0; pos < 3; pos++) {
-                Material symbol = animState.currentSymbols[reel][pos];
-                boolean isFinal = isStopped && pos == 2; // Solo el último slot en dorado
-
-                setSymbolInSlot(inv, reelSlots[pos], symbol, isFinal);
-            }
-        }
-    }
-
-    private boolean isAnimationSlot(int slot) {
-        return slot == 12 || slot == 21 || slot == 30 ||  // Rodillo 1
-                slot == 13 || slot == 22 || slot == 31 ||  // Rodillo 2
-                slot == 14 || slot == 23 || slot == 32;    // Rodillo 3
-    }
-
-    private boolean isResultSlot(int slot) {
-        for (int resultSlot : resultSlots) {
-            if (resultSlot == slot) return true;
-        }
+    private boolean isReelSlot(int slot) {
+        for (int s : reel1Slots) if (s == slot) return true;
+        for (int s : reel2Slots) if (s == slot) return true;
+        for (int s : reel3Slots) if (s == slot) return true;
         return false;
     }
 
-    private void setRandomSymbol(Inventory inv, int slot, boolean isGray) {
-        Material symbol = symbols[new Random().nextInt(symbols.length)];
-        ItemStack item = new ItemStack(symbol);
-        ItemMeta meta = item.getItemMeta();
+    private void updateGUIFromAnimationState(Inventory inv, AnimationState animState) {
+        for (int reel = 0; reel < 3; reel++) {
+            int[] slots = reel == 0 ? reel1Slots : (reel == 1 ? reel2Slots : reel3Slots);
+            for (int pos = 0; pos < 3; pos++) {
+                Material sym = animState.currentSymbols[reel][pos];
+                boolean isFinal = animState.isReelStopped(reel) && pos == 2;
+                setSymbolInSlot(inv, slots[pos], sym, isFinal);
+            }
+        }
+    }
 
-        String colorCode = isGray ? ChatColor.GRAY + "" : ChatColor.of("#FFD3A5") + "" + ChatColor.BOLD;
-        meta.setDisplayName(colorCode + getSymbolName(symbol));
-        meta.setCustomModelData(100); // Custom model data correcto
+    private void setSymbolInSlot(Inventory inv, int slot, Material mat, boolean gold) {
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta = item.getItemMeta();
+        String name = getSymbolName(mat);
+        meta.setDisplayName(gold ?
+                ChatColor.of("#FFD3A5") + "" + ChatColor.BOLD + name :
+                ChatColor.GRAY + name);
+        meta.setCustomModelData(100);
         item.setItemMeta(meta);
         inv.setItem(slot, item);
     }
 
-    private String getSymbolName(Material symbol) {
-        return switch (symbol) {
+    private String getSymbolName(Material m) {
+        return switch (m) {
             case COAL -> "Carbón";
             case IRON_INGOT -> "Hierro";
             case GOLD_INGOT -> "Oro";
             case DIAMOND -> "Diamante";
             case EMERALD -> "Esmeralda";
-            default -> symbol.name();
+            default -> m.name();
         };
     }
 
-    private String getCategoryFromSymbol(Material symbol) {
-        return switch (symbol) {
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent e) {
+        Player p = (Player) e.getWhoClicked();
+
+        if (!p.hasMetadata("slot_machine_location")) return;
+        if (e.getView().getTopInventory().getSize() != 54) return;
+        if (e.getClickedInventory() == p.getInventory()) return;
+
+        if (e.getSlot() == tokenSlot) {
+            if (isSpinning.getOrDefault(p.getUniqueId(), false)) {
+                e.setCancelled(true);
+                return;
+            }
+            ItemStack cursor = e.getCursor();
+            if (cursor != null && cursor.getType() != Material.AIR) {
+                if (!cursor.isSimilar(EconomyItems.createVithiumToken())) {
+                    e.setCancelled(true);
+                    p.sendMessage(ChatColor.of("#FFB3BA") + "۞ Solo puedes colocar DinoFichas aquí.");
+                    return;
+                }
+            }
+            return;
+        }
+
+        e.setCancelled(true);
+
+        if (e.getSlot() == closeButton) {
+            p.closeInventory();
+        } else if (e.getSlot() == spinButton) {
+            startSpin(p, e.getInventory());
+        }
+    }
+
+    private void startSpin(Player p, Inventory inv) {
+        if (isSpinning.getOrDefault(p.getUniqueId(), false)) return;
+
+        ItemStack bet = inv.getItem(tokenSlot);
+        if (bet == null || !bet.isSimilar(EconomyItems.createVithiumToken())) {
+            p.sendMessage(ChatColor.of("#FFB3BA") + "۞ ¡Coloca una DinoFicha primero!");
+            p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 0.8f);
+            return;
+        }
+
+        bet.setAmount(bet.getAmount() - 1);
+        inv.setItem(tokenSlot, bet.getAmount() > 0 ? bet : null);
+
+        isSpinning.put(p.getUniqueId(), true);
+        Location loc = null;
+        if (p.hasMetadata("slot_machine_location")) {
+            loc = (Location) p.getMetadata("slot_machine_location").get(0).value();
+        }
+        final Location machineLoc = loc;
+
+        AnimationState state = new AnimationState();
+        Random r = new Random();
+
+        double winChance = config.getDouble("SlotMachine.win_chance", 15.0);
+        double roll = r.nextDouble() * 100;
+        boolean shouldWin = roll <= winChance;
+
+        if (shouldWin) {
+            Material winningSymbol = symbols[r.nextInt(symbols.length)];
+            state.finalResults[0] = winningSymbol;
+            state.finalResults[1] = winningSymbol;
+            state.finalResults[2] = winningSymbol;
+        } else {
+            do {
+                state.finalResults[0] = symbols[r.nextInt(symbols.length)];
+                state.finalResults[1] = symbols[r.nextInt(symbols.length)];
+                state.finalResults[2] = symbols[r.nextInt(symbols.length)];
+            } while (state.finalResults[0] == state.finalResults[1] && state.finalResults[1] == state.finalResults[2]);
+        }
+
+        for(int i=0; i<3; i++) {
+            for(int j=0; j<3; j++) state.currentSymbols[i][j] = symbols[r.nextInt(symbols.length)];
+        }
+
+        if (machineLoc != null) {
+            // Asegurarnos de borrar CUALQUIER display viejo antes de empezar uno nuevo
+            cleanupDisplays(machineLoc);
+
+            animationStates.put(machineLoc, state);
+            animationStartTimes.put(machineLoc, System.currentTimeMillis());
+            machineLoc.getWorld().playSound(machineLoc, Sound.BLOCK_PISTON_EXTEND, 1.0f, 1.0f);
+            machineLoc.getWorld().playSound(machineLoc, Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.2f);
+            createItemDisplays(machineLoc, p);
+        }
+
+        BukkitRunnable task = new BukkitRunnable() {
+            @Override
+            public void run() {
+                try {
+                    state.currentTick++;
+                    int[] stops = {40, 50, 60};
+
+                    for(int reel=0; reel<3; reel++) {
+                        if (!state.isReelStopped(reel)) {
+                            if (state.currentTick >= stops[reel]) {
+                                state.stopReel(reel);
+                                p.playSound(p.getLocation(), Sound.BLOCK_ANVIL_LAND, 0.5f, 1.5f);
+                            } else {
+                                if (reel == 0 && state.currentTick % 4 == 0) {
+                                    p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.3f, 1.0f + (state.currentTick * 0.02f));
+                                }
+
+                                state.currentSymbols[reel][2] = state.currentSymbols[reel][1];
+                                state.currentSymbols[reel][1] = state.currentSymbols[reel][0];
+                                state.currentSymbols[reel][0] = symbols[r.nextInt(symbols.length)];
+                            }
+                        }
+                    }
+
+                    if (p.hasMetadata("slot_machine_location") && p.getOpenInventory().getTopInventory().getSize() == 54) {
+                        updateGUIFromAnimationState(inv, state);
+                    }
+
+                    if (machineLoc != null) {
+                        Material[] displayMats = {
+                                state.currentSymbols[0][2],
+                                state.currentSymbols[1][2],
+                                state.currentSymbols[2][2]
+                        };
+                        updateDisplayItems(machineLoc, displayMats);
+                    }
+
+                    if (state.currentTick >= 60) {
+                        this.cancel();
+                        finishSpin(p, inv, machineLoc, state);
+                    }
+
+                } catch (Exception e) {
+                    this.cancel();
+                    forceCleanup(p, machineLoc);
+                }
+            }
+        };
+
+        if (machineLoc != null) activeAnimations.put(machineLoc, task);
+        task.runTaskTimer(plugin, 0L, 2L);
+    }
+
+    private void finishSpin(Player p, Inventory inv, Location loc, AnimationState state) {
+        Material[] results = state.finalResults;
+
+        for(int i=0; i<3; i++) {
+            int slot = reel1Slots[2] + i;
+            setSymbolInSlot(inv, slot, results[i], true);
+        }
+
+        if (results[0] == results[1] && results[1] == results[2]) {
+            giveReward(p, results[0], loc);
+        } else {
+            p.sendMessage(ChatColor.RED + "¡No hay suerte esta vez!");
+            if (loc != null) {
+                loc.getWorld().playSound(loc, Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 0.5f);
+                loc.getWorld().playSound(loc, Sound.ENTITY_VILLAGER_NO, 0.8f, 0.8f);
+            }
+        }
+
+        if (loc != null) {
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    cleanupDisplays(loc); // Limpiar al instante
+                    animationStates.remove(loc);
+                    activeAnimations.remove(loc);
+                    animationStartTimes.remove(loc);
+                    isSpinning.put(p.getUniqueId(), false); // Liberar giro AL FINAL
+
+                    if (!p.hasMetadata("slot_machine_location")) {
+                        forceCleanup(p, loc);
+                    }
+                }
+            }.runTaskLater(plugin, 40L); // Reducido a 2 segundos exactos para que la transición sea fluida
+        } else {
+            isSpinning.put(p.getUniqueId(), false);
+        }
+    }
+
+    private void giveReward(Player p, Material symbol, Location loc) {
+        String cat = getCategoryFromSymbol(symbol);
+        List<String> rewards = config.getStringList("SlotMachine." + cat + ".three_out_of_three");
+
+        if (rewards.isEmpty()) {
+            p.sendMessage(ChatColor.of("#FFB3BA") + "۞ No hay recompensas configuradas.");
+            return;
+        }
+
+        String rewStr = rewards.get(new Random().nextInt(rewards.size()));
+        String[] parts = rewStr.split(" ");
+        String itemCode = parts[0];
+        int amount = 1;
+        try { amount = Integer.parseInt(parts[1]); } catch (Exception ignored) {}
+
+        ItemStack item = createRewardItem(itemCode, amount);
+
+        if (item != null) {
+            p.getInventory().addItem(item).forEach((k,v) -> p.getWorld().dropItemNaturally(p.getLocation(), v));
+
+            String displayName = (item.getItemMeta().hasDisplayName()) ? item.getItemMeta().getDisplayName() : itemCode;
+
+            p.sendMessage(ChatColor.of("#B5EAD7") + "۞ ¡Has ganado " +
+                    ChatColor.of("#FFD3A5") + displayName +
+                    ChatColor.of("#B5EAD7") + " x" + amount + "!");
+        }
+
+        if (loc != null) {
+            loc.getWorld().playSound(loc, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+            loc.getWorld().playSound(loc, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.5f);
+            loc.getWorld().playSound(loc, Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, 0.8f, 1.2f);
+
+            loc.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, loc.clone().add(0.5, 2, 0.5), 15, 0.5, 0.5, 0.5, 0.1);
+            loc.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, loc.clone().add(0.5, 2, 0.5), 10, 0.3, 0.3, 0.3, 0.05);
+        }
+    }
+
+    private String getCategoryFromSymbol(Material m) {
+        return switch (m) {
             case COAL -> "itemsvarios";
             case IRON_INGOT -> "pociones";
             case GOLD_INGOT -> "vithiums_fichas";
@@ -391,926 +521,202 @@ public class SlotMachine implements Listener {
     }
 
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (!event.getView().getTitle().equals(title)) return;
+    public void onClose(InventoryCloseEvent e) {
+        Player p = (Player) e.getPlayer();
 
-        Player player = (Player) event.getWhoClicked();
+        if (!p.hasMetadata("slot_machine_location")) return;
 
-        // Permitir interacción completa con el inventario del jugador
-        if (event.getClickedInventory() == player.getInventory()) {
-            return; // No cancelar - permitir interacción normal
+        ItemStack tokens = e.getInventory().getItem(tokenSlot);
+        if (tokens != null) p.getInventory().addItem(tokens);
+
+        Location loc = (Location) p.getMetadata("slot_machine_location").get(0).value();
+
+        p.removeMetadata("slot_machine_location", plugin);
+
+        if (!activeAnimations.containsKey(loc)) {
+            forceCleanup(p, loc);
         }
-
-        // Solo manejar clicks en el inventario de la slot machine
-        if (event.getClickedInventory() != event.getView().getTopInventory()) {
-            return;
-        }
-
-        // Si está girando, cancelar todas las interacciones excepto cerrar
-        if (isSpinning.getOrDefault(player.getUniqueId(), false)) {
-            if (event.getSlot() == closeButton) {
-                event.setCancelled(false);
-                return;
-            }
-            event.setCancelled(true);
-            return;
-        }
-
-        // Manejar slot de fichas (49)
-        if (event.getSlot() == tokenSlot) {
-            handleTokenSlot(event);
-            return;
-        }
-
-        // Para todos los otros slots, cancelar por defecto
-        event.setCancelled(true);
-
-        if (event.getCurrentItem() == null) return;
-
-        // Manejar botones específicos
-        switch (event.getSlot()) {
-            case 0 -> player.closeInventory(); // Botón cerrar
-            case 43 -> { // Botón girar
-                ItemStack wager = event.getInventory().getItem(tokenSlot);
-                if (wager != null && wager.isSimilar(EconomyItems.createVithiumToken())) {
-                    startSpinAnimation(player, event.getInventory());
-                } else {
-                    player.sendMessage(ChatColor.of("#FFB3BA") + "۞ ¡Coloca una Vithium Ficha primero!");
-                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 0.8f);
-                }
-            }
-        }
-    }
-
-    private void handleTokenSlot(InventoryClickEvent event) {
-        ItemStack cursor = event.getCursor();
-        ItemStack current = event.getCurrentItem();
-        ItemStack vithiumToken = EconomyItems.createVithiumToken();
-
-        // Si está colocando una ficha
-        if (cursor != null && cursor.isSimilar(vithiumToken)) {
-            event.setCancelled(false);
-            return;
-        }
-
-        // Si está sacando una ficha
-        if (current != null && current.isSimilar(vithiumToken)) {
-            event.setCancelled(false);
-            return;
-        }
-
-        // Si está intentando colocar otro item
-        if (cursor != null && !cursor.getType().equals(Material.AIR)) {
-            event.setCancelled(true);
-            Player player = (Player) event.getWhoClicked();
-            player.sendMessage(ChatColor.of("#FFB3BA") + "۞ Solo puedes colocar Vithium Fichas aquí.");
-            return;
-        }
-
-        // Permitir click con mano vacía
-        event.setCancelled(false);
     }
 
     @EventHandler
-    public void onInventoryClose(InventoryCloseEvent event) {
-        if (!event.getView().getTitle().equals(title)) return;
-
-        Player player = (Player) event.getPlayer();
-
-        // Devolver CUALQUIER item que esté en el slot de fichas
-        ItemStack itemInTokenSlot = event.getInventory().getItem(tokenSlot);
-        if (itemInTokenSlot != null) {
-            HashMap<Integer, ItemStack> remaining = player.getInventory().addItem(itemInTokenSlot);
-            if (!remaining.isEmpty()) {
-                for (ItemStack item : remaining.values()) {
-                    player.getWorld().dropItemNaturally(player.getLocation(), item);
-                }
-            }
+    public void onQuit(PlayerQuitEvent e) {
+        Player p = e.getPlayer();
+        if (p.hasMetadata("slot_machine_location")) {
+            Location loc = (Location) p.getMetadata("slot_machine_location").get(0).value();
+            forceCleanup(p, loc);
         }
-
-        // Si no hay animación activa, liberar la máquina y limpiar displays
-        if (player.hasMetadata("slot_machine_location")) {
-            Location machineLoc = (Location) player.getMetadata("slot_machine_location").get(0).value();
-
-            // Solo liberar si no hay animación en curso
-            if (!activeAnimations.containsKey(machineLoc)) {
-                machineUsers.remove(machineLoc);
-                cleanupDisplays(machineLoc);
-            }
-
-            player.removeMetadata("slot_machine_location", plugin);
-        }
-
-        // NO detener animación si está activa - debe continuar aunque se cierre la GUI
+        isSpinning.remove(p.getUniqueId());
     }
 
     @EventHandler
-    public void onChunkUnload(ChunkUnloadEvent event) {
-        // Limpiar displays cuando se descargan chunks
+    public void onChunkUnload(ChunkUnloadEvent e) {
         List<Location> toRemove = new ArrayList<>();
         for (Location loc : activeDisplays.keySet()) {
-            if (loc.getChunk().equals(event.getChunk())) {
+            if (loc.getChunk().equals(e.getChunk())) {
                 cleanupDisplays(loc);
+                manager.setGameActive(loc, false);
                 toRemove.add(loc);
             }
         }
         toRemove.forEach(activeDisplays::remove);
         toRemove.forEach(machineUsers::remove);
+        toRemove.forEach(l -> {
+            if (activeAnimations.containsKey(l)) activeAnimations.get(l).cancel();
+        });
         toRemove.forEach(activeAnimations::remove);
-        toRemove.forEach(animationStates::remove); // NUEVO: limpiar estados de animación
+        toRemove.forEach(animationStartTimes::remove);
     }
 
-    private void createItemDisplays(Location machineLoc) {
-        if (activeDisplays.containsKey(machineLoc)) {
-            cleanupDisplays(machineLoc);
-        }
+    private void forceCleanup(Player p, Location loc) {
+        if (p != null) isSpinning.remove(p.getUniqueId());
+        machineUsers.remove(loc);
+        if (activeAnimations.containsKey(loc)) activeAnimations.get(loc).cancel();
+        activeAnimations.remove(loc);
+        animationStates.remove(loc);
+        animationStartTimes.remove(loc);
+        cleanupDisplays(loc);
+        manager.setGameActive(loc, false);
+    }
+
+    private void createItemDisplays(Location machineLoc, Player player) {
+        if (!machineLoc.getChunk().isLoaded()) machineLoc.getChunk().load();
 
         List<ItemDisplay> displays = new ArrayList<>();
-        World world = machineLoc.getWorld();
 
-        // Asegurarse de que el chunk esté cargado
-        if (!machineLoc.getChunk().isLoaded()) {
-            machineLoc.getChunk().load();
+        // Normalizamos el Yaw del jugador (0 a 360)
+        double yaw = player.getLocation().getYaw();
+        yaw = (yaw % 360 + 360) % 360;
+
+        // "Redondear" a la dirección cardinal más cercana (Norte, Sur, Este, Oeste)
+        double cardinalYaw;
+        if (yaw >= 45 && yaw < 135) {
+            cardinalYaw = 90.0;  // Oeste
+        } else if (yaw >= 135 && yaw < 225) {
+            cardinalYaw = 180.0; // Norte
+        } else if (yaw >= 225 && yaw < 315) {
+            cardinalYaw = 270.0; // Este
+        } else {
+            cardinalYaw = 0.0;   // Sur
         }
 
-        // Posiciones centradas para cada rodillo
-        double[] reelPositions = {-0.5, 0.0, 0.5}; // Centrado perfecto en X
-        double displayHeight = 2.0; // Altura ajustada
+        // Usamos el Yaw redondeado para los cálculos
+        double radYaw = Math.toRadians(cardinalYaw);
 
-        for (int i = 0; i < 3; i++) {
-            Location displayLoc = machineLoc.clone()
-                    .add(reelPositions[i], displayHeight, 0.5) // Centrado en X y Z
-                    .add(0.5, 0, 0.5); // Ajuste para centrar en el bloque
+        // Vector horizontal (derecha/izquierda relativos a la cara del bloque)
+        double dx = Math.cos(radYaw);
+        double dz = Math.sin(radYaw);
 
-            ItemDisplay display = world.spawn(displayLoc, ItemDisplay.class, itemDisplay -> {
-                // Crear item con custom model data
-                ItemStack displayItem = new ItemStack(symbols[0]);
-                ItemMeta meta = displayItem.getItemMeta();
-                meta.setCustomModelData(100);
-                displayItem.setItemMeta(meta);
+        // Vector de profundidad (empujar "adentro" del bloque)
+        double pushBack = 0.2;
+        double px = -Math.sin(radYaw) * pushBack;
+        double pz = Math.cos(radYaw) * pushBack;
 
-                itemDisplay.setItemStack(displayItem);
-                itemDisplay.setBillboard(Display.Billboard.CENTER);
+        // Rotación exacta fijada a los ejes
+        float displayYaw = (float) (Math.toRadians(-cardinalYaw + 180));
+        Quaternionf rotation = new Quaternionf().rotateY(displayYaw);
 
-                // Configuración de transformación
-                Transformation transformation = itemDisplay.getTransformation();
-                transformation.getScale().set(0.4f); // Tamaño ajustado
-                transformation.getTranslation().set(0, 0, 0); // Posición exacta
-                itemDisplay.setTransformation(transformation);
+        double spacing = 0.325;
+        double heightY = 1.525;
+        float scaleSize = 0.275f;
 
-                // Configuración importante para evitar desapariciones
-                itemDisplay.setPersistent(true); // Hacerlo persistente
-                itemDisplay.setInvulnerable(true); // Invulnerable a daños
-                itemDisplay.setGlowing(true); // Efecto de brillo
-                itemDisplay.setBrightness(new Display.Brightness(15, 15)); // Máxima iluminación
-                itemDisplay.setViewRange(1.5f); // Rango de visualización más amplio
-            });
+        for(int i = 0; i < 3; i++) {
+            int multiplier = i - 1;
 
-            // Forzar que el display se mantenga
-            display.setPersistent(true);
-            displays.add(display);
-        }
+            Location dLoc = machineLoc.clone().add(
+                    0.5 + (dx * spacing * multiplier) + px,
+                    heightY,
+                    0.5 + (dz * spacing * multiplier) + pz
+            );
 
-        activeDisplays.put(machineLoc, displays);
+            ItemDisplay d = machineLoc.getWorld().spawn(dLoc, ItemDisplay.class, display -> {
+                display.setItemStack(new ItemStack(symbols[0]));
+                display.setBillboard(Display.Billboard.FIXED); // Debe mantenerse en FIXED para respetar nuestra rotación manual
 
-        // Forzar guardado del chunk
-        world.getChunkAt(machineLoc).setForceLoaded(true);
-    }
+                Transformation t = display.getTransformation();
+                t.getScale().set(scaleSize);
+                t.getLeftRotation().set(rotation);
+                display.setTransformation(t);
 
-    private void updateDisplayItems(Location machineLoc, Material[] symbols) {
-        List<ItemDisplay> displays = activeDisplays.get(machineLoc);
-        if (displays == null || displays.size() != 3) {
-            // Si los displays desaparecieron, recrearlos
-            if (machineLoc != null && machineLoc.getWorld() != null) {
-                createItemDisplays(machineLoc);
-                displays = activeDisplays.get(machineLoc);
-                if (displays == null) return;
-            } else {
-                return;
-            }
-        }
-
-        for (int i = 0; i < 3 && i < displays.size(); i++) {
-            ItemDisplay display = displays.get(i);
-            if (display == null || !display.isValid()) {
-                // Recrear display si es necesario
-                createItemDisplays(machineLoc);
-                return;
-            }
-
-            try {
-                ItemStack displayItem = new ItemStack(symbols[i]);
-                ItemMeta meta = displayItem.getItemMeta();
-                meta.setCustomModelData(100);
-                displayItem.setItemMeta(meta);
-
-                // Actualizar el display
-                display.setItemStack(displayItem);
-
-                // Reforzar persistencia
                 display.setPersistent(true);
-            } catch (Exception e) {
-                plugin.getLogger().warning("Error al actualizar ItemDisplay: " + e.getMessage());
-                // Recrear displays si hay error
-                createItemDisplays(machineLoc);
-                return;
-            }
-        }
-    }
+                display.setInvulnerable(true);
+                display.setGlowing(true);
+                display.setBrightness(new Display.Brightness(15, 15));
 
-    private void cleanupDisplays(Location machineLoc) {
-        List<ItemDisplay> displays = activeDisplays.get(machineLoc);
-        if (displays != null) {
-            // Asegurarse de que el chunk esté cargado
-            if (machineLoc != null && machineLoc.getWorld() != null && !machineLoc.getChunk().isLoaded()) {
-                machineLoc.getChunk().load();
-            }
-
-            for (ItemDisplay display : displays) {
-                try {
-                    if (display != null && display.isValid()) {
-                        display.remove();
-                    }
-                } catch (Exception e) {
-                    plugin.getLogger().warning("Error al limpiar ItemDisplay: " + e.getMessage());
-                }
-            }
-            activeDisplays.remove(machineLoc);
-
-            // Liberar el chunk si es necesario
-            if (machineLoc != null && machineLoc.getWorld() != null) {
-                machineLoc.getChunk().setForceLoaded(false);
-            }
-        }
-    }
-
-    // COMPLETAMENTE ARREGLADO: Método de animación corregido
-    private void startSpinAnimation(Player player, Inventory inv) {
-        if (isSpinning.getOrDefault(player.getUniqueId(), false)) return;
-
-        isSpinning.put(player.getUniqueId(), true);
-
-        // Consumir ficha
-        ItemStack wager = inv.getItem(tokenSlot);
-        if (wager != null) {
-            wager.setAmount(wager.getAmount() - 1);
-            if (wager.getAmount() <= 0) {
-                inv.setItem(tokenSlot, null);
-            }
-        }
-
-        Location machineLoc = null;
-        if (player.hasMetadata("slot_machine_location")) {
-            machineLoc = (Location) player.getMetadata("slot_machine_location").get(0).value();
-        }
-
-        final Location finalMachineLoc = machineLoc;
-
-        // Crear estado de animación
-        AnimationState animState = new AnimationState();
-        Random random = new Random();
-
-        // Generar resultados finales y símbolos iniciales
-        for (int reel = 0; reel < 3; reel++) {
-            animState.finalResults[reel] = symbols[random.nextInt(symbols.length)];
-
-            // Inicializar cada posición del rodillo con símbolos diferentes
-            for (int pos = 0; pos < 3; pos++) {
-                animState.currentSymbols[reel][pos] = symbols[(reel + pos) % symbols.length];
-            }
-        }
-
-        if (finalMachineLoc != null) {
-            animationStates.put(finalMachineLoc, animState);
-        }
-
-        // Crear displays 3D
-        if (finalMachineLoc != null) {
-            createItemDisplays(finalMachineLoc);
-            // Actualizar inmediatamente con los símbolos iniciales
-            updateDisplayItems(finalMachineLoc, new Material[]{
-                    animState.currentSymbols[0][2], // Símbolo inferior del primer rodillo
-                    animState.currentSymbols[1][2], // Símbolo inferior del segundo rodillo
-                    animState.currentSymbols[2][2]  // Símbolo inferior del tercer rodillo
+                display.addScoreboardTag("slot_display");
             });
+            displays.add(d);
+        }
+        activeDisplays.put(machineLoc, displays);
+    }
 
-            finalMachineLoc.getWorld().playSound(finalMachineLoc, Sound.BLOCK_PISTON_EXTEND, 1.0f, 1.0f);
-            finalMachineLoc.getWorld().playSound(finalMachineLoc, Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.2f);
+    private void updateDisplayItems(Location loc, Material[] mats) {
+        List<ItemDisplay> displays = activeDisplays.get(loc);
+        if (displays == null || displays.size() < 3) return;
+
+        for(int i=0; i<3; i++) {
+            ItemStack item = new ItemStack(mats[i]);
+            ItemMeta m = item.getItemMeta();
+            m.setCustomModelData(100);
+            item.setItemMeta(m);
+            if (displays.get(i).isValid()) displays.get(i).setItemStack(item);
+        }
+    }
+
+    private void cleanupDisplays(Location loc) {
+        if (activeDisplays.containsKey(loc)) {
+            activeDisplays.get(loc).forEach(Entity::remove);
+            activeDisplays.remove(loc);
         }
 
-        BukkitRunnable animationTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                try {
-                    // Verificar y mantener los displays
-                    if (finalMachineLoc != null) {
-                        List<ItemDisplay> displays = activeDisplays.get(finalMachineLoc);
-                        if (displays == null || displays.size() != 3 || displays.stream().anyMatch(d -> d == null || !d.isValid())) {
-                            createItemDisplays(finalMachineLoc);
-                        }
-
-                        // Asegurar que el chunk permanezca cargado
-                        finalMachineLoc.getChunk().setForceLoaded(true);
+        // LIMPIEZA ABSOLUTA MEDIANTE TAGS
+        if (loc.getWorld() != null && loc.getChunk().isLoaded()) {
+            Location searchLoc = loc.clone().add(0.5, 2.0, 0.5);
+            for (Entity e : loc.getChunk().getEntities()) {
+                if (e instanceof ItemDisplay && e.getScoreboardTags().contains("slot_display")) {
+                    if (e.getLocation().distanceSquared(searchLoc) < 4.0) {
+                        e.remove();
                     }
-
-                    animState.currentTick++;
-
-                    // Tiempos de detención para cada rodillo (animación en cascada)
-                    int[] stopTimes = {
-                            animState.maxTicks - 20, // Primer rodillo
-                            animState.maxTicks - 10, // Segundo rodillo
-                            animState.maxTicks       // Tercer rodillo
-                    };
-
-                    for (int reel = 0; reel < 3; reel++) {
-                        if (!animState.isReelStopped(reel)) {
-                            if (animState.currentTick >= stopTimes[reel]) {
-                                // Detener este rodillo
-                                animState.stopReel(reel);
-                                if (finalMachineLoc != null) {
-                                    finalMachineLoc.getWorld().playSound(finalMachineLoc, Sound.BLOCK_ANVIL_LAND, 0.5f, 1.5f);
-
-                                    // Actualizar el display 3D con el símbolo final cuando se detiene
-                                    Material[] currentDisplaySymbols = new Material[3];
-                                    for (int i = 0; i < 3; i++) {
-                                        currentDisplaySymbols[i] = animState.isReelStopped(i) ?
-                                                animState.finalResults[i] :
-                                                animState.currentSymbols[i][2];
-                                    }
-                                    updateDisplayItems(finalMachineLoc, currentDisplaySymbols);
-                                }
-                            } else {
-                                // Animación del rodillo
-                                if (animState.currentTick > stopTimes[reel] - 15) {
-                                    // Últimos 15 ticks - mostrar más el símbolo final
-                                    for (int pos = 0; pos < 3; pos++) {
-                                        if (random.nextDouble() < 0.3) {
-                                            animState.currentSymbols[reel][pos] = animState.finalResults[reel];
-                                        } else {
-                                            animState.currentSymbols[reel][pos] = getNextRandomSymbol(
-                                                    animState.currentSymbols[reel][pos],
-                                                    animState.finalResults[reel]
-                                            );
-                                        }
-                                    }
-                                } else {
-                                    // Animación normal - cada posición cambia independientemente
-                                    for (int pos = 0; pos < 3; pos++) {
-                                        animState.currentSymbols[reel][pos] = getNextRandomSymbol(
-                                                animState.currentSymbols[reel][pos],
-                                                null
-                                        );
-                                    }
-                                }
-                            }
-                        }
-
-                        // Actualizar GUI
-                        if (player.getOpenInventory().getTitle().equals(title)) {
-                            updateGUIForReel(inv, reel, animState);
-                        }
-                    }
-
-                    // Actualizar displays 3D con los símbolos inferiores de cada rodillo
-                    if (finalMachineLoc != null) {
-                        Material[] displaySymbols = new Material[3];
-                        for (int i = 0; i < 3; i++) {
-                            displaySymbols[i] = animState.currentSymbols[i][2]; // Símbolo inferior
-                        }
-                        updateDisplayItems(finalMachineLoc, displaySymbols);
-                    }
-
-                    // Sonido de animación
-                    if (finalMachineLoc != null && animState.currentTick % 4 == 0) {
-                        finalMachineLoc.getWorld().playSound(finalMachineLoc, Sound.BLOCK_NOTE_BLOCK_HAT, 0.3f, 1.0f + (animState.currentTick * 0.02f));
-                    }
-
-                    // Finalizar animación
-                    if (animState.currentTick >= animState.maxTicks) {
-                        finishAnimation(player, inv, finalMachineLoc, animState);
-                        this.cancel();
-                    }
-
-                } catch (Exception e) {
-                    plugin.getLogger().severe("Error en la animación de SlotMachine: " + e.getMessage());
-                    // Limpiar y cancelar si hay error
-                    if (finalMachineLoc != null) {
-                        cleanupDisplays(finalMachineLoc);
-                        machineUsers.remove(finalMachineLoc);
-                        activeAnimations.remove(finalMachineLoc);
-                        animationStates.remove(finalMachineLoc);
-                    }
-                    isSpinning.put(player.getUniqueId(), false);
-                    this.cancel();
                 }
             }
-
-            private Material getNextRandomSymbol(Material current, Material preferred) {
-                Material next;
-                int attempts = 0;
-
-                do {
-                    // 30% de probabilidad de mostrar el símbolo preferido (si existe)
-                    if (preferred != null && random.nextDouble() < 0.3) {
-                        next = preferred;
-                    } else {
-                        // Seleccionar aleatoriamente, evitando repeticiones
-                        List<Material> possible = new ArrayList<>(Arrays.asList(symbols));
-                        possible.remove(current); // Evitar repetición
-
-                        if (possible.isEmpty()) {
-                            next = symbols[random.nextInt(symbols.length)];
-                        } else {
-                            next = possible.get(random.nextInt(possible.size()));
-                        }
-                    }
-                    attempts++;
-                } while (next == current && attempts < 10); // Prevenir bucles infinitos
-
-                return next;
-            }
-        };
-
-        if (finalMachineLoc != null) {
-            activeAnimations.put(finalMachineLoc, animationTask);
-        }
-
-        animationTask.runTaskTimer(plugin, 0L, 2L);
-    }
-
-    private void updateGUIForReel(Inventory inv, int reel, AnimationState animState) {
-        // Determinar qué slots actualizar según el rodillo
-        int[] slotsToUpdate;
-        switch (reel) {
-            case 0: slotsToUpdate = reel1Slots; break; // 12, 21, 30
-            case 1: slotsToUpdate = reel2Slots; break; // 13, 22, 31
-            case 2: slotsToUpdate = reel3Slots; break; // 14, 23, 32
-            default: return;
-        }
-
-        // Actualizar cada posición del rodillo
-        for (int pos = 0; pos < 3; pos++) {
-            Material symbol = animState.currentSymbols[reel][pos];
-            boolean isFinal = animState.isReelStopped(reel) && pos == 2; // Solo el último slot en dorado
-
-            setSymbolInSlot(inv, slotsToUpdate[pos], symbol, isFinal);
         }
     }
 
-    private int[] getAnimationSlotsForReel(int reel) {
-        return switch (reel) {
-            case 0 -> new int[]{animationSlots[0], animationSlots[1]}; // slots 12 y 13
-            case 1 -> new int[]{animationSlots[2], animationSlots[3]}; // slots 21 y 22
-            case 2 -> new int[]{animationSlots[4], animationSlots[5]}; // slots 14 y 23
-            default -> new int[0];
-        };
-    }
-
-    private void setSymbolInSlot(Inventory inv, int slot, Material symbol, boolean isFinal) {
-        ItemStack item = new ItemStack(symbol);
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(isFinal ?
-                ChatColor.of("#FFD3A5") + "" + ChatColor.BOLD + getSymbolName(symbol) : // Dorado si es final
-                ChatColor.GRAY + getSymbolName(symbol)); // Gris si está girando
-        meta.setCustomModelData(100);
-        item.setItemMeta(meta);
-        inv.setItem(slot, item);
-    }
-
-    private void finishAnimation(Player player, Inventory inv, Location machineLoc, AnimationState animState) {
-        // Mostrar resultados finales en dorado
-        for (int i = 0; i < 3; i++) {
-            setSymbolInSlot(inv, resultSlots[i], animState.finalResults[i], true);
-        }
-
-        // Actualizar displays 3D con los resultados finales
-        if (machineLoc != null) {
-            updateDisplayItems(machineLoc, animState.finalResults);
-        }
-
-        checkWin(player, inv, machineLoc, animState.finalResults);
-        isSpinning.put(player.getUniqueId(), false);
-
-        // Limpiar después de mostrar resultado
-        if (machineLoc != null) {
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    cleanupDisplays(machineLoc);
-                    machineUsers.remove(machineLoc);
-                    activeAnimations.remove(machineLoc);
-                    animationStates.remove(machineLoc);
-                }
-            }.runTaskLater(plugin, 100L); // 5 segundos
-        }
-    }
-
-/*    // NUEVO: Método helper para actualizar slots de animación
-    private void updateAnimationSlot(Inventory inv, int reel, Material symbol, boolean isAnimationSlot) {
-        ItemStack item = new ItemStack(symbol);
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.GRAY + getSymbolName(symbol));
-        meta.setCustomModelData(100);
-        item.setItemMeta(meta);
-
-        if (isAnimationSlot) {
-            // Actualizar slots de animación correspondientes
-            switch (reel) {
-                case 0:
-                    inv.setItem(animationSlots[0], item); // slot 12
-                    inv.setItem(animationSlots[1], item); // slot 13
-                    break;
-                case 1:
-                    inv.setItem(animationSlots[2], item); // slot 21
-                    inv.setItem(animationSlots[3], item); // slot 22
-                    break;
-                case 2:
-                    inv.setItem(animationSlots[4], item); // slot 14
-                    inv.setItem(animationSlots[5], item); // slot 23
-                    break;
-            }
-        } else {
-            // Actualizar slot de resultado
-            if (reel < resultSlots.length) {
-                inv.setItem(resultSlots[reel], item);
-            }
-        }
-    }*/
-
-    private void checkWin(Player player, Inventory inv, Location machineLoc, Material[] results) {
-        // Contar símbolos iguales
-        Map<Material, Integer> symbolCount = new HashMap<>();
-        for (Material symbol : results) {
-            if (symbol != null) {
-                symbolCount.put(symbol, symbolCount.getOrDefault(symbol, 0) + 1);
-            }
-        }
-
-        // Determinar tipo de victoria
-        Material winningSymbol = null;
-        boolean threeOfAKind = false;
-        boolean twoOfAKind = false;
-
-        for (Map.Entry<Material, Integer> entry : symbolCount.entrySet()) {
-            if (entry.getValue() == 3) {
-                winningSymbol = entry.getKey();
-                threeOfAKind = true;
-                break;
-            } else if (entry.getValue() == 2) {
-                winningSymbol = entry.getKey();
-                twoOfAKind = true;
-            }
-        }
-
-        if (threeOfAKind || twoOfAKind) {
-            giveReward(player, winningSymbol, threeOfAKind, machineLoc);
-        } else {
-            // Sonido de pérdida
-            if (machineLoc != null) {
-                machineLoc.getWorld().playSound(machineLoc, Sound.BLOCK_NOTE_BLOCK_BASS, SoundCategory.VOICE, 1.0f, 0.5f);
-                machineLoc.getWorld().playSound(machineLoc, Sound.ENTITY_VILLAGER_NO, SoundCategory.VOICE, 0.8f, 0.8f);
-            }
-            player.sendMessage(ChatColor.RED + "¡No hay suerte esta vez!");
-        }
-    }
-
-    private void giveReward(Player player, Material symbol, boolean threeOfAKind, Location machineLoc) {
-        String category = getCategoryFromSymbol(symbol);
-        String rewardType = threeOfAKind ? "three_out_of_three" : "two_out_of_three";
-
-        List<String> rewards = config.getStringList("SlotMachine." + category + "." + rewardType);
-
-        if (rewards.isEmpty()) {
-            player.sendMessage(ChatColor.of("#FFB3BA") + "۞ No hay recompensas configuradas para esta categoría.");
-            return;
-        }
-
-        // Seleccionar recompensa aleatoria
-        String selectedReward = rewards.get(new Random().nextInt(rewards.size()));
-        String[] parts = selectedReward.split(" ");
-
-        if (parts.length != 2) {
-            player.sendMessage(ChatColor.of("#FFB3BA") + "۞ Error en la configuración de recompensas.");
-            return;
-        }
-
-        String itemName = parts[0];
-        int amount;
-
-        try {
-            amount = Integer.parseInt(parts[1]);
-        } catch (NumberFormatException e) {
-            player.sendMessage(ChatColor.of("#FFB3BA") + "۞ Error en la cantidad de la recompensa.");
-            return;
-        }
-
-        // Crear item
-        ItemStack rewardItem = createItemFromName(itemName, amount);
-        if (rewardItem == null) {
-            player.sendMessage(ChatColor.of("#FFB3BA") + "۞ Item no reconocido: " + itemName);
-            return;
-        }
-
-        // Dar recompensa
-        HashMap<Integer, ItemStack> remaining = player.getInventory().addItem(rewardItem);
-        if (!remaining.isEmpty()) {
-            for (ItemStack item : remaining.values()) {
-                player.getWorld().dropItemNaturally(player.getLocation(), item);
-            }
-        }
-
-        // Mensajes y sonidos
-        String multiplier = threeOfAKind ? "x3" : "x2";
-        String itemDisplayName = rewardItem.getItemMeta().getDisplayName();
-        if (itemDisplayName == null || itemDisplayName.isEmpty()) {
-            itemDisplayName = getSymbolName(rewardItem.getType());
-        }
-
-        player.sendMessage(ChatColor.of("#B5EAD7") + "۞ ¡Has ganado " +
-                ChatColor.of("#FFD3A5") + itemDisplayName +
-                ChatColor.of("#B5EAD7") + " x" + amount + "!");
-
-        // Sonidos de victoria para todos los jugadores cercanos
-        if (machineLoc != null) {
-            if (threeOfAKind) {
-                machineLoc.getWorld().playSound(machineLoc, Sound.UI_TOAST_CHALLENGE_COMPLETE, SoundCategory.VOICE, 1.0f, 1.0f);
-                machineLoc.getWorld().playSound(machineLoc, Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.VOICE, 1.0f, 1.5f);
-                machineLoc.getWorld().playSound(machineLoc, Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.VOICE, 0.8f, 1.2f);
-            } else {
-                machineLoc.getWorld().playSound(machineLoc, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.VOICE, 1.0f, 1.5f);
-                machineLoc.getWorld().playSound(machineLoc, Sound.BLOCK_NOTE_BLOCK_CHIME, SoundCategory.VOICE, 1.0f, 1.2f);
-            }
-
-            // Efectos de partículas para victoria
-            World world = machineLoc.getWorld();
-            Location effectLoc = machineLoc.clone().add(0.5, 2, 0.5);
-
-            if (threeOfAKind) {
-                world.spawnParticle(Particle.TOTEM_OF_UNDYING, effectLoc, 15, 0.5, 0.5, 0.5, 0.1);
-                world.spawnParticle(Particle.ELECTRIC_SPARK, effectLoc, 10, 0.3, 0.3, 0.3, 0.05);
-            } else {
-                world.spawnParticle(Particle.TRIAL_SPAWNER_DETECTION_OMINOUS, effectLoc, 8, 0.3, 0.3, 0.3, 0.05);
-            }
-        }
-    }
-
-    // [El resto de métodos createItemFromName y createCustomItem permanecen igual]
-    private ItemStack createItemFromName(String itemName, int amount) {
-        // Primero intentar items vanilla
-        try {
-            Material material = Material.valueOf(itemName.toUpperCase());
-            return new ItemStack(material, amount);
-        } catch (IllegalArgumentException e) {
-            // No es item vanilla, intentar items custom
-            return createCustomItem(itemName, amount);
-        }
-    }
-
-    private ItemStack createCustomItem(String itemName, int amount) {
+    private ItemStack createRewardItem(String name, int amount) {
         ItemStack item = null;
-        int cantidad = 1;
-        Player target = null;
 
-        switch (itemName.toLowerCase()) {
+        switch (name.toLowerCase()) {
             case "doubletotem":
                 item = doubleLifeTotem.createDoubleLifeTotem();
-                break;
-            case "lifetotem":
-                item = lifeTotem.createLifeTotem();
-                break;
-            case "spidertotem":
-                item = spiderTotem.createSpiderTotem();
-                break;
-            case "infernaltotem":
-                item = infernalTotem.createInfernalTotem();
-                break;
-            case "aguijon_real":
-                item = EmblemItems.createAgujonReal();
-                break;
-            case "upgrade_vacio":
-                item = UpgradeNTItems.createUpgradeVacio();
-                break;
-            case "fragmento_upgrade":
-                item = UpgradeNTItems.createFragmentoUpgrade();
-                break;
-            case "duplicador":
-                item = UpgradeNTItems.createDuplicador();
-                break;
-            case "fragmento_infernal":
-                item = EmblemItems.createFragmentoInfernal();
-                break;
-            case "pepita_infernal":
-                item = EmblemItems.createPepitaInfernal();
-                break;
-            case "corrupted_nether_star":
-                item = EmblemItems.createcorruptedNetherStar();
-                break;
-            case "nether_emblem":
-                item = EmblemItems.createNetherEmblem();
-                break;
-            case "overworld_emblem":
-                item = EmblemItems.createOverworldEmblem();
-                break;
-            case "end_relic":
-                item = EmblemItems.createEndEmblem();
                 break;
             case "corrupted_steak":
                 item = DayOneChanges.corruptedSteak();
                 break;
-            case "placa_diamante":
-                item = EnhancedEnchantmentTable.createDiamondPlate();
+            case "corrupted_golden_apple":
+                item = CorruptedGoldenApple.createCorruptedGoldenApple();
                 break;
-            case "mesa_encantamientos_mejorada":
-                item = EnhancedEnchantmentTable.createEnhancedEnchantmentTable();
+            case "libro_habilidades":
+                item = HabilidadesBook.createHabilidadesBook();
                 break;
-            case "casco_night_vision":
-                item = NightVisionHelmet.createNightVisionHelmet();
-                break;
-            case "corrupted_helmet_armor":
-                item = CorruptedArmor.createCorruptedHelmet();
-                break;
-            case "corrupted_chestplate_armor":
-                item = CorruptedArmor.createCorruptedChestplate();
-                break;
-            case "corrupted_leggings_armor":
-                item = CorruptedArmor.createCorruptedLeggings();
-                break;
-            case "corrupted_boots_armor":
-                item = CorruptedArmor.createCorruptedBoots();
-                break;
-            case "enderite_sword":
-                item = EnderiteTools.createEnderiteSword();
-                break;
-            case "enderite_axe":
-                item = EnderiteTools.createEnderiteAxe();
-                break;
-            case "enderite_pickaxe":
-                item = EnderiteTools.createEnderitePickaxe();
-                break;
-            case "enderite_shovel":
-                item = EnderiteTools.createEnderiteShovel();
-                break;
-            case "enderite_hoe":
-                item = EnderiteTools.createEnderiteHoe();
-                break;
-            case "leggins_netherite_essence":
-                item = legginsNetheriteEssence.createLegginsNetheriteEssence();
-                break;
-            case "boot_netherite_essence":
-                item = bootNetheriteEssence.createBootNetheriteEssence();
-                break;
-            case "chestplate_netherite_essence":
-                item = chestplateNetheriteEssence.createChestplateNetheriteEssence();
-                break;
-            case "helmet_netherite_essence":
-                item = helmetNetheriteEssence.createHelmetNetheriteEssence();
-                break;
-            case "helmet_netherite_upgrade":
-                item = corruptedUpgrades.createHelmetNetheriteUpgrade();
-                break;
-            case "chestplate_netherite_upgrade":
-                item = corruptedUpgrades.createChestplateNetheriteUpgrade();
-                break;
-            case "leggins_netherite_upgrade":
-                item = corruptedUpgrades.createLeggingsNetheriteUpgrade();
-                break;
-            case "boot_netherite_upgrade":
-                item = corruptedUpgrades.createBootsNetheriteUpgrade();
-                break;
-            case "cooper_helmet":
-                item = CopperArmor.createCopperHelmet();
-                break;
-            case "cooper_chestplate":
-                item = CopperArmor.createCopperChestplate();
-                break;
-            case "cooper_leggings":
-                item = CopperArmor.createCopperLeggings();
-                break;
-            case "cooper_boots":
-                item = CopperArmor.createCopperBoots();
-                break;
-            case "corrupted_netherite_scrap":
-                item = CorruptedNetheriteItems.createCorruptedScrapNetherite();
-                break;
-            case "corrupted_netherite_ingot":
-                item = CorruptedNetheriteItems.createCorruptedNetheriteIngot();
-                break;
-            case "corrupted_powder":
-                item = CorruptedMobItems.createCorruptedPowder();
-                break;
-            case "corrupted_bone_lime":
-                item = CorruptedMobItems.createCorruptedBone(CorruptedMobItems.BoneVariant.LIME);
-                break;
-            case "corrupted_bone_green":
-                item = CorruptedMobItems.createCorruptedBone(CorruptedMobItems.BoneVariant.GREEN);
-                break;
-            case "corrupted_bone_yellow":
-                item = CorruptedMobItems.createCorruptedBone(CorruptedMobItems.BoneVariant.YELLOW);
-                break;
-            case "corrupted_bone_orange":
-                item = CorruptedMobItems.createCorruptedBone(CorruptedMobItems.BoneVariant.ORANGE);
-                break;
-            case "corrupted_bone_red":
-                item = CorruptedMobItems.createCorruptedBone(CorruptedMobItems.BoneVariant.RED);
-                break;
-            case "corrupted_rotten":
-                item = CorruptedMobItems.createCorruptedMeet();
-                break;
-            case "corrupted_spidereyes":
-                item = CorruptedMobItems.createCorruptedSpiderEye();
-                break;
-            case "corrupted_soul":
-                item = corruptedSoul.createCorruptedSoulEssence();
-                break;
-
-            //BLOQUES
-            case "corrupted_ancient_debris":
-                item = corruptedAncientDebris.createcorruptedancientdebris();
-                break;
-            case "guardian_shulker_heart":
-                item = guardianShulkerHeart.createGuardianShulkerHeart();
-                break;
-            case "endstalactitas":
-                item = Endstalactitas.createEndstalactita();
-                break;
-
-            //VARIOS
-            case "toxicspidereye":
-                item = ItemsTotems.createToxicSpiderEye();
-                break;
-            case "infernalcreeperpowder":
-                item = ItemsTotems.createInfernalCreeperPowder();
-                break;
-            case "whiteenderpearl":
-                item = ItemsTotems.createWhiteEnderPearl();
-                break;
-            case "specialtotem":
-                item = ItemsTotems.createSpecialTotem();
-                break;
-            case "customboat":
-                item = customBoat.createBoatItem(target);
-                break;
-            case "fuel":
-                item = customBoat.createFuelItem();
-                break;
-            case "varita_guardian_blaze":
-                item = BlazeItems.createBlazeRod();
-                break;
-            case "polvo_guardian_blaze":
-                item = BlazeItems.createGuardianBlazePowder();
-                break;
-            case "ultra_pocion_resistencia_fuego":
-                item = BlazeItems.createPotionOfFireResistance();
-                break;
-            case "guardian_shulker_shell":
-                item = EndItems.createGuardianShulkerShell();
-                break;
-            case "enderite_nugget":
-                item = EndItems.createEnderiteNugget(cantidad);
-                break;
-            case "enderite_fragment":
-                item = EndItems.createFragmentoEnderite();
-                break;
-            case "end_amatist":
-                item = EndItems.createEndAmatist(cantidad);
-                break;
-            case "enderite_ingot":
-                item = EndItems.createIngotEnderite();
-                break;
-            case "enderite_upgrades":
-                item = EndItems.createEnderiteUpgrades();
-                break;
-
-            //Economy Items
-            case "vithiums":
+            case "dinocoins":
                 item = EconomyItems.createVithiumCoin();
                 break;
-            case "vithiums_fichas":
+            case "dinofichas":
                 item = EconomyItems.createVithiumToken();
                 break;
-            case "mochila":
+            case "mochila_nivel_1":
                 item = EconomyItems.createNormalMochila();
                 break;
-            case "mochila_verde":
+            case "mochila_nivel_2":
                 item = EconomyItems.createGreenMochila();
                 break;
-            case "mochila_roja":
+            case "mochila_nivel_3":
                 item = EconomyItems.createRedMochila();
                 break;
-            case "mochila_azul":
+            case "mochila_nivel_4":
                 item = EconomyItems.createBlueMochila();
                 break;
-            case "mochila_morada":
+            case "mochila_nivel_5":
                 item = EconomyItems.createPurpleMochila();
-                break;
-            case "mochila_negra":
-                item = EconomyItems.createBlackMochila();
-                break;
-            case "mochila_blanca":
-                item = EconomyItems.createWhiteMochila();
-                break;
-            case "mochila_amarilla":
-                item = EconomyItems.createYellowMochila();
                 break;
             case "enderbag":
                 item = EconomyItems.createEnderBag();
@@ -1321,10 +727,10 @@ public class SlotMachine implements Listener {
             case "panic_apple":
                 item = EconomyItems.createManzanaPanico();
                 break;
-            case "yunque_nivel_1":
+            case "artefacto_nivel_1":
                 item = EconomyItems.createYunqueReparadorNivel1();
                 break;
-            case "yunque_nivel_2":
+            case "artefacto_nivel_2":
                 item = EconomyItems.createYunqueReparadorNivel2();
                 break;
             case "icetotem":
@@ -1333,34 +739,28 @@ public class SlotMachine implements Listener {
             case "flytotem":
                 item = economyFlyTotem.createFlyTotem();
                 break;
-
-            //Otros Items
-            case "corrupted_golden_apple":
-                item = CorruptedGoldenApple.createCorruptedGoldenApple();
+            case "special_totem":
+                item = ItemsTotems.createSpecialTotem();
                 break;
-            case "apilate_gold_block":
-                item = CorruptedGoldenApple.createApilateGoldBlock();
-                break;
-            case "orbe_de_vida":
-                item = ReviveItems.createResurrectOrb();
-                break;
-            case "wither_compass":
-                item = UltraWitherCompass.createUltraWitherCompass();
-                break;
-            case "icecrystal":
+            case "cristal_hielo":
                 item = ItemsTotems.createIceCrystal();
                 break;
-            case "tridente_espectral":
-                item = tridenteEspectral.createSpectralTrident();
+            case "arco_hielo":
+                item = iceBowItem.createIceBow();
                 break;
-            default:
-                return null;
         }
 
         if (item != null) {
             item.setAmount(amount);
+            return item;
         }
 
-        return item;
+        try {
+            Material mat = Material.valueOf(name.toUpperCase());
+            return new ItemStack(mat, amount);
+        } catch (IllegalArgumentException e) {
+            Bukkit.getLogger().warning("[SlotMachine] Error: Item desconocido '" + name + "' en config.");
+            return null;
+        }
     }
 }

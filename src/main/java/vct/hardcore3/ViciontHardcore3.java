@@ -2,10 +2,10 @@ package vct.hardcore3;
 
 import Blocks.Endstalactitas;
 import Blocks.GuardianShulkerHeart;
+import Casino.CasinoCommands;
 import Casino.CasinoManager;
 import Commands.*;
 import CorrupcionAnsiosa.*;
-import Dificultades.*;
 import Dificultades.CustomMobs.*;
 import Dificultades.Features.*;
 import EffectListener.ConfusionEffect;
@@ -14,20 +14,26 @@ import EffectListener.CustomEffectManager;
 import EffectListener.EffectPreventionListener;
 import Enchants.*;
 import Events.AchievementParty.AchievementCommands;
-import Events.AchievementParty.AchievementGUI;
 import Events.AchievementParty.AchievementPartyHandler;
-import Events.DamageLogListener;
+import Handlers.DamageLogListener;
+import Events.HotPotato.HotPotatoCommand;
+import Events.HotPotato.HotPotatoHandler;
+import Events.ItemParty.ItemPartyCommand;
 import Events.ItemParty.ItemPartyHandler;
+import Events.MissionSystem.MissionCommands;
+import Events.MissionSystem.MissionGUI;
 import Events.MissionSystem.MissionHandler;
 import Events.MissionSystem.MissionRewardHandler;
 import Events.Skybattle.EventoHandler;
+import Events.Skybattle.LavaClashCommand;
 import Events.UltraWitherBattle.UltraWitherEvent;
 import Habilidades.*;
 import Handlers.*;
 import InfestedCaves.*;
 import RunicSmithing.RunicSmithingGUI;
-import Security.PingMonitor.PingMonitor;
+import ShopSystem.*;
 import SlotMachine.SlotMachineManager;
+import StatueManager.*;
 import Structures.StructureCommand;
 import TitleListener.*;
 import items.*;
@@ -77,6 +83,9 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private DeathStormHandler deathStormHandler;
     private NightmareMechanic nightmareMechanic;
 
+    private DatabaseManager databaseManager;
+    private TeamsHandler teamsHandler;
+
     private SuccessNotification successNotif;
     private ErrorNotification errorNotif;
 
@@ -84,16 +93,18 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private CustomEffectManager effectManager;
     private EffectPreventionListener effectPreventionListener;
 
+    private MuerteAnimation muerteAnimation;
+    private RuletaAnimation ruletaAnimation;
+
     // ------------------------------------------------------------------------
     //  Sistemas de Misiones / Tiendas / Linterna
     // ------------------------------------------------------------------------
 
     private MissionHandler missionHandler;
-    private MissionSystemCommands missionSystemCommands;
     private MissionRewardHandler missionRewardHandler;
 
-    private ShopHandler shopHandler;
-    private ShopCommand shopCommand;
+/*    private ShopHandler shopHandler;
+    private ShopCommand shopCommand;*/
 
     private FlashlightManager flashlightManager;
     private AltarFunctions altarFunctions;
@@ -114,12 +125,12 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private EconomyIceTotem economyIceTotem;
     private EconomyFlyTotem economyFlyTotem;
     private EconomyItemsFunctions economyItemsFunctions;
+    private ItemsEventos itemsEventos;
 
     // ------------------------------------------------------------------------
     //  Ping / Sonidos / Teams / Spawners
     // ------------------------------------------------------------------------
 
-    private PingMonitor pingMonitor;
     private DamageLogListener damageLogListener;
     private MobSoundManager mobSoundManager;
     private GameModeTeamHandler gameModeTeamHandler;
@@ -142,6 +153,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private HabilidadesGUI habilidadesGUI;
     private HabilidadesListener habilidadesListener;
     private HabilidadesEffects habilidadesEffects;
+    private CustomItemRegistry customItemRegistry;
 
     // ------------------------------------------------------------------------
     //  Eventos
@@ -150,9 +162,9 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private EventoHandler eventoHandler;
     private AchievementPartyHandler achievementPartyHandler;
     private AchievementCommands achievementCommands;
-    private AchievementGUI achievementGUI;
     private UltraWitherEvent ultraWitherEvent;
     private ItemPartyHandler itemPartyHandler;
+    private HotPotatoHandler hotPotatoHandler;
 
     // ------------------------------------------------------------------------
     //  Casino
@@ -162,7 +174,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private SlotMachineManager slotMachineManager;
 
     // ------------------------------------------------------------------------
-    //  Mobs / Bosses / Bloques / Armaduras / Dimensiones
+    //  Mobs / Bosses / Entidades
     // ------------------------------------------------------------------------
     private RemoveParticlesCreeper removeParticlesCreeper;
     private CorruptedZombies corruptedZombies;
@@ -170,11 +182,20 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private CustomDolphin customDolphin;
     private CorruptedCreeper corruptedCreeper;
     private CustomBoat customBoat;
+    private SpawnerInfestedGolems spawnerInfestedGolems;
+    private InfestedGolems infestedGolems;
 
     /*private HellishBeeHandler hellishBeeHandler;*/
     private InfestedBeeHandler infestedBeeHandler;
     /*private QueenBeeHandler queenBeeHandler;*/
     private UltraWitherBossHandler ultraWitherBossHandler;
+
+    private StatueManager statueManager;
+    private StatueGUI statueGUI;
+
+    // ------------------------------------------------------------------------
+    //  Bloques / Armaduras
+    // ------------------------------------------------------------------------
 
     private Endstalactitas endstalactitas;
     private GuardianShulkerHeart guardianShulkerHeart;
@@ -184,35 +205,22 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     private EnderiteSwordListener enderiteSwordListener;
     private TridenteEspectral tridenteEspectral;
 
+    // ------------------------------------------------------------------------
+    //  Dimensiones
+    // ------------------------------------------------------------------------
+
     private CorruptedEnd corruptedEnd;
 
     public static final String WORLD_NAME = "infested_caves";
     private InfestedGenerator generator;
     private PortalManager portalManager;
     private InfestedListeners listeners;
+    private InfestedCaveAmbient infestedAmbient;
     private StructureManager structureManager;
+    private Null_Runes nullRunes;
 
     // ------------------------------------------------------------------------
-    //  Cambios por día
-    // ------------------------------------------------------------------------
-
-/*    private DayOneChanges dayOneChanges;
-    private DayTwoChanges dayTwoChanges;
-    private DayFourChanges dayFourChanges;
-    private DayFiveChange dayFiveChanges;
-    private DaySevenChanges daySevenChanges;
-    private DaySixChanges daySixChanges;
-    private DayEightChanges dayEightChanges;
-    private DayNineChanges dayNineChanges;
-    private DayTenChanges dayTenChanges;
-    private DayTwelveChanges dayTwelveChanges;
-    private DayThirteenChanges dayThirteenChanges;
-    private DayFourteenChanges dayFourteenChanges;
-    private DayFifteenChanges dayFifteenChanges;
-    private DaySixteenChanges daySixteenChanges;*/
-
-    // ------------------------------------------------------------------------
-    //  Ciclo de vida del plugin
+    //  Inicipialización y apagado
     // ------------------------------------------------------------------------
 
     @Override
@@ -222,7 +230,13 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
         logStartup();
         registerBaseListeners();
+        saveDefaultConfig();
 
+        this.databaseManager = new DatabaseManager(this);
+        this.teamsHandler = new TeamsHandler();
+        this.teamsHandler.loadTeams();
+
+        initMobSoundSystem();
         initCoreDayAndDeathStormSystem();
         initTiempoSystem();
         initCorruptionSystem();
@@ -235,19 +249,18 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         initEnchantSystem();
         initAnimationAndTitleSystem();
         initStructureSystem();
-        /*initDayChangesSystem();*/
+        statueEffectSystem();
         initGameplaySystem();
         initLootSystem();
+        initHabilidadesSystem();
         initEventsSystem();
         initEventCommandsSystem();
         initShopSystem();
         initCasinoSystem();
         initFlashlightSystem();
-        initMobSoundSystem();
         initBlocksSystem();
         initMobsAndBossesSystem();
         initMobCapSystem();
-        initHabilidadesSystem();
         initPublicCommandSystem();
         initCorruptedEndSystem();
         initInfestedCavesDimension();
@@ -267,6 +280,14 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         } else {
             Bukkit.getLogger().severe("deathStormHandler is null, cannot save storm data.");
         }
+
+/*        if (muerteAnimation != null) {
+            muerteAnimation.shutdown();
+        }*/
+
+/*        if (ruletaAnimation != null) {
+            ruletaAnimation.shutdown();
+        }*/
 
         // Guardar DamageLog
         if (damageLogListener != null) {
@@ -296,10 +317,6 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
             MobCapManager.getInstance(this, config).shutdown();
         }
 
-        // Economy items
-        if (economyItemsFunctions != null) {
-            economyItemsFunctions.onDisable();
-        }
 
         // Casino
         if (slotMachineManager != null) {
@@ -324,6 +341,18 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         if (effectManager != null) {
             effectManager.cleanupAllEffects();
         }
+
+        if (spawnerInfestedGolems != null) {
+            spawnerInfestedGolems.shutdown();
+        }
+        if (infestedGolems != null) {
+            infestedGolems.revert();
+        }
+
+        if (missionHandler != null) {
+            missionHandler.forceSaveAllOnShutdown();
+        }
+
 
         // Limpieza de bosses/abejas
         cleanupBossHandlers();
@@ -378,17 +407,16 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         deathStormHandler.loadStormData();
     }
 
+    private void initMobSoundSystem() {
+        mobSoundManager = new MobSoundManager(this);
+    }
+
     private void initTiempoSystem() {
         // Registrar el comando para el temporizador
         tiempoCommand = new TiempoCommand(this);
 
-        Objects.requireNonNull(getCommand("addtiempo")).setExecutor(tiempoCommand);
-        Objects.requireNonNull(getCommand("removetiempo")).setExecutor(tiempoCommand);
-        Objects.requireNonNull(getCommand("tiempoview")).setExecutor(tiempoCommand);
-
-        Objects.requireNonNull(getCommand("addtiempo")).setTabCompleter(tiempoCommand);
-        Objects.requireNonNull(getCommand("removetiempo")).setTabCompleter(tiempoCommand);
-        Objects.requireNonNull(getCommand("tiempoview")).setTabCompleter(tiempoCommand);
+        Objects.requireNonNull(getCommand("timers")).setExecutor(tiempoCommand);
+        Objects.requireNonNull(getCommand("timers")).setTabCompleter(tiempoCommand);
     }
 
     private void initCorruptionSystem() {
@@ -414,11 +442,12 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         economyIceTotem = new EconomyIceTotem(this);
         economyFlyTotem = new EconomyFlyTotem(this);
         invulnerableItemProtection = new InvulnerableItemProtection(this);
-        economyItemsFunctions = new EconomyItemsFunctions(this);
+        economyItemsFunctions = new EconomyItemsFunctions(this, databaseManager);
         nightVisionHelmet = new NightVisionHelmet(this);
         corruptedArmor = new CorruptedArmor(this);
         enderiteSwordListener = new EnderiteSwordListener(this);
         tridenteEspectral = new TridenteEspectral(this);
+        itemsEventos = new ItemsEventos(this);
 
         Bukkit.getPluginManager().registerEvents(normalTotemHandler, this);
         Bukkit.getPluginManager().registerEvents(doubleLifeTotemHandler, this);
@@ -433,22 +462,28 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         Bukkit.getPluginManager().registerEvents(corruptedArmor, this);
         Bukkit.getPluginManager().registerEvents(enderiteSwordListener, this);
         Bukkit.getPluginManager().registerEvents(tridenteEspectral, this);
+        Bukkit.getPluginManager().registerEvents(itemsEventos, this);
+
+        getCommand("mochilas").setExecutor(new MochilaCommand(economyItemsFunctions));
+        getCommand("delmochilas").setExecutor(new MochilaCommand(economyItemsFunctions));
     }
 
     private void initMissionSystem() {
         // Handler principal de misiones
-        missionHandler = new MissionHandler(this, dayHandler);
+        this.missionHandler = new MissionHandler(this, databaseManager, dayHandler);
 
-        // Comandos de misión (panel, etc.)
-        missionSystemCommands = new MissionSystemCommands(this, dayHandler);
+        MissionGUI missionGUI = new MissionGUI(this, missionHandler);
 
-        // Recompensas (usa el handler desde comandos)
-        missionRewardHandler = new MissionRewardHandler(this, missionSystemCommands.getMissionHandler());
+        MissionCommands missionCommands = new MissionCommands(missionHandler, missionGUI);
 
-        // Registro de listeners internos del sistema de misiones
-        missionHandler.registerAllMissionListeners();
-        // Si algún día usas @EventHandler en MissionHandler, puedes descomentar:
-        // Bukkit.getPluginManager().registerEvents(missionHandler, this);
+        Objects.requireNonNull(getCommand("missions")).setExecutor(missionCommands);
+        Objects.requireNonNull(getCommand("misiones")).setExecutor(missionCommands);
+
+        Objects.requireNonNull(getCommand("missions")).setTabCompleter(missionCommands);
+
+        this.missionRewardHandler = new MissionRewardHandler(this, missionHandler);
+
+        this.missionHandler.registerAllMissionListeners();
         Objects.requireNonNull(getCommand("testtoast")).setExecutor(new testtiastcommand(this));
 
     }
@@ -457,12 +492,11 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         chatgeneral chatGeneralHandler = new chatgeneral();
         gameModeTeamHandler = new GameModeTeamHandler(this);
 
-        // Ahora missionSystemCommands ya está inicializado -> se corrige el posible NPE
-        FirstJoinHandler firstJoinHandler = new FirstJoinHandler(this, missionSystemCommands, corruptionManager);
+        FirstJoinHandler firstJoinHandler = new FirstJoinHandler(this, missionHandler, corruptionManager, databaseManager, teamsHandler);
 
         Bukkit.getPluginManager().registerEvents(chatGeneralHandler, this);
-        Bukkit.getPluginManager().registerEvents(gameModeTeamHandler, this);
         Bukkit.getPluginManager().registerEvents(firstJoinHandler, this);
+        Bukkit.getPluginManager().registerEvents(gameModeTeamHandler, this);
     }
 
     private void initGeneralCommandsAndCustomSpawners() {
@@ -483,7 +517,11 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         Objects.requireNonNull(this.getCommand("givevct")).setExecutor(itemsCommands);
         Objects.requireNonNull(this.getCommand("givevct")).setTabCompleter(itemsCommands);
 
+        getCommand("anuncio").setExecutor(new AnuncioCommand());
+
         Bukkit.getPluginManager().registerEvents(customSpawnerHandler, this);
+
+        getCommand("viciontreload").setExecutor(new ViciontReloadCommand(this, databaseManager));
 
         //revive
         ReviveCommand reviveCommand = new ReviveCommand(this);
@@ -495,24 +533,24 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
     private void initAsyncAndUtilitySystems() {
         // Lista VHList
-        new VHList(this).runTaskTimer(this, 0, 10);
+        new VHList(this).runTaskTimer(this, 0, 20);
 
         // Damage log
         damageLogListener = new DamageLogListener(this);
         Bukkit.getPluginManager().registerEvents(damageLogListener, this);
-
-        // Ping monitor
-        pingMonitor = new PingMonitor(this);
-        pingMonitor.startMonitoring();
-        getLogger().info("PingMonitor activado.");
 
         // Comando giveessence
         GiveEssenceCommand giveEssenceCommand = new GiveEssenceCommand();
         Objects.requireNonNull(this.getCommand("giveessence")).setExecutor(giveEssenceCommand);
 
         LootManager lootManager = new LootManager(this);
+        LootCommand cmdExecutor = new LootCommand(lootManager);
 
-        getCommand("LootTableVC").setExecutor(new LootCommand(lootManager));
+        PluginCommand cmd = getCommand("LootTableVC");
+        if (cmd != null) {
+            cmd.setExecutor(cmdExecutor);
+            cmd.setTabCompleter(cmdExecutor);
+        }
     }
 
     private void initAltarSystem() {
@@ -528,16 +566,13 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     }
 
     private void initAnimationAndTitleSystem() {
-        // Animaciones
-        RuletaAnimation ruletaAnimation = new RuletaAnimation(this);
-        MuerteAnimation muerteAnimation = new MuerteAnimation(this);
+        ruletaAnimation = new RuletaAnimation(this);
+        muerteAnimation = new MuerteAnimation(this);
         BonusAnimation bonusAnimation = new BonusAnimation(this);
 
-        // Notificaciones (esta vez asignamos a campos, no a variables locales)
         successNotif = new SuccessNotification(this);
         errorNotif = new ErrorNotification(this);
 
-        // MuerteHandler
         MuerteHandler muertehandler = new MuerteHandler(this, damageLogListener, deathStormHandler, dayHandler);
 
         // Comandos de teleport / disco
@@ -549,9 +584,11 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         Bukkit.getPluginManager().registerEvents(discoCommand, this);
         Bukkit.getPluginManager().registerEvents(muertehandler, this);
 
-        // Comandos de ruleta / muerte / bonus
-        Objects.requireNonNull(this.getCommand("ruletavct"))
-                .setExecutor(new RuletaCommand(ruletaAnimation));
+        RuletaCommand ruletaCmd = new RuletaCommand(ruletaAnimation);
+        Objects.requireNonNull(this.getCommand("ruletavct")).setExecutor(ruletaCmd);
+        Objects.requireNonNull(this.getCommand("ruletavct")).setTabCompleter(ruletaCmd);
+
+        // Comandos de muerte / bonus
         Objects.requireNonNull(this.getCommand("muertevct"))
                 .setExecutor(new MuerteCommand(muerteAnimation));
         Objects.requireNonNull(this.getCommand("bonusvct"))
@@ -565,26 +602,24 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     }
 
     private void initStructureSystem() {
-        // Si StructureCommand registra comandos dentro del constructor, no hace falta más
-        new StructureCommand(this);
+        // --- CAMBIO AQUÍ: Le pasamos ruletaAnimation al StructureCommand ---
+        new StructureCommand(this, ruletaAnimation);
     }
 
-    /*private void initDayChangesSystem() {
-        dayOneChanges = new DayOneChanges(this, dayHandler);
-        dayTwoChanges = new DayTwoChanges(this);
-        dayFourChanges = new DayFourChanges(this, dayHandler);
-        dayFiveChanges = new DayFiveChange(this, dayHandler);
-        daySixChanges = new DaySixChanges(this, dayHandler);
-        daySevenChanges = new DaySevenChanges(this, dayHandler);
-        dayEightChanges = new DayEightChanges(this, dayHandler);
-        dayNineChanges = new DayNineChanges(this, dayHandler);
-        dayTenChanges = new DayTenChanges(this, dayHandler);
-        dayTwelveChanges = new DayTwelveChanges(this, dayHandler);
-        dayThirteenChanges = new DayThirteenChanges(this, dayHandler);
-        dayFourteenChanges = new DayFourteenChanges(this, dayHandler);
-        dayFifteenChanges = new DayFifteenChanges(this, dayHandler);
-        daySixteenChanges = new DaySixteenChanges(this, dayHandler);
-    }*/
+    private void statueEffectSystem() {
+        this.statueManager = new StatueManager(this);
+        this.statueGUI = new StatueGUI(this);
+
+        // Registrar Comandos
+        getCommand("givestatue").setExecutor(new StatueCommand()); // Ajustar import
+
+        // Registrar Eventos
+        getServer().getPluginManager().registerEvents(new StatueListener(statueManager, statueGUI), this);
+        getServer().getPluginManager().registerEvents(statueGUI, this);
+
+        // Cargar estatuas ya existentes en el mundo (por si hubo reload)
+        statueManager.loadStatues();
+    }
 
     private void initGameplaySystem() {
         //Nightmare
@@ -622,58 +657,64 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
     }
 
     private void initEventsSystem() {
-        eventoHandler = new EventoHandler(this);
+        eventoHandler = new EventoHandler(this, habilidadesManager, habilidadesEffects);
         ultraWitherEvent = new UltraWitherEvent(this, tiempoCommand, successNotif, errorNotif);
-        achievementPartyHandler = new AchievementPartyHandler(this);
-        achievementGUI = new AchievementGUI(this, achievementPartyHandler);
+        achievementPartyHandler = new AchievementPartyHandler(this, databaseManager);
         achievementCommands = new AchievementCommands(achievementPartyHandler);
         itemPartyHandler = new ItemPartyHandler(this, tiempoCommand);
+        hotPotatoHandler = new HotPotatoHandler(this, tiempoCommand, habilidadesManager, habilidadesEffects);
+
+        EventInventoryManager invManager = new EventInventoryManager(this, databaseManager);
+
+        eventoHandler.setEventInventoryManager(invManager);
+        hotPotatoHandler.setEventInventoryManager(invManager);
 
         Bukkit.getPluginManager().registerEvents(eventoHandler, this);
         Bukkit.getPluginManager().registerEvents(ultraWitherEvent, this);
         Bukkit.getPluginManager().registerEvents(achievementPartyHandler, this);
         Bukkit.getPluginManager().registerEvents(itemPartyHandler, this);
+        Bukkit.getPluginManager().registerEvents(hotPotatoHandler, this);
 
         // Comandos de logros
-        Objects.requireNonNull(this.getCommand("addlogro")).setExecutor(achievementCommands);
-        Objects.requireNonNull(this.getCommand("addlogro")).setTabCompleter(achievementCommands);
-        Objects.requireNonNull(this.getCommand("removelogro")).setExecutor(achievementCommands);
-        Objects.requireNonNull(this.getCommand("removelogro")).setTabCompleter(achievementCommands);
+        Objects.requireNonNull(this.getCommand("logros")).setExecutor(achievementCommands);
+        Objects.requireNonNull(this.getCommand("logros")).setTabCompleter(achievementCommands);
     }
 
     private void initEventCommandsSystem() {
-        EventsCommands eventsCommands = new EventsCommands(
-                eventoHandler,
-                achievementPartyHandler,
-                itemPartyHandler,
-                achievementGUI
-        );
+        LavaClashCommand lavaCmd = new LavaClashCommand(eventoHandler);
+        getCommand("lavaclash").setExecutor(lavaCmd);
+        getCommand("lavaclash").setTabCompleter(lavaCmd);
 
-        Objects.requireNonNull(this.getCommand("start")).setExecutor(eventsCommands);
-        Objects.requireNonNull(this.getCommand("start")).setTabCompleter(eventsCommands);
+        // ItemParty
+        ItemPartyCommand itemPartyCmd = new ItemPartyCommand(itemPartyHandler);
+        getCommand("itemparty").setExecutor(itemPartyCmd);
+        getCommand("itemparty").setTabCompleter(itemPartyCmd);
 
-        Objects.requireNonNull(this.getCommand("end")).setExecutor(eventsCommands);
-        Objects.requireNonNull(this.getCommand("end")).setTabCompleter(eventsCommands);
-
-        Objects.requireNonNull(this.getCommand("evento1")).setExecutor(eventsCommands);
-        Objects.requireNonNull(this.getCommand("evento1")).setTabCompleter(eventsCommands);
-
-        Objects.requireNonNull(this.getCommand("reset")).setExecutor(eventsCommands);
-        Objects.requireNonNull(this.getCommand("reset")).setTabCompleter(eventsCommands);
-
-        Objects.requireNonNull(this.getCommand("logros")).setExecutor(eventsCommands);
-        Objects.requireNonNull(this.getCommand("logros")).setTabCompleter(eventsCommands);
-
-        Objects.requireNonNull(this.getCommand("reloadevent")).setExecutor(eventsCommands);
-        Objects.requireNonNull(this.getCommand("reloadevent")).setTabCompleter(eventsCommands);
+        HotPotatoCommand hotPotatoCmd = new HotPotatoCommand(hotPotatoHandler);
+        getCommand("hotpotato").setExecutor(hotPotatoCmd);
+        getCommand("hotpotato").setTabCompleter(hotPotatoCmd);
     }
 
     private void initShopSystem() {
-        shopHandler = new ShopHandler(this);
+/*        shopHandler = new ShopHandler(this);
         shopCommand = new ShopCommand(this, shopHandler);
 
         Objects.requireNonNull(this.getCommand("spawntienda")).setExecutor(shopCommand);
-        Objects.requireNonNull(this.getCommand("spawntienda")).setTabCompleter(shopCommand);
+        Objects.requireNonNull(this.getCommand("spawntienda")).setTabCompleter(shopCommand);*/
+        CustomItemRegistry.init(this);
+
+        //Inicializar Shop System
+        ShopManager shopManager = new ShopManager(this);
+        ShopGUI shopGUI = new ShopGUI(shopManager);
+        ShopCommands shopCommands = new ShopCommands(shopManager, shopGUI);
+        ShopListeners shopListeners = new ShopListeners(shopManager, shopGUI);
+
+        //Registrar Eventos y Comandos
+        getServer().getPluginManager().registerEvents(shopListeners, this);
+        getCommand("spawnshop").setExecutor(shopCommands);
+        getCommand("removeshop").setExecutor(shopCommands);
+        getCommand("trade").setExecutor(shopCommands);
+        getCommand("trade").setTabCompleter(shopCommands);
     }
 
     private void initCasinoSystem() {
@@ -685,18 +726,14 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
                 slotMachineManager.loadSlotMachinesFromFile();
             }
         }, 20L);
+
+        getCommand("casino").setExecutor(new CasinoCommands(casinoManager));
     }
 
     private void initFlashlightSystem() {
         flashlightManager = new FlashlightManager(this);
         Objects.requireNonNull(this.getCommand("flashlight"))
                 .setExecutor(new Commands.FlashlightCommand(this, flashlightManager));
-    }
-
-    private void initMobSoundSystem() {
-        mobSoundManager = new MobSoundManager(this);
-        // Si quieres activarlo:
-        // Bukkit.getPluginManager().registerEvents(mobSoundManager, this);
     }
 
     private void initBlocksSystem() {
@@ -713,6 +750,11 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         customDolphin = new CustomDolphin(this);
         customBoat = new CustomBoat(this);
         corruptedinfernalSpider = new CorruptedInfernalSpider(this);
+        NULLEntity nullMobManager = new NULLEntity(this);
+
+        infestedGolems = new InfestedGolems(this);
+        infestedGolems.apply();
+        spawnerInfestedGolems = new SpawnerInfestedGolems(this, infestedGolems);
 
         Bukkit.getPluginManager().registerEvents(customBoat, this);
         Bukkit.getPluginManager().registerEvents(customDolphin, this);
@@ -753,7 +795,7 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
         Bukkit.getPluginManager().registerEvents(habilidadesGUI, this);
         Bukkit.getPluginManager().registerEvents(habilidadesListener, this);
 
-        HabilidadesCommand habilidadesCommand = new HabilidadesCommand(habilidadesManager);
+        HabilidadesCommand habilidadesCommand = new HabilidadesCommand(habilidadesManager, habilidadesEffects);
         Objects.requireNonNull(getCommand("habilidades")).setExecutor(habilidadesCommand);
         Objects.requireNonNull(getCommand("habilidades")).setTabCompleter(habilidadesCommand);
 
@@ -798,10 +840,24 @@ public class ViciontHardcore3 extends JavaPlugin implements Listener {
 
         getCommand("infestedPortal").setExecutor(new InfestedCommands(this, portalManager));
         getCommand("infestedPortalOverworld").setExecutor(new InfestedCommands(this, portalManager));
-        getCommand("InfestedForest").setExecutor(new InfestedCommands(this, portalManager));
+        getCommand("InfestedCave").setExecutor(new InfestedCommands(this, portalManager));
 
         getServer().getPluginManager().registerEvents(listeners, this);
         getServer().getPluginManager().registerEvents(portalManager, this);
+
+        // --- NUEVO: Inicializar Ambiente ---
+        this.infestedAmbient = new InfestedCaveAmbient(this);
+        getServer().getPluginManager().registerEvents(this.infestedAmbient, this);
+
+        //Runas
+        this.nullRunes = new Null_Runes(this);
+        getServer().getPluginManager().registerEvents(nullRunes, this);
+
+        // Registrar comando de test
+        AmbientCommand ambientCmd = new AmbientCommand(this.infestedAmbient);
+        getCommand("icambient").setExecutor(ambientCmd);
+        getCommand("icambient").setTabCompleter(ambientCmd);
+        // -----------------------------------
 
         // 5. Crear la dimensión
         createInfestedWorld();

@@ -48,7 +48,7 @@ public class DayTenChanges implements Listener {
         this.infernalCreeper = new InfernalCreeper(plugin);
         this.toxicSpider = new ToxicSpider(plugin);
         this.fastRavager = new FastRavager(plugin);
-        this.corruptedSpider = new CorruptedSpider(plugin);
+        this.corruptedSpider = new CorruptedSpider(plugin,dayHandler);
         this.corruptedZombies = new CorruptedZombies(plugin);
         this.corruptedSoul = new CorruptedSoul(plugin);
         this.lifeTotem = new LifeTotem(plugin);

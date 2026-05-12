@@ -4,8 +4,6 @@ import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
 import org.bukkit.block.Biome;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -15,7 +13,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import net.md_5.bungee.api.ChatColor;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -68,15 +65,7 @@ public class Mission11 implements Mission, Listener {
 
     @Override
     public void initializePlayerData(String playerName) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        data.set("players." + playerName + ".missions.11.time_in_mushroom", 0L);
-        data.set("players." + playerName + ".missions.11.start_time", 0L);
-
-        try {
-            data.save(missionHandler.getMissionFile());
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al inicializar datos de Misión 11: " + e.getMessage());
-        }
+        // No es necesario inicializar con JSON
     }
 
     @Override
@@ -86,15 +75,13 @@ public class Mission11 implements Mission, Listener {
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
-        if (!missionHandler.isMissionActive(11)) return;
-
         Player player = event.getPlayer();
-        String playerName = player.getName();
-        UUID playerId = player.getUniqueId();
+        if (!missionHandler.isMissionActive(player, 11)) return;
 
-        // Verificar si ya completó la misión
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        if (data.getBoolean("players." + playerName + ".missions.11.completed", false)) {
+        UUID playerId = player.getUniqueId();
+        MissionData data = missionHandler.getData(player, 11);
+
+        if (data.isCompleted()) {
             return;
         }
 
@@ -116,11 +103,9 @@ public class Mission11 implements Mission, Listener {
 
     private void startTracking(Player player) {
         UUID playerId = player.getUniqueId();
-        String playerName = player.getName();
-
         playerStartTimes.put(playerId, System.currentTimeMillis());
 
-        player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#F0E68C") + "Comenzando a contar tiempo en Mushroom Island!");
+        player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#F0E68C") + "¡Comenzando a contar tiempo en Mushroom Island!");
 
         BukkitRunnable task = new BukkitRunnable() {
             @Override
@@ -136,23 +121,19 @@ public class Mission11 implements Mission, Listener {
                     return;
                 }
 
-                // Actualizar tiempo acumulado
-                FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-                long currentTime = data.getLong("players." + playerName + ".missions.11.time_in_mushroom", 0);
+                MissionData data = missionHandler.getData(player, 11);
+
+                // Asegúrate de que getProgressLong exista en tu MissionData
+                long currentTime = data.getProgressLong("time_in_mushroom");
                 currentTime += 20; // 20 ticks = 1 segundo
-                data.set("players." + playerName + ".missions.11.time_in_mushroom", currentTime);
 
-                try {
-                    data.save(missionHandler.getMissionFile());
+                data.setProgressValue("time_in_mushroom", currentTime);
+                missionHandler.saveData(player, 11, data);
 
-                    // Verificar si completó el tiempo requerido
-                    if (currentTime >= REQUIRED_TIME) {
-                        successNotification.showSuccess(player);
-                        missionHandler.completeMission(playerName, 11);
-                        stopTracking(player);
-                    }
-                } catch (IOException e) {
-                    plugin.getLogger().severe("Error al guardar progreso de Misión 11: " + e.getMessage());
+                if (currentTime >= REQUIRED_TIME) {
+                    successNotification.showSuccess(player);
+                    missionHandler.completeMission(player.getName(), 11);
+                    stopTracking(player);
                 }
             }
         };

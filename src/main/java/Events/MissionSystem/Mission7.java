@@ -3,8 +3,6 @@ package Events.MissionSystem;
 import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Creeper;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -18,7 +16,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.entity.LivingEntity;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -65,15 +62,7 @@ public class Mission7 implements Mission, Listener {
 
     @Override
     public void initializePlayerData(String playerName) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        data.set("players." + playerName + ".missions.7.corrupted_skeletons_killed", 0);
-        data.set("players." + playerName + ".missions.7.corrupted_creepers_killed", 0);
-
-        try {
-            data.save(missionHandler.getMissionFile());
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al inicializar datos de Misión 7: " + e.getMessage());
-        }
+        // No es necesario inicializar con JSON
     }
 
     @Override
@@ -83,20 +72,14 @@ public class Mission7 implements Mission, Listener {
 
     @EventHandler
     public void onEntityDeath(EntityDeathEvent event) {
-        if (!missionHandler.isMissionActive(7)) return;
-
         Entity entity = event.getEntity();
         Player killer = ((LivingEntity) entity).getKiller();
 
         if (killer == null) return;
+        if (!missionHandler.isMissionActive(killer, 7)) return;
 
-        String playerName = killer.getName();
-
-        // Verificar si ya completó la misión
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        if (data.getBoolean("players." + playerName + ".missions.7.completed", false)) {
-            return;
-        }
+        MissionData data = missionHandler.getData(killer, 7);
+        if (data.isCompleted()) return;
 
         boolean isCorruptedSkeleton = entity instanceof Skeleton &&
                 entity.getPersistentDataContainer().has(
@@ -109,36 +92,35 @@ public class Mission7 implements Mission, Listener {
                         PersistentDataType.BYTE);
 
         if (isCorruptedSkeleton) {
-            int skeletonsKilled = data.getInt("players." + playerName + ".missions.7.corrupted_skeletons_killed", 0);
-            skeletonsKilled++;
-            data.set("players." + playerName + ".missions.7.corrupted_skeletons_killed", skeletonsKilled);
+            int skeletonsKilled = data.getProgressInt("corrupted_skeletons_killed");
+            if (skeletonsKilled < 30) {
+                skeletonsKilled++;
+                data.setProgressValue("corrupted_skeletons_killed", skeletonsKilled);
 
-            killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Corrupted Skeletons eliminados: " +
-                    ChatColor.of("#FFB6C1") + skeletonsKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "30");
+                killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Corrupted Skeletons eliminados: " +
+                        ChatColor.of("#FFB6C1") + skeletonsKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "30");
+            }
         } else if (isCorruptedCreeper) {
-            int creepersKilled = data.getInt("players." + playerName + ".missions.7.corrupted_creepers_killed", 0);
-            creepersKilled++;
-            data.set("players." + playerName + ".missions.7.corrupted_creepers_killed", creepersKilled);
+            int creepersKilled = data.getProgressInt("corrupted_creepers_killed");
+            if (creepersKilled < 30) {
+                creepersKilled++;
+                data.setProgressValue("corrupted_creepers_killed", creepersKilled);
 
-            killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Corrupted Creepers eliminados: " +
-                    ChatColor.of("#FFB6C1") + creepersKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "30");
+                killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Corrupted Creepers eliminados: " +
+                        ChatColor.of("#FFB6C1") + creepersKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "30");
+            }
         } else {
             return;
         }
 
-        try {
-            data.save(missionHandler.getMissionFile());
+        missionHandler.saveData(killer, 7, data);
 
-            // Verificar si completó ambos objetivos
-            int skeletonsKilled = data.getInt("players." + playerName + ".missions.7.corrupted_skeletons_killed", 0);
-            int creepersKilled = data.getInt("players." + playerName + ".missions.7.corrupted_creepers_killed", 0);
+        // Verificar si completó ambos objetivos
+        if (data.getProgressInt("corrupted_skeletons_killed") >= 30 &&
+                data.getProgressInt("corrupted_creepers_killed") >= 30) {
 
-            if (skeletonsKilled >= 30 && creepersKilled >= 30) {
-                successNotification.showSuccess(killer);
-                missionHandler.completeMission(playerName, 7);
-            }
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al guardar progreso de Misión 7: " + e.getMessage());
+            successNotification.showSuccess(killer);
+            missionHandler.completeMission(killer.getName(), 7);
         }
     }
 }

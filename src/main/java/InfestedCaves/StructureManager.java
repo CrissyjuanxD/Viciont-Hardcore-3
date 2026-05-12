@@ -4,7 +4,6 @@ import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
-import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormat;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
 import com.sk89q.worldedit.function.operation.Operation;
@@ -19,7 +18,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.Random;
 
 public class StructureManager {
@@ -60,18 +58,12 @@ public class StructureManager {
     public void pasteTempleAtSpawn(World world) {
         if (templeSchematic == null) return;
 
-        int foundY = 100;
-        // Buscar suelo para el templo
-        for (int y = 115; y > -50; y--) {
-            if (world.getBlockAt(0, y, 0).getType() != Material.AIR) {
-                foundY = y + 1;
-                break;
-            }
-        }
-        pasteSchematic(templeSchematic, new Location(world, 0, foundY, 0));
+        // SE PEGA EXACTAMENTE EN LAS COORDENADAS SOLICITADAS.
+        // El generador ya se encargó de dejar el espacio vacío de forma natural.
+        plugin.getLogger().info("Pegando TemploRunico en 0, -56, 0");
+        pasteSchematic(templeSchematic, new Location(world, 0, -56, 0));
     }
 
-    // Intenta generar dungeons en chunks lejanos
     public void tryGenerateDungeon(Chunk chunk) {
         if (dungeonSchematic == null) return;
 
@@ -82,12 +74,11 @@ public class StructureManager {
 
         if (dist < 500) return;
 
-        // Probabilidad baja (1 de cada 200 chunks validos)
+        // Probabilidad baja
         Random random = new Random(chunk.getWorld().getSeed() + chunk.getX() * 341873128712L + chunk.getZ() * 132897987541L);
         if (random.nextInt(200) != 0) return;
 
-        // Buscar aire para que "flote" o esté en zonas abiertas
-        int y = 20 + random.nextInt(60); // Altura media
+        int y = 20 + random.nextInt(60);
         if (chunk.getBlock(8, y, 8).getType() == Material.AIR) {
             plugin.getLogger().info("Generando InfestedDungeon en " + centerX + ", " + y + ", " + centerZ);
             pasteSchematic(dungeonSchematic, new Location(chunk.getWorld(), centerX + 8, y, centerZ + 8));

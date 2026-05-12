@@ -2,7 +2,6 @@ package Commands;
 
 import Bosses.BaseBoss;
 import Bosses.QueenBeeHandler;
-import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -25,7 +24,6 @@ public class DebugArenaCommand implements CommandExecutor {
 
         // Buscar cualquier boss activo basado en BaseBoss
         for (Entity e : w.getEntities()) {
-            // Solo bosses del tipo QueenBee por ahora (puedes añadir más)
             if (QueenBeeHandler.ACTIVE_BOSSES.containsKey(e.getUniqueId())) {
                 foundBoss = QueenBeeHandler.ACTIVE_BOSSES.get(e.getUniqueId());
                 break;

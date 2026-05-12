@@ -22,7 +22,6 @@ public class CorruptedCreeper implements Listener {
     private final JavaPlugin plugin;
     private final NamespacedKey corruptedKey;
     private static boolean eventsRegistered = false;
-    private final MobSoundManager soundManager;
 
     // --- OPTIMIZACIÓN CENTRALIZADA ---
     private static final Set<UUID> activeCreepers = new HashSet<>();
@@ -40,7 +39,6 @@ public class CorruptedCreeper implements Listener {
     public CorruptedCreeper(JavaPlugin plugin) {
         this.plugin = plugin;
         this.corruptedKey = new NamespacedKey(plugin, "corrupted_creeper");
-        this.soundManager = new MobSoundManager(plugin);
     }
 
     public void apply() {
@@ -220,7 +218,6 @@ public class CorruptedCreeper implements Listener {
     @EventHandler
     public void onCorruptedCreeperDeath(EntityDeathEvent event) {
         if (event.getEntity() instanceof Creeper creeper && isCorruptedCreeper(creeper)) {
-            soundManager.removeCustomMob(creeper);
             creeper.getWorld().playSound(creeper.getLocation(), Sound.ENTITY_CREEPER_DEATH, SoundCategory.HOSTILE, 1.0f, 0.6f);
             activeCreepers.remove(creeper.getUniqueId()); // Limpieza inmediata
 

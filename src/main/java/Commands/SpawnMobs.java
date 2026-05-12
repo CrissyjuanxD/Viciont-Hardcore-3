@@ -1,6 +1,6 @@
 package Commands;
 
-import Bosses.HellishBeeHandler;
+/*import Bosses.HellishBeeHandler;*/
 import Bosses.QueenBeeHandler;
 import Dificultades.CustomMobs.*;
 import org.bukkit.Bukkit;
@@ -54,6 +54,7 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
     private final InfernalBeast infernalBeast;
     private final CorruptedDrowned corruptedDrowned;
     private final CorruptedBee corruptedBee;
+    private final InfestedGolems infestedGolems;
     private final DayHandler dayHandler;
 
     private final CustomDolphin customDolphin;
@@ -63,7 +64,7 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
         this.bombitaSpawner = new Bombita(plugin);
         this.iceologerSpawner = new Iceologer(plugin);
         this.corruptedZombieSpawner = new CorruptedZombies(plugin);
-        this.corruptedSpider = new CorruptedSpider(plugin);
+        this.corruptedSpider = new CorruptedSpider(plugin, dayHandler);
         /*this.hellishBeeHandler = new HellishBeeHandler(plugin);*/
         this.guardianBlaze = new GuardianBlaze(plugin);
         this.guardianCorruptedSkeleton = new GuardianCorruptedSkeleton(plugin);
@@ -96,6 +97,7 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
         this.infernalBeast = new InfernalBeast(plugin);
         this.corruptedDrowned = new CorruptedDrowned(plugin);
         this.corruptedBee = new CorruptedBee(plugin);
+        this.infestedGolems = new InfestedGolems(plugin);
         plugin.getCommand("spawnvct").setExecutor(this);
         plugin.getCommand("spawnvct").setTabCompleter(this);
     }
@@ -161,7 +163,7 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
                 break;
 
             case "hellishbee":
-                HellishBeeHandler.spawn(plugin, location);
+              /*  HellishBeeHandler.spawn(plugin, location);*/
                 sender.sendMessage("¡Hellish Bee ha sido spawneada en " + locationToString(location) + "!");
                 break;
 
@@ -327,6 +329,16 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
                 sender.sendMessage("¡Corrupted Bee ha sido spawneada en " + locationToString(location) + "!");
                 break;
 
+            case "infestedgolems":
+                infestedGolems.spawnInfestedGolem(location);
+                sender.sendMessage("¡Infested Golem ha sido spawneado en " + locationToString(location) + "!");
+                break;
+
+            case "null_statue":
+                Null_Statue.spawn(location);
+                sender.sendMessage("¡Null Statue ha sido spawneada en " + locationToString(location) + "!");
+                break;
+
             default:
                 sender.sendMessage("Mob no reconocido. Usa /spawnvct <bombita|iceologer|corruptedzombie|corruptedspider|queenbee>");
                 break;
@@ -380,6 +392,8 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
             suggestions.add("infernalbeast");
             suggestions.add("corrupteddrowned");
             suggestions.add("corruptedbee");
+            suggestions.add("infestedgolems");
+            suggestions.add("null_statue");
         } else if (args.length == 2 && args[0].equalsIgnoreCase("corruptedskeleton")) {
             for (CorruptedSkeleton.Variant variant : CorruptedSkeleton.Variant.values()) {
                 suggestions.add(variant.name().toLowerCase());

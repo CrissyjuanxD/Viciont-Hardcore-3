@@ -1,8 +1,9 @@
 package TitleListener;
 
-import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -12,8 +13,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.api.ChatColor;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,6 +25,7 @@ public class DiscoCommand implements Listener, CommandExecutor {
     private final JavaPlugin plugin;
     private final Set<Player> activeDiscoPlayers = new HashSet<>();
     private final Map<Player, BukkitTask> discoTasks = new HashMap<>();
+    private final Map<Player, BossBar> discoBossBars = new HashMap<>(); // Registro de las BossBars activas
     private final ChatColor[] colors = {
             ChatColor.AQUA, ChatColor.RED, ChatColor.GREEN, ChatColor.YELLOW, ChatColor.DARK_PURPLE,
     };
@@ -35,32 +36,37 @@ public class DiscoCommand implements Listener, CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (label.equalsIgnoreCase("playdisco")) {
-            handleDiscoCommand(sender, true);
+        boolean isStart = label.equalsIgnoreCase("playdisco");
+
+        // Si se pasa un jugador como argumento: /playdisco [jugador] o /stopdisco [jugador]
+        if (args.length == 1) {
+            Player target = Bukkit.getPlayer(args[0]);
+            if (target != null) {
+                if (isStart) {
+                    startDisco(target);
+                    sender.sendMessage(ChatColor.GREEN + "Modo disco habilitado para " + target.getName() + ".");
+                } else {
+                    stopDisco(target);
+                    sender.sendMessage(ChatColor.GREEN + "Modo disco deshabilitado para " + target.getName() + ".");
+                }
+            } else {
+                sender.sendMessage(ChatColor.RED + "Jugador no encontrado.");
+            }
             return true;
         }
 
-        if (label.equalsIgnoreCase("stopdisco")) {
-            handleDiscoCommand(sender, false);
-            return true;
-        }
-
-        return false;
+        // Comportamiento por defecto si no se especifica jugador
+        handleDiscoCommand(sender, isStart);
+        return true;
     }
 
     private void handleDiscoCommand(CommandSender sender, boolean start) {
         if (sender instanceof ConsoleCommandSender) {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 if (start) {
-                    if (!activeDiscoPlayers.contains(player)) {
-                        activeDiscoPlayers.add(player);
-                        startDiscoTask(player);
-                    }
+                    startDisco(player);
                 } else {
-                    if (activeDiscoPlayers.contains(player)) {
-                        activeDiscoPlayers.remove(player);
-                        stopDiscoTask(player);
-                    }
+                    stopDisco(player);
                 }
             }
             sender.sendMessage(ChatColor.GREEN + "El modo disco ha sido " + (start ? "habilitado" : "deshabilitado") + " para todos los jugadores en línea.");
@@ -72,24 +78,42 @@ public class DiscoCommand implements Listener, CommandExecutor {
                     player.sendMessage(ChatColor.RED + "El modo disco ya está activo.");
                     return;
                 }
-
-                activeDiscoPlayers.add(player);
-                startDiscoTask(player);
+                startDisco(player);
                 player.sendMessage(ChatColor.GREEN + "El modo disco ha sido habilitado.");
             } else {
                 if (!activeDiscoPlayers.contains(player)) {
                     player.sendMessage(ChatColor.RED + "El modo disco ya está desactivado.");
                     return;
                 }
-
-                activeDiscoPlayers.remove(player);
-                stopDiscoTask(player);
+                stopDisco(player);
                 player.sendMessage(ChatColor.GREEN + "El modo disco ha sido deshabilitado.");
             }
         }
     }
 
+
+    public void startDisco(Player player) {
+        if (player != null && !activeDiscoPlayers.contains(player)) {
+            activeDiscoPlayers.add(player);
+            startDiscoTask(player);
+        }
+    }
+
+    public void stopDisco(Player player) {
+        if (player != null && activeDiscoPlayers.contains(player)) {
+            activeDiscoPlayers.remove(player);
+            stopDiscoTask(player);
+        }
+    }
+
+    // --- LÓGICA DE LA BOSSBAR ---
+
     private void startDiscoTask(Player player) {
+        // Crear una BossBar blanca sin título inicial
+        BossBar bossBar = Bukkit.createBossBar("", BarColor.WHITE, BarStyle.SOLID);
+        bossBar.addPlayer(player);
+        discoBossBars.put(player, bossBar);
+
         BukkitTask task = new BukkitRunnable() {
             int index = 0;
 
@@ -100,7 +124,8 @@ public class DiscoCommand implements Listener, CommandExecutor {
                     return;
                 }
 
-                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(colors[index] + "\uEAA5"));
+                // Cambiar el color del símbolo en el título de la BossBar
+                bossBar.setTitle(colors[index] + "\uEAA5");
                 index = (index + 1) % colors.length;
             }
         }.runTaskTimer(plugin, 0L, 10L);
@@ -109,11 +134,16 @@ public class DiscoCommand implements Listener, CommandExecutor {
     }
 
     private void stopDiscoTask(Player player) {
+        // Cancelar el runnable
         BukkitTask task = discoTasks.remove(player);
-
         if (task != null) {
             task.cancel();
         }
-        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(""));
+
+        // Eliminar y ocultar la BossBar
+        BossBar bossBar = discoBossBars.remove(player);
+        if (bossBar != null) {
+            bossBar.removeAll();
+        }
     }
 }

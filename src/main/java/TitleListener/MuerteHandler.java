@@ -1,10 +1,8 @@
 package TitleListener;
 
-import Events.DamageLogListener;
+import Handlers.DamageLogListener;
 import Handlers.DayHandler;
 import net.kyori.adventure.text.TranslatableComponent;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -17,13 +15,15 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import Handlers.DeathStormHandler;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.ArrayList;
 
 public class MuerteHandler implements Listener {
     private final JavaPlugin plugin;
@@ -41,7 +41,6 @@ public class MuerteHandler implements Listener {
         this.deathStormHandler = deathStormHandler;
         this.dayHandler = dayHandler;
         this.muerteAnimation = new MuerteAnimation(plugin);
-        Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
     @EventHandler
@@ -49,6 +48,7 @@ public class MuerteHandler implements Listener {
         Player player = event.getEntity();
         UUID playerId = player.getUniqueId();
 
+        // Pausar el DamageLog al instante para limpiar la pantalla
         Bukkit.getOnlinePlayers().forEach(onlinePlayer -> {
             UUID onlinePlayerId = onlinePlayer.getUniqueId();
             if (damageLogListener != null) {
@@ -65,42 +65,41 @@ public class MuerteHandler implements Listener {
         Component original = event.deathMessage();
         if (original == null) return;
 
+        // Configuración de Colores Hexadecimales
+        TextColor colorPrincipal = TextColor.fromHexString("#8930DA");
+        TextColor colorSecundario = TextColor.fromHexString("#BE9BE4");
+
         Component formatted;
 
-        // ✅ Si el mensaje es traducible, reconstruimos con color
         if (original instanceof TranslatableComponent translatable) {
             String key = translatable.key();
-            java.util.List<Component> args = translatable.args();
-            java.util.List<Component> coloredArgs = new java.util.ArrayList<>();
+            List<Component> args = translatable.args();
+            List<Component> coloredArgs = new ArrayList<>();
 
             for (int i = 0; i < args.size(); i++) {
-                Component arg = args.get(i);
-                Component colored;
-
                 if (i == 0) {
-                    // Víctima (jugador) → morado y negrita
-                    colored = arg.color(NamedTextColor.DARK_PURPLE);
+                    coloredArgs.add(Component.text(player.getName()).color(colorPrincipal).decorate(TextDecoration.BOLD));
                 } else {
-                    // Todo lo demás (asesino, arma, proyectil, etc.) → dorado forzado
-                    colored = forceColor(arg, NamedTextColor.GOLD);
+                    coloredArgs.add(forceColorAndBold(args.get(i), colorPrincipal));
                 }
-
-                coloredArgs.add(colored);
             }
 
-            // Reconstrucción completa del mensaje traducido
-            formatted = Component.translatable(
-                    key,
-                    coloredArgs
-            ).color(NamedTextColor.GRAY);
+            // AQUI ESTÁ EL TRUCO: Usar el caracter invisible (\u200B) en lugar de n!
+            formatted = Component.text("\u200B").append(
+                    Component.translatable(key, coloredArgs).color(colorSecundario)
+            );
 
         } else {
-            // Fallback por si no es traducible (raro)
-            formatted = Component.text(player.getName(), NamedTextColor.DARK_PURPLE)
-                    .append(Component.text(" ha muerto", NamedTextColor.GRAY));
+            // Y AQUÍ TAMBIÉN:
+            formatted = Component.text("\u200B")
+                    .append(Component.text(player.getName()).color(colorPrincipal).decorate(TextDecoration.BOLD))
+                    .append(Component.text(" ha muerto").color(colorSecundario));
         }
 
         Component actionBarMessage = formatted;
+
+        // FEEDBACK VISUAL INMEDIATO: Le enviamos el Action Bar al instante SOLO a la víctima
+        player.sendActionBar(actionBarMessage);
 
         if (currentDeathMessageTask != null && !currentDeathMessageTask.isCancelled()) {
             currentDeathMessageTask.cancel();
@@ -117,14 +116,10 @@ public class MuerteHandler implements Listener {
                     counter += 20;
                 } else {
                     isDeathMessageActive = false;
-                    // Reactivar primero solo DamageLog si está activo (excepto para el jugador muerto)
                     Bukkit.getScheduler().runTask(plugin, () -> {
                         Bukkit.getOnlinePlayers().forEach(onlinePlayer -> {
                             UUID onlinePlayerId = onlinePlayer.getUniqueId();
-                            // Si es el jugador que murió, saltar la reactivación de DamageLog
-                            if (onlinePlayerId.equals(player.getUniqueId())) {
-                                return;
-                            }
+                            if (onlinePlayerId.equals(player.getUniqueId())) return;
 
                             if (damageLogListener != null && damageLogListener.isPlayerInDamageLog(onlinePlayerId)) {
                                 damageLogListener.resumeActionBarForPlayer(onlinePlayerId);
@@ -132,7 +127,6 @@ public class MuerteHandler implements Listener {
                         });
                     });
 
-                    // Reactivación especial para el jugador que murió (sin delay)
                     Bukkit.getScheduler().runTask(plugin, () -> {
                         if (damageLogListener != null) {
                             damageLogListener.resumeActionBarForPlayer(player.getUniqueId());
@@ -142,7 +136,8 @@ public class MuerteHandler implements Listener {
                 }
             }
         };
-        currentDeathMessageTask.runTaskTimer(plugin, 0, 20);
+        // RETRASO DE 1 SEGUNDO (20 Ticks) ANTES DE MANDAR EL ACTION BAR AL RESTO
+        currentDeathMessageTask.runTaskTimer(plugin, 20, 20);
 
         new BukkitRunnable() {
             @Override
@@ -195,7 +190,7 @@ public class MuerteHandler implements Listener {
                     }
                 }.runTaskLater(plugin, 3 * 20);
             }
-        }.runTaskLater(plugin, 9 * 20);
+        }.runTaskLater(plugin, 10 * 20);
     }
 
     public static boolean isDeathMessageActive() {
@@ -248,15 +243,15 @@ public class MuerteHandler implements Listener {
     private void sendTitleToAllPlayers(String playerName) {
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             onlinePlayer.sendTitle(
-                    ChatColor.DARK_GRAY + "" + ChatColor.MAGIC + "Ｏ" + ChatColor.RESET + ChatColor.DARK_PURPLE + " ᴍᴀʟᴅɪᴄɪᴏɴ ʟɪʙᴇʀᴀᴅᴀ " + ChatColor.RESET + ChatColor.GRAY + ChatColor.MAGIC + "Ｏ", // 🟣 título principal
+                    ChatColor.DARK_GRAY + "" + ChatColor.MAGIC + "Ｏ" + ChatColor.RESET + ChatColor.DARK_PURPLE + " ᴍᴀʟᴅɪᴄɪᴏɴ ʟɪʙᴇʀᴀᴅᴀ " + ChatColor.RESET + ChatColor.GRAY + ChatColor.MAGIC + "Ｏ",
                     ChatColor.GRAY + "" + ChatColor.BOLD + "۞ "
                             + ChatColor.GOLD + playerName
                             + ChatColor.GRAY + " ʜᴀ ᴇɴᴏᴊᴀᴅᴏ ᴀʟ "
                             + ChatColor.DARK_GRAY + "" + ChatColor.BOLD + "ᴅᴀʀᴋ ᴅᴇᴍᴏɴ"
-                            + ChatColor.GRAY + " ۞", // subtítulo formateado
-                    10, // fadeIn ticks
-                    70, // stay ticks
-                    20  // fadeOut ticks
+                            + ChatColor.GRAY + " ۞",
+                    10,
+                    70,
+                    20
             );
         }
     }
@@ -267,21 +262,16 @@ public class MuerteHandler implements Listener {
         }
     }
 
-    private Component forceColor(Component component, NamedTextColor color, TextDecoration... decorations) {
-        Component base = component.color(color);
-        for (TextDecoration deco : decorations) {
-            base = base.decorate(deco);
-        }
+    private Component forceColorAndBold(Component component, TextColor color) {
+        Component base = component.color(color).decorate(TextDecoration.BOLD);
 
-        // Aplicar el color a todos los hijos
         if (!component.children().isEmpty()) {
-            java.util.List<Component> recoloredChildren = new java.util.ArrayList<>();
+            List<Component> recoloredChildren = new ArrayList<>();
             for (Component child : component.children()) {
-                recoloredChildren.add(forceColor(child, color, decorations));
+                recoloredChildren.add(forceColorAndBold(child, color));
             }
             base = base.children(recoloredChildren);
         }
         return base;
     }
-
 }

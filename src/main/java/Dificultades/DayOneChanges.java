@@ -39,7 +39,7 @@
             this.plugin = plugin;
             this.dayHandler = handler;
             this.corruptedZombies = new CorruptedZombies(plugin);
-            this.corruptedSpider = new CorruptedSpider(plugin);
+            this.corruptedSpider = new CorruptedSpider(plugin,handler);
         }
 
         public void apply() {

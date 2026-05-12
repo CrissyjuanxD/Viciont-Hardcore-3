@@ -18,18 +18,19 @@ public class InfestedCaveItems {
     }
 
 
-    public static ItemStack createRawInfestedCrystal(int amount) {
+    public static ItemStack createRawSculkCrystal(int amount) {
         ItemStack item = new ItemStack(Material.RAW_COPPER, amount);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.of("#009999") + "" + ChatColor.BOLD + "Pepita de Enderite");
+        meta.setDisplayName(ChatColor.of("#3e88a8") + "" + ChatColor.BOLD + "Sculk Crystal en Bruto");
         meta.setCustomModelData(20);
 
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.GRAY + " ");
-        lore.add(ChatColor.of("#333366") + "" + ChatColor.BOLD + "Pepitas de cristales");
-        lore.add(ChatColor.of("#336666") + "que aparecieron cuando surgió ");
-        lore.add(ChatColor.of("#336666") + "una entidad desconocida en este");
-        lore.add(ChatColor.of("#336666") + "mundo.");
+        lore.add(ChatColor.of("#43988e") + "Mineral proveniente de una ");
+        lore.add(ChatColor.of("#43988e") + "dimensión extraña. ");
+        lore.add(ChatColor.of("#62b5b7") + "Se dice que un ser omnipresente");
+        lore.add(ChatColor.of("#62b5b7") + "lo creó para fines " + ChatColor.of("#349698") + "desconocidos" + ChatColor.of("#62b5b7") + "."
+        );
         lore.add(" ");
 
         meta.setLore(lore);
@@ -38,18 +39,18 @@ public class InfestedCaveItems {
         return item;
     }
 
-    public static ItemStack createSculkCrystalFragment(int amount) {
-        ItemStack item = new ItemStack(Material.IRON_NUGGET, amount);
+    public static ItemStack createSculkCrystalFragment() {
+        ItemStack item = new ItemStack(Material.IRON_NUGGET);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.of("#009999") + "" + ChatColor.BOLD + "Pepita de Enderite");
+        meta.setDisplayName(ChatColor.of("#4ca3c8") + "" + ChatColor.BOLD + "Fragmento de Sculk Crystal");
         meta.setCustomModelData(50);
 
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.GRAY + " ");
-        lore.add(ChatColor.of("#333366") + "" + ChatColor.BOLD + "Pepitas de cristales");
-        lore.add(ChatColor.of("#336666") + "que aparecieron cuando surgió ");
-        lore.add(ChatColor.of("#336666") + "una entidad desconocida en este");
-        lore.add(ChatColor.of("#336666") + "mundo.");
+        lore.add(ChatColor.of("#43988e") + "Fragmento que surge del");
+        lore.add(ChatColor.of("#43988e") + "extraño mineral de Sculk.");
+        lore.add(ChatColor.of("#44bbad") + "Su nivel de energía es tan alto");
+        lore.add(ChatColor.of("#44bbad") + "que causaría " + ChatColor.of("#bb7444") + "quemaduras graves" + ChatColor.of("#44bbad") + ".");
         lore.add(" ");
 
         meta.setLore(lore);
@@ -61,15 +62,14 @@ public class InfestedCaveItems {
     public static ItemStack createEmptyRune() {
         ItemStack item = new ItemStack(Material.ECHO_SHARD);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.of("#009999") + "" + ChatColor.BOLD + "Fragmento de Enderite");
+        meta.setDisplayName(ChatColor.of("#c1d3d7") + "" + ChatColor.BOLD + "Runa Vacia");
         meta.setCustomModelData(3000);
 
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.GRAY + " ");
-        lore.add(ChatColor.of("#333366") + "" + ChatColor.BOLD + "Fragmentos de cristales " + ChatColor.RESET + ChatColor.of("#336666") + "que");
-        lore.add(ChatColor.of("#336666") + "se han ido forjando con el");
-        lore.add(ChatColor.of("#336666") + "paso del tiempo para poder fabricar");
-        lore.add(ChatColor.of("#336666") + "nuevas herramientas.");
+        lore.add(ChatColor.GRAY + ">" + " " + ChatColor.of("#99c2d6") + "Esta runa no tiene");
+        lore.add(ChatColor.of("#99c2d6") + "ningún poder de energía en ");
+        lore.add(ChatColor.of("#99c2d6") + "su interior.");
         lore.add(" ");
 
         meta.setLore(lore);
@@ -81,15 +81,14 @@ public class InfestedCaveItems {
     public static ItemStack createNormalRune() {
         ItemStack item = new ItemStack(Material.ECHO_SHARD);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.of("#009999") + "" + ChatColor.BOLD + "Fragmento de Enderite");
+        meta.setDisplayName(ChatColor.of("#58bee9") + "" + ChatColor.BOLD + "Runa de Sculk Crystal");
         meta.setCustomModelData(3001);
 
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.GRAY + " ");
-        lore.add(ChatColor.of("#333366") + "" + ChatColor.BOLD + "Fragmentos de cristales " + ChatColor.RESET + ChatColor.of("#336666") + "que");
-        lore.add(ChatColor.of("#336666") + "se han ido forjando con el");
-        lore.add(ChatColor.of("#336666") + "paso del tiempo para poder fabricar");
-        lore.add(ChatColor.of("#336666") + "nuevas herramientas.");
+        lore.add(ChatColor.GRAY + ">" + " " + ChatColor.of("#99c2d6") + "Esta runa tiene");
+        lore.add(ChatColor.of("#99c2d6") + "el poder de la energía del");
+        lore.add(ChatColor.of("#4ca3c8") + "" + ChatColor.BOLD + "Sculk Crystal" + ChatColor.of("#99c2d6") + ".");
         lore.add(" ");
 
         meta.setLore(lore);

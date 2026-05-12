@@ -1,6 +1,7 @@
 package Dificultades.CustomMobs;
 
 import Dificultades.Features.MobSoundManager;
+import Handlers.DayHandler;
 import items.CorruptedMobItems;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
@@ -20,14 +21,21 @@ import java.util.Objects;
 
 public class CorruptedSpider implements Listener {
     private final JavaPlugin plugin;
+    private final DayHandler dayHandler;
     private final NamespacedKey corrupedtedspiderKey;
     private static boolean eventsRegistered = false;
-    private final MobSoundManager soundManager;
 
-    public CorruptedSpider(JavaPlugin plugin) {
+    public CorruptedSpider(JavaPlugin plugin, DayHandler dayHandler) {
         this.plugin = plugin;
+        this.dayHandler = dayHandler;
         this.corrupedtedspiderKey = new NamespacedKey(plugin, "corruptedspider");
-        this.soundManager = new MobSoundManager(plugin);
+        MobSoundManager.register(
+                corrupedtedspiderKey,
+                Sound.ENTITY_SPIDER_AMBIENT,
+                Sound.ENTITY_SPIDER_STEP,
+                0.6f,
+                1.0f
+        );
     }
 
     public void apply() {
@@ -93,7 +101,6 @@ public class CorruptedSpider implements Listener {
     @EventHandler
     public void onCorruptedSpiderDeath(EntityDeathEvent event) {
         if (event.getEntity() instanceof Spider spider && isCorruptedSpider(spider)) {
-            soundManager.removeCustomMob(spider);
             spider.getWorld().playSound(spider.getLocation(), Sound.ENTITY_SPIDER_DEATH, SoundCategory.HOSTILE, 1.0f, 0.6f);
 
             if (Math.random() <= 0.35) {

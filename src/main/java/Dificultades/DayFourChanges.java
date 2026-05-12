@@ -61,7 +61,7 @@ public class DayFourChanges implements Listener {
         this.corruptedInfernalSpider = new CorruptedInfernalSpider(plugin);
         /*this.queenBeeHandler = new QueenBeeHandler(plugin);*/
         this.corruptedZombies = new CorruptedZombies(plugin);
-        this.corruptedSpider = new CorruptedSpider(plugin);
+        this.corruptedSpider = new CorruptedSpider(plugin,handler);
         this.corruptedBee = new CorruptedBee(plugin);
         this.bombita = new Bombita(plugin);
         this.iceologer= new Iceologer(plugin);

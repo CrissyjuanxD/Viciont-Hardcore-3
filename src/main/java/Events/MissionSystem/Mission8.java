@@ -3,8 +3,6 @@ package Events.MissionSystem;
 import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -14,7 +12,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import net.md_5.bungee.api.ChatColor;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,7 +33,7 @@ public class Mission8 implements Mission, Listener {
 
     @Override
     public String getDescription() {
-        return "Fabrica armadura completa de Corrupted Netherite";
+        return "Fabricar armadura completa de Corrupted Netherite";
     }
 
     @Override
@@ -61,18 +58,7 @@ public class Mission8 implements Mission, Listener {
 
     @Override
     public void initializePlayerData(String playerName) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-
-        String[] armorPieces = {"helmet", "chestplate", "leggings", "boots"};
-        for (String piece : armorPieces) {
-            data.set("players." + playerName + ".missions.8.corrupted_armor." + piece, false);
-        }
-
-        try {
-            data.save(missionHandler.getMissionFile());
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al inicializar datos de Misión 8: " + e.getMessage());
-        }
+        // No es necesario inicializar con JSON
     }
 
     @Override
@@ -82,18 +68,11 @@ public class Mission8 implements Mission, Listener {
 
     @EventHandler
     public void onSmithingTableUse(SmithItemEvent event) {
-        if (!missionHandler.isMissionActive(8)) return;
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!missionHandler.isMissionActive(player, 8)) return;
 
-        if (!(event.getWhoClicked() instanceof Player)) return;
-
-        Player player = (Player) event.getWhoClicked();
-        String playerName = player.getName();
-
-        // Verificar si ya completó la misión
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        if (data.getBoolean("players." + playerName + ".missions.8.completed", false)) {
-            return;
-        }
+        MissionData data = missionHandler.getData(player, 8);
+        if (data.isCompleted()) return;
 
         ItemStack result = event.getCurrentItem();
         if (result == null || !result.hasItemMeta()) return;
@@ -116,36 +95,33 @@ public class Mission8 implements Mission, Listener {
         }
 
         if (armorPiece != null) {
-            if (!data.getBoolean("players." + playerName + ".missions.8.corrupted_armor." + armorPiece, false)) {
-                data.set("players." + playerName + ".missions.8.corrupted_armor." + armorPiece, true);
+            String dataKey = "corrupted_armor_" + armorPiece; // Coincide con la GUI
 
-                try {
-                    data.save(missionHandler.getMissionFile());
+            if (!data.getProgressBool(dataKey)) {
+                data.setProgressValue(dataKey, true);
+                missionHandler.saveData(player, 8, data);
 
-                    String armorName = armorPiece.substring(0, 1).toUpperCase() + armorPiece.substring(1);
-                    player.sendMessage(ChatColor.of("#98FB98") + "¡Has fabricado " + armorName + " Corrupto!");
+                String armorName = armorPiece.substring(0, 1).toUpperCase() + armorPiece.substring(1);
+                player.sendMessage(ChatColor.of("#98FB98") + "¡Has fabricado " + armorName + " Corrupto!");
 
-                    // Verificar si completó toda la armadura
-                    boolean allCompleted = true;
-                    String[] pieces = {"helmet", "chestplate", "leggings", "boots"};
-                    int completed = 0;
+                // Verificar si completó toda la armadura
+                boolean allCompleted = true;
+                String[] pieces = {"helmet", "chestplate", "leggings", "boots"};
+                int completed = 0;
 
-                    for (String piece : pieces) {
-                        if (data.getBoolean("players." + playerName + ".missions.8.corrupted_armor." + piece, false)) {
-                            completed++;
-                        } else {
-                            allCompleted = false;
-                        }
-                    }
-
-                    if (allCompleted) {
-                        missionHandler.completeMission(playerName, 8);
+                for (String piece : pieces) {
+                    if (data.getProgressBool("corrupted_armor_" + piece)) {
+                        completed++;
                     } else {
-                        player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Progreso de armadura corrupta: " + ChatColor.of("#FFB6C1") + completed + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "4");
-                        successNotification.showSuccess(player);
+                        allCompleted = false;
                     }
-                } catch (IOException e) {
-                    plugin.getLogger().severe("Error al guardar progreso de Misión 8: " + e.getMessage());
+                }
+
+                if (allCompleted) {
+                    missionHandler.completeMission(player.getName(), 8);
+                } else {
+                    player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Progreso de armadura corrupta: " + ChatColor.of("#FFB6C1") + completed + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "4");
+                    successNotification.showSuccess(player);
                 }
             }
         }

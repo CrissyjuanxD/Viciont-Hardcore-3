@@ -1,0 +1,6 @@
+Database1:
+  host: "127.0.0.1" # El host que te da el panel (a veces es una IP o un dominio)
+  port: 3306        # El puerto que te da el panel
+  database: "database_name" # El nombre que te dio el panel
+  username: "database_username"   # El usuario que te dio el panel
+  password: "my_password"

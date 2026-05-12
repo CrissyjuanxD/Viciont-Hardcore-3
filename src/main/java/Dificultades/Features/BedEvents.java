@@ -33,8 +33,7 @@ public class BedEvents implements Listener {
     private final Random random = new Random();
     private final long PHANTOM_RESET_COOLDOWN = 60 * 60 * 1000L;
 
-    // Probabilidad de que la cama (día 12+) active Nightmare
-    private static final double NIGHTMARE_CHANCE = 0.25; // 25%
+    private static final double NIGHTMARE_CHANCE = 0.25;
 
     public BedEvents(JavaPlugin plugin, DayHandler dayHandler, DeathStormHandler deathStormHandler, NightmareMechanic nightmareMechanic) {
         this.plugin = plugin;
@@ -67,7 +66,6 @@ public class BedEvents implements Listener {
             return;
         }
 
-        // 🔥 LÓGICA ESPECIAL DÍA 12+: ya no spawnea phantoms extra, ahora puede activar Nightmare
         if (currentDay >= 12) {
             event.setCancelled(true);
             handlePhantomReset(player);
@@ -75,7 +73,6 @@ public class BedEvents implements Listener {
             return;
         }
 
-        // Lógica original de dormir (días < 12)
         if (world.getTime() >= 12530 && world.getTime() <= 23458 && !world.isThundering()) {
             if (currentDay >= 4 && Bukkit.getOnlinePlayers().size() < 4) {
                 sendActionBar(player, ChatColor.RED + "¡No hay suficientes jugadores online para dormir! (Se necesitan 4)");
@@ -154,10 +151,6 @@ public class BedEvents implements Listener {
         }
     }
 
-    // ===========================
-    //   RESET PHANTOMS (igual)
-    // ===========================
-
     private void handlePhantomReset(Player player) {
         if (lastPhantomReset.containsKey(player)) {
             long timeSinceLastReset = System.currentTimeMillis() - lastPhantomReset.get(player);
@@ -176,10 +169,6 @@ public class BedEvents implements Listener {
             player.sendMessage(ChatColor.YELLOW + "Nada ocurrió al intentar dormir...");
         }
     }
-
-    // ===========================
-    //   ACTIVAR NIGHTMARE DÍA 12+
-    // ===========================
 
     private void handleNightmareBedTrigger(Player player) {
         if (nightmareMechanic == null) return;
@@ -204,16 +193,22 @@ public class BedEvents implements Listener {
     }
 
     // ===========================
-    //      ACTION BARS (solo cama)
+    //      ACTION BARS FIX
     // ===========================
 
     private void sendGlobalActionBar(String message) {
+        TextComponent root = new TextComponent("\u200B");
+        root.addExtra(new TextComponent(TextComponent.fromLegacyText(message)));
+
         for (Player p : Bukkit.getOnlinePlayers()) {
-            p.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
+            p.spigot().sendMessage(ChatMessageType.ACTION_BAR, root);
         }
     }
 
     private void sendActionBar(Player player, String message) {
-        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
+        TextComponent root = new TextComponent("\u200B");
+        root.addExtra(new TextComponent(TextComponent.fromLegacyText(message)));
+
+        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, root);
     }
 }

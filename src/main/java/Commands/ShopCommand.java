@@ -1,3 +1,4 @@
+/*
 package Commands;
 
 import Handlers.ShopHandler;
@@ -99,4 +100,4 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
 
         return completions;
     }
-}
+}*/

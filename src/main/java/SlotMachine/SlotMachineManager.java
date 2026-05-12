@@ -10,6 +10,7 @@ import SlotMachine.providers.modelengine.ModelEngine4;
 import SlotMachine.commands.SlotMachineCommand;
 import SlotMachine.utils.ItemCreator;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.Entity;
 import org.bukkit.inventory.ItemStack;
 import vct.hardcore3.ViciontHardcore3;
 import net.md_5.bungee.api.ChatColor;
@@ -67,7 +68,14 @@ public class SlotMachineManager {
         // Inicializar y registrar comandos
         initializeCommands();
 
-        plugin.getLogger().info("SlotMachine system initialized successfully!");
+        // --- CORRECCIÓN IMPORTANTE ---
+        // Retrasamos la carga 40 ticks (2 segundos) para dar tiempo a que los mundos
+        // y ModelEngine carguen completamente. Esto evita que spawnear entidades falle.
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            loadSlotMachinesFromFile();
+            plugin.getLogger().info("SlotMachine system initialized successfully!");
+        }, 40L);
+        // -----------------------------
     }
 
     private void loadConfiguration() {
@@ -111,6 +119,27 @@ public class SlotMachineManager {
             command.setTabCompleter(slotMachineCommand);
         }
     }
+    // Método para limpiar entidades corruptas/duplicadas en la ubicación exacta
+    private void cleanupLocation(Location location) {
+        if (location.getWorld() == null) return;
+
+        // Buscamos entidades en un radio muy pequeño (0.5 bloques)
+        for (Entity entity : location.getWorld().getNearbyEntities(location, 0.5, 0.5, 0.5)) {
+            if (entity.getType() == EntityType.ARMOR_STAND) {
+                // Si tiene el nombre de nuestra máquina o metadata, la borramos
+                if ("SlotMachine".equals(entity.getCustomName()) || entity.hasMetadata("slot_machine")) {
+                    // Remover de ModelEngine si existe
+                    if (useModelEngine4 && modelEngine4 != null) {
+                        modelEngine4.removeModel(entity);
+                    } else if (modelEngine3 != null) {
+                        modelEngine3.removeModel(entity);
+                    }
+                    entity.remove();
+                }
+            }
+        }
+    }
+
 
     public boolean createSlotMachine(Location location, Player creator, String machineId) {
         SlotMachine slotMachine = slotMachineTool.getSlotMachine(machineId);
@@ -122,51 +151,71 @@ public class SlotMachineManager {
             }
         }
 
-        // Verificar si ya existe una máquina en esa ubicación
         if (activeMachines.containsKey(location)) {
             creator.sendMessage(ChatColor.of("#FF6B6B") + "۞ Ya existe una Slot Machine en esa ubicación.");
             return false;
         }
 
-        // Crear entidad ArmorStand
-        ArmorStand entity = (ArmorStand) location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
+        // 1. Limpieza preventiva
+        cleanupLocation(location);
+
+        // 2. CORRECCIÓN MATEMÁTICA (Anti-NaN)
+        // Redondeamos la ubicación para evitar decimales infinitos que causan el error
+        Location cleanLoc = location.clone();
+        cleanLoc.setX(Math.round(location.getX() * 100.0) / 100.0);
+        cleanLoc.setY(Math.round(location.getY() * 100.0) / 100.0);
+        cleanLoc.setZ(Math.round(location.getZ() * 100.0) / 100.0);
+        // Forzar Yaw/Pitch a números seguros si son NaN
+        if (Float.isNaN(cleanLoc.getYaw())) cleanLoc.setYaw(0f);
+        if (Float.isNaN(cleanLoc.getPitch())) cleanLoc.setPitch(0f);
+
+        ArmorStand entity = (ArmorStand) cleanLoc.getWorld().spawnEntity(cleanLoc, EntityType.ARMOR_STAND);
+
+        // Configuración base
         entity.setInvulnerable(true);
         entity.setInvisible(true);
         entity.setGravity(false);
         entity.setAI(false);
-        entity.setCollidable(true);
+        entity.setCollidable(false);
         entity.setSilent(true);
         entity.setCustomName("SlotMachine");
         entity.setCustomNameVisible(false);
 
-        // Metadata para identificar como slot machine
+        // 3. Configuración de Persistencia
+        entity.setRemoveWhenFarAway(false);
+        entity.setPersistent(true);
+        entity.setMarker(false);
+
+        // 4. SANITIZACIÓN DE POSES Y VELOCIDAD (Clave para arreglar el error de Gson/Json)
+        entity.setVelocity(new org.bukkit.util.Vector(0, 0, 0)); // Velocidad Cero Absoluto
+        entity.setHeadPose(org.bukkit.util.EulerAngle.ZERO);
+        entity.setBodyPose(org.bukkit.util.EulerAngle.ZERO);
+        entity.setLeftArmPose(org.bukkit.util.EulerAngle.ZERO);
+        entity.setRightArmPose(org.bukkit.util.EulerAngle.ZERO);
+        entity.setLeftLegPose(org.bukkit.util.EulerAngle.ZERO);
+        entity.setRightLegPose(org.bukkit.util.EulerAngle.ZERO);
+
         entity.setMetadata("slot_machine", new FixedMetadataValue(plugin, slotMachine.getModelId()));
 
-        // Crear modelo 3D
         UUID modelUUID = null;
         if (useModelEngine4 && modelEngine4 != null) {
             modelUUID = modelEngine4.spawnModel(entity, slotMachine.getModelId());
         } else if (modelEngine3 != null) {
-            // Para ModelEngine3 mantener compatibilidad
             boolean created = modelEngine3.createModel(entity, slotMachine.getModelId());
-            if (created) {
-                modelUUID = entity.getUniqueId();
-            }
+            if (created) modelUUID = entity.getUniqueId();
         }
 
         if (modelUUID == null) {
             plugin.getLogger().warning("Failed to create 3D model for slot machine");
         }
 
-        // Crear modelo de datos
-        SlotMachineModel model = new SlotMachineModel(slotMachine.getId(), location);
+        // Usamos cleanLoc para guardar
+        SlotMachineModel model = new SlotMachineModel(slotMachine.getId(), cleanLoc);
         model.setEntity(entity);
         model.setModelUUID(modelUUID);
-        activeMachines.put(location, model);
+        activeMachines.put(cleanLoc, model); // Usar cleanLoc en el mapa también
 
         creator.sendMessage(ChatColor.of("#B5EAD7") + "۞ Slot Machine creada exitosamente!");
-
-        // Guardar en archivo para persistencia
         saveSlotMachineToFile(model);
         return true;
     }
@@ -254,6 +303,8 @@ public class SlotMachineManager {
             FileConfiguration config = YamlConfiguration.loadConfiguration(dataFile);
             if (!config.contains("machines")) return;
 
+            int loadedCount = 0;
+
             for (String key : config.getConfigurationSection("machines").getKeys(false)) {
                 String worldName = config.getString("machines." + key + ".location.world");
                 double x = config.getDouble("machines." + key + ".location.x");
@@ -264,17 +315,29 @@ public class SlotMachineManager {
                 String machineId = config.getString("machines." + key + ".id", "default");
 
                 org.bukkit.World world = plugin.getServer().getWorld(worldName);
-                if (world == null) continue;
+                if (world == null) {
+                    plugin.getLogger().warning("Mundo no encontrado para SlotMachine: " + worldName);
+                    continue;
+                }
 
                 Location location = new Location(world, x, y, z, yaw, pitch);
 
+                // --- SOLUCIÓN CRÍTICA PARA EL REINICIO ---
+                // Si el chunk no está cargado, la entidad NO se crea. Forzamos la carga.
+                if (!location.getChunk().isLoaded()) {
+                    location.getChunk().load();
+                }
+                // -----------------------------------------
+
                 // Recrear la máquina
                 recreateSlotMachine(location, machineId);
+                loadedCount++;
             }
 
-            plugin.getLogger().info("Loaded " + activeMachines.size() + " slot machines from file");
+            plugin.getLogger().info("Loaded " + loadedCount + " slot machines from file");
         } catch (Exception e) {
             plugin.getLogger().severe("Error loading slot machines: " + e.getMessage());
+            e.printStackTrace(); // Imprimir error completo para depurar
         }
     }
 
@@ -284,32 +347,47 @@ public class SlotMachineManager {
             slotMachine = slotMachineTool.getDefaultSlotMachine();
         }
 
-        // Crear entidad ArmorStand
+        // 1. Limpieza preventiva (Mata cualquier entidad corrupta anterior en este sitio)
+        cleanupLocation(location);
+
+        // 2. CORRECCIÓN MATEMÁTICA (Anti-NaN)
+        if (Float.isNaN(location.getYaw())) location.setYaw(0f);
+        if (Float.isNaN(location.getPitch())) location.setPitch(0f);
+
         ArmorStand entity = (ArmorStand) location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
+
         entity.setInvulnerable(true);
         entity.setInvisible(true);
         entity.setGravity(false);
         entity.setAI(false);
-        entity.setCollidable(true);
+        entity.setCollidable(false);
         entity.setSilent(true);
         entity.setCustomName("SlotMachine");
         entity.setCustomNameVisible(false);
 
-        // Metadata
+        entity.setRemoveWhenFarAway(false);
+        entity.setPersistent(true);
+        entity.setMarker(false);
+
+        // 3. SANITIZACIÓN DE POSES Y VELOCIDAD
+        entity.setVelocity(new org.bukkit.util.Vector(0, 0, 0));
+        entity.setHeadPose(org.bukkit.util.EulerAngle.ZERO);
+        entity.setBodyPose(org.bukkit.util.EulerAngle.ZERO);
+        entity.setLeftArmPose(org.bukkit.util.EulerAngle.ZERO);
+        entity.setRightArmPose(org.bukkit.util.EulerAngle.ZERO);
+        entity.setLeftLegPose(org.bukkit.util.EulerAngle.ZERO);
+        entity.setRightLegPose(org.bukkit.util.EulerAngle.ZERO);
+
         entity.setMetadata("slot_machine", new FixedMetadataValue(plugin, slotMachine.getModelId()));
 
-        // Crear modelo 3D
         UUID modelUUID = null;
         if (useModelEngine4 && modelEngine4 != null) {
             modelUUID = modelEngine4.spawnModel(entity, slotMachine.getModelId());
         } else if (modelEngine3 != null) {
             boolean created = modelEngine3.createModel(entity, slotMachine.getModelId());
-            if (created) {
-                modelUUID = entity.getUniqueId();
-            }
+            if (created) modelUUID = entity.getUniqueId();
         }
 
-        // Crear modelo de datos
         SlotMachineModel model = new SlotMachineModel(slotMachine.getId(), location);
         model.setEntity(entity);
         model.setModelUUID(modelUUID);
@@ -510,7 +588,7 @@ public class SlotMachineManager {
     }
 
     public void shutdown() {
-        // Limpiar todas las máquinas activas
+        // Solo borramos las entidades visuales del mundo, NO el archivo.
         for (SlotMachineModel model : activeMachines.values()) {
             if (model.getEntity() != null) {
                 if (useModelEngine4 && modelEngine4 != null) {
@@ -522,19 +600,6 @@ public class SlotMachineManager {
             }
         }
         activeMachines.clear();
-
-        // Guardar estado actual
-        try {
-            File dataFile = new File(plugin.getDataFolder(), "slotmachines.yml");
-            if (dataFile.exists()) {
-                FileConfiguration config = YamlConfiguration.loadConfiguration(dataFile);
-                config.set("machines", null);
-                config.save(dataFile);
-            }
-        } catch (Exception e) {
-            plugin.getLogger().severe("Error saving slot machines on shutdown: " + e.getMessage());
-        }
-
         plugin.getLogger().info("SlotMachine system shutdown completed.");
     }
 

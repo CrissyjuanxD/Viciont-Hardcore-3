@@ -1,23 +1,21 @@
 package Events.MissionSystem;
 
+import net.md_5.bungee.api.ChatColor;
 import org.bukkit.*;
-import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import net.md_5.bungee.api.ChatColor;
 
-import java.io.IOException;
 import java.util.List;
 
 public class MissionRewardHandler implements Listener {
@@ -31,63 +29,60 @@ public class MissionRewardHandler implements Listener {
     }
 
     @EventHandler
-    public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+    public void onEntityInteract(PlayerInteractEntityEvent event) {
+        if (event.getHand() != EquipmentSlot.HAND) return;
 
-        Block block = event.getClickedBlock();
-        if (block == null || block.getType() != Material.PINK_GLAZED_TERRACOTTA) return;
+        Entity entity = event.getRightClicked();
+        if (entity.getType() != EntityType.FOX) return;
+        if (!entity.getScoreboardTags().contains("reward_statue") &&
+                !entity.getName().contains("Estatua de Recompensas")) return;
 
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
 
-        if (!isMissionToken(item)) return;
+        if (!isMissionToken(item)) {
+            player.sendMessage(ChatColor.RED + "✖ " + ChatColor.GRAY + "Solo puedes interactuar usando una " +
+                    ChatColor.GOLD + ChatColor.BOLD + "Ficha de Misión" + ChatColor.GRAY +
+                    ", las cuales se consiguen completando misiones, para recibir tu recompensa.");
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_GUITAR, 1.0f, 0.6f);
+            return;
+        }
 
         int missionNumber = getMissionNumberFromToken(item);
         if (missionNumber == -1) return;
 
-        // Verificar que la misión esté completada y no haya reclamado la recompensa
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        String playerName = player.getName();
+        event.setCancelled(true);
 
-        if (!data.getBoolean("players." + playerName + ".missions." + missionNumber + ".completed", false)) {
+        MissionData data = missionHandler.getData(player, missionNumber);
+
+        if (!data.isCompleted()) {
             player.sendMessage(ChatColor.RED + "No has completado esta misión.");
             return;
         }
 
-        if (data.getBoolean("players." + playerName + ".missions." + missionNumber + ".reward_claimed", false)) {
+        if (data.isRewardClaimed()) {
             player.sendMessage(ChatColor.RED + "Ya has reclamado la recompensa de esta misión.");
             return;
         }
 
-        event.setCancelled(true);
-
-        // Consumir la ficha
         if (item.getAmount() > 1) {
             item.setAmount(item.getAmount() - 1);
         } else {
             player.getInventory().setItemInMainHand(null);
         }
 
-        // Iniciar animación de recompensa
-        startRewardAnimation(player, block.getLocation(), missionNumber);
+        startRewardAnimation(player, entity.getLocation(), missionNumber);
 
-        // Marcar recompensa como reclamada
-        data.set("players." + playerName + ".missions." + missionNumber + ".reward_claimed", true);
-        try {
-            data.save(missionHandler.getMissionFile());
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al guardar reclamación de recompensa: " + e.getMessage());
-        }
+        data.setRewardClaimed(true);
+        missionHandler.saveData(player, missionNumber, data);
     }
 
     private boolean isMissionToken(ItemStack item) {
-        if (item == null || item.getType() != Material.ECHO_SHARD) return false;
-
+        if (item == null || item.getType() != Material.POPPED_CHORUS_FRUIT) return false;
         ItemMeta meta = item.getItemMeta();
         if (meta == null || !meta.hasCustomModelData()) return false;
-
         int cmd = meta.getCustomModelData();
-        return cmd >= 3001 && cmd <= 3027; // Fichas de misión 1-27
+        return cmd >= 3001 && cmd <= 3027;
     }
 
     private int getMissionNumberFromToken(ItemStack item) {
@@ -101,19 +96,17 @@ public class MissionRewardHandler implements Listener {
         Location center = blockLocation.clone().add(0.5, 0.5, 0.5);
         World world = center.getWorld();
 
-        // Fase 1: Círculo de Sonic Boom (radio 5) - solo 2 segundos
         new BukkitRunnable() {
             int ticks = 0;
             int particleCount = 0;
 
             @Override
             public void run() {
-                if (ticks >= 40) { // 2 segundos
+                if (ticks >= 40) {
                     this.cancel();
                     return;
                 }
 
-                // Generar solo 4 partículas por ejecución (en lugar de 36)
                 for (int i = 0; i < 4; i++) {
                     double angle = Math.toRadians(particleCount * 10);
                     double x = 5 * Math.cos(angle);
@@ -131,15 +124,12 @@ public class MissionRewardHandler implements Listener {
                 ticks++;
             }
         }.runTaskTimer(plugin, 10L, 5L);
-
-        // Fase 2: Círculo de Poof giratorio con cambios de color
         startRotatingPoofAnimation(player, center, missionNumber);
     }
 
     private void startRotatingPoofAnimation(Player player, Location center, int missionNumber) {
         World world = center.getWorld();
 
-        // Colores que cambian cada 2 segundos
         Particle.DustOptions[] colors = {
                 new Particle.DustOptions(Color.ORANGE, 1.0f),
                 new Particle.DustOptions(Color.GREEN, 1.0f),
@@ -155,29 +145,24 @@ public class MissionRewardHandler implements Listener {
 
             @Override
             public void run() {
-                if (ticks >= 200) { // 10 segundos
-                    // Fase 3: Explosión final y rayo
+                if (ticks >= 200) {
                     createFinalExplosionAndBeam(center, missionNumber, player);
                     this.cancel();
                     return;
                 }
 
-                // Cambiar color cada 40 ticks (2 segundos)
                 int colorIndex = (ticks / 40) % colors.length;
                 Particle.DustOptions currentColor = colors[colorIndex];
 
-                // Sonido cuando cambia de color
                 if (ticks % 40 == 0 && ticks > 0) {
                     world.playSound(center, Sound.BLOCK_NOTE_BLOCK_CHIME, SoundCategory.VOICE,1.0f, 1.0f + (colorIndex * 0.2f));
                 }
 
-                // Sonido de rotación cada 20 ticks
                 if (ticks - lastSoundTick >= 20) {
                     world.playSound(center, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.VOICE,0.3f, 1.5f);
                     lastSoundTick = ticks;
                 }
 
-                // Crear círculo giratorio
                 for (int i = 0; i < 360; i += 15) {
                     double angle = Math.toRadians(i + rotation);
                     double x = 5 * Math.cos(angle);
@@ -186,16 +171,15 @@ public class MissionRewardHandler implements Listener {
                     world.spawnParticle(Particle.DUST, particleLoc, 1, 0, 0, 0, 0, currentColor);
                 }
 
-                rotation += 8; // Velocidad de rotación
+                rotation += 8;
                 ticks++;
             }
-        }.runTaskTimer(plugin, 40L, 1L); // Empezar después de sonic boom
+        }.runTaskTimer(plugin, 40L, 1L);
     }
 
     private void createFinalExplosionAndBeam(Location center, int missionNumber, Player originalPlayer) {
         World world = center.getWorld();
 
-        // Explosión en círculo
         for (int i = 0; i < 360; i += 10) {
             double angle = Math.toRadians(i);
             double x = 5 * Math.cos(angle);
@@ -206,14 +190,12 @@ public class MissionRewardHandler implements Listener {
 
         world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.VOICE, 2.0f, 1.0f);
 
-        // Rayo de partículas negras hacia arriba
         new BukkitRunnable() {
             int height = 0;
 
             @Override
             public void run() {
                 if (height >= 7) {
-                    // Rayo hacia el jugador
                     createPlayerBeam(center.clone().add(0, 7, 0), missionNumber, originalPlayer);
                     this.cancel();
                     return;
@@ -223,12 +205,11 @@ public class MissionRewardHandler implements Listener {
                 Particle.DustOptions blackDust = new Particle.DustOptions(Color.BLACK, 2.0f);
                 world.spawnParticle(Particle.DUST, beamLoc, 10, 0.2, 0.2, 0.2, 0, blackDust);
 
-                // Sonido del rayo
                 world.playSound(beamLoc, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.VOICE, 0.5f, 2.0f);
 
                 height++;
             }
-        }.runTaskTimer(plugin, 20L, 3L); // Más rápido - cada 3 ticks
+        }.runTaskTimer(plugin, 20L, 3L);
     }
 
     private void createPlayerBeam(Location beamEnd, int missionNumber, Player originalPlayer) {
@@ -238,26 +219,22 @@ public class MissionRewardHandler implements Listener {
         if (targetPlayer != null) {
             final Player finalTargetPlayer = targetPlayer;
 
-            // Crear rayo morado hacia el jugador
             new BukkitRunnable() {
                 double progress = 0;
 
                 @Override
                 public void run() {
                     if (progress >= 1.0) {
-                        // Explosión de fireworks en el jugador
                         finalTargetPlayer.getWorld().spawnParticle(Particle.FIREWORK,
                                 finalTargetPlayer.getLocation(), 50, 1, 1, 1, 0.1);
                         finalTargetPlayer.getWorld().playSound(finalTargetPlayer.getLocation(),
                                 Sound.ENTITY_FIREWORK_ROCKET_BLAST, SoundCategory.VOICE, 2.0f, 1.0f);
 
-                        // Dar recompensa
                         giveRewardChest(finalTargetPlayer, missionNumber);
                         this.cancel();
                         return;
                     }
 
-                    // Crear línea de partículas moradas
                     Location start = beamEnd;
                     Location end = finalTargetPlayer.getEyeLocation();
 
@@ -280,23 +257,19 @@ public class MissionRewardHandler implements Listener {
     }
 
     private void giveRewardChest(Player player, int missionNumber) {
-        // Obtener las recompensas de la misión
         Mission mission = missionHandler.getMissions().get(missionNumber);
         if (mission == null) return;
 
         List<ItemStack> rewards = mission.getRewards();
 
-        // Crear cofre con las recompensas dentro usando NBT
         ItemStack rewardChest = new ItemStack(Material.CHEST);
         ItemMeta chestMeta = rewardChest.getItemMeta();
         chestMeta.setDisplayName(ChatColor.of("#FFD700") + "Recompensa de Misión #" + missionNumber);
 
-        // Usar BlockStateMeta para añadir items al cofre
         if (chestMeta instanceof BlockStateMeta) {
             BlockStateMeta blockStateMeta = (BlockStateMeta) chestMeta;
             Chest chestState = (Chest) blockStateMeta.getBlockState();
 
-            // Añadir items al inventario del cofre
             for (int i = 0; i < Math.min(rewards.size(), 27); i++) {
                 chestState.getInventory().setItem(i, rewards.get(i));
             }
@@ -305,11 +278,9 @@ public class MissionRewardHandler implements Listener {
             rewardChest.setItemMeta(blockStateMeta);
         }
 
-        // Intentar dar el cofre al jugador
         if (player.getInventory().firstEmpty() != -1) {
             player.getInventory().addItem(rewardChest);
         } else {
-            // Si no hay espacio, dropear al suelo
             player.getWorld().dropItemNaturally(player.getLocation(), rewardChest);
             player.sendMessage(ChatColor.of("#FFA07A") + "¡Tu inventario estaba lleno! El cofre se ha dejado caer al suelo.");
         }

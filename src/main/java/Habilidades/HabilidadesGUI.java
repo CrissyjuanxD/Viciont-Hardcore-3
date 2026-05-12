@@ -1,7 +1,7 @@
 package Habilidades;
 
 import Handlers.DayHandler;
-import items.CorruptedNetheriteItems;
+import items.EconomyItems;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -80,7 +80,7 @@ public class HabilidadesGUI implements Listener {
         meta.setLore(lore);
 
         if (isUnlocked) {
-            meta.addEnchant(Enchantment.LUCK_OF_THE_SEA, 1, true);
+            meta.addEnchant(Enchantment.UNBREAKING, 1, true);
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }
 
@@ -143,8 +143,7 @@ public class HabilidadesGUI implements Listener {
         if (!isUnlocked && isDayUnlocked && canUnlock) {
             lore.add("");
             lore.add(ChatColor.of("#E0AAFF") + "Costo:");
-            lore.add(ChatColor.of("#C77DFF") + "• " + getCostXP(level) + " niveles de experiencia");
-            lore.add(ChatColor.of("#C77DFF") + "• 5 Corrupted Netherite Ingot");
+            addCostLore(lore, level);
             lore.add("");
             lore.add(ChatColor.of("#9D4EDD") + "Click para desbloquear");
         }
@@ -157,69 +156,31 @@ public class HabilidadesGUI implements Listener {
 
         switch (type) {
             case VITALIDAD:
+                desc.add(ChatColor.GRAY + "Otorga +1.5 Corazones permanentes.");
+                break;
+            case AGILIDAD:
                 switch (level) {
-                    case 1:
-                        desc.add(ChatColor.of("#E0AAFF") + "Otorga +2 corazones extras");
-                        desc.add(ChatColor.of("#E0AAFF") + "permanentes");
-                        break;
-                    case 2:
-                        desc.add(ChatColor.of("#E0AAFF") + "Otorga +2 corazones extras");
-                        desc.add(ChatColor.of("#E0AAFF") + "permanentes");
-                        break;
+                    case 1: desc.add(ChatColor.GRAY + "Velocidad I infinita."); break;
+                    case 2: desc.add(ChatColor.GRAY + "Fuerza I infinita."); break;
                     case 3:
-                        desc.add(ChatColor.of("#E0AAFF") + "Otorga +2 corazones extras");
-                        desc.add(ChatColor.of("#E0AAFF") + "permanentes y probabilidad");
-                        desc.add(ChatColor.of("#E0AAFF") + "de Absorción III (10s)");
+                        desc.add(ChatColor.GRAY + "Haste I infinita.");
+                        desc.add(ChatColor.GRAY + "Desbloquea el Doble Salto (20s Cooldown).");
                         break;
                     case 4:
-                        desc.add(ChatColor.of("#E0AAFF") + "Otorga +2 corazones extras");
-                        desc.add(ChatColor.of("#E0AAFF") + "permanentes y probabilidad");
-                        desc.add(ChatColor.of("#E0AAFF") + "de Absorción IV (10s)");
+                        desc.add(ChatColor.GRAY + "Velocidad II infinita.");
+                        desc.add(ChatColor.GRAY + "Mejora a Triple Salto (14s Cooldown).");
                         break;
                 }
                 break;
             case RESISTENCIA:
                 switch (level) {
-                    case 1:
-                        desc.add(ChatColor.of("#E0AAFF") + "Otorga Resistencia I");
-                        desc.add(ChatColor.of("#E0AAFF") + "permanente");
-                        break;
-                    case 2:
-                        desc.add(ChatColor.of("#E0AAFF") + "15% de probabilidad de");
-                        desc.add(ChatColor.of("#E0AAFF") + "bloquear proyectiles hostiles");
-                        break;
-                    case 3:
-                        desc.add(ChatColor.of("#E0AAFF") + "15% de probabilidad de");
-                        desc.add(ChatColor.of("#E0AAFF") + "bloquear golpes hostiles");
-                        break;
-                    case 4:
-                        desc.add(ChatColor.of("#E0AAFF") + "Otorga Resistencia II");
-                        desc.add(ChatColor.of("#E0AAFF") + "permanente");
-                        break;
-                }
-                break;
-            case AGILIDAD:
-                switch (level) {
-                    case 1:
-                        desc.add(ChatColor.of("#E0AAFF") + "Otorga Velocidad I");
-                        desc.add(ChatColor.of("#E0AAFF") + "permanente");
-                        break;
-                    case 2:
-                        desc.add(ChatColor.of("#E0AAFF") + "Otorga Salto II");
-                        desc.add(ChatColor.of("#E0AAFF") + "permanente");
-                        break;
-                    case 3:
-                        desc.add(ChatColor.of("#E0AAFF") + "Permite realizar un");
-                        desc.add(ChatColor.of("#E0AAFF") + "doble salto");
-                        break;
-                    case 4:
-                        desc.add(ChatColor.of("#E0AAFF") + "Velocidad II permanente");
-                        desc.add(ChatColor.of("#E0AAFF") + "y triple salto");
-                        break;
+                    case 1: desc.add(ChatColor.GRAY + "8% prob. bloquear daño directo de proyectiles."); break;
+                    case 2: desc.add(ChatColor.GRAY + "8% prob. bloquear daño directo de monstruos."); break;
+                    case 3: desc.add(ChatColor.GRAY + "8% prob. bloquear cualquier daño."); break;
+                    case 4: desc.add(ChatColor.GRAY + "Resistencia I infinita."); break;
                 }
                 break;
         }
-
         return desc;
     }
 
@@ -233,14 +194,21 @@ public class HabilidadesGUI implements Listener {
         }
     }
 
-    private int getCostXP(int level) {
-        switch (level) {
-            case 1: return 35;
-            case 2: return 45;
-            case 3: return 55;
-            case 4: return 65;
-            default: return 35;
+    private void addCostLore(List<String> lore, int level) {
+        int xp = 0;
+        String item = "";
+        int coins = 0;
+
+        switch(level) {
+            case 1: xp = 30; item = "12 Bloques de Oro"; coins = 5; break;
+            case 2: xp = 40; item = "15 Bloques de Diamante"; coins = 10; break;
+            case 3: xp = 50; item = "32 Bloques de Esmeralda"; coins = 15; break;
+            case 4: xp = 60; item = "3 Bloques de Netherite"; coins = 20; break;
         }
+
+        lore.add(ChatColor.of("#C77DFF") + "• " + xp + " Niveles de XP");
+        lore.add(ChatColor.of("#C77DFF") + "• " + item);
+        lore.add(ChatColor.of("#C77DFF") + "• " + coins + " Vithiums");
     }
 
     @EventHandler
@@ -305,58 +273,70 @@ public class HabilidadesGUI implements Listener {
             return;
         }
 
-        int costXP = getCostXP(level);
-        if (player.getLevel() < costXP) {
-            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
-            player.sendMessage(ChatColor.of("#FF6B6B") + "Necesitas " + costXP + " niveles de experiencia.");
+        int xpCost = 0;
+        Material matCost = null;
+        int matAmount = 0;
+        int coinCost = 0;
+
+        switch(level) {
+            case 1: xpCost = 30; matCost = Material.GOLD_BLOCK; matAmount = 12; coinCost = 5; break;
+            case 2: xpCost = 40; matCost = Material.DIAMOND_BLOCK; matAmount = 15; coinCost = 10; break;
+            case 3: xpCost = 50; matCost = Material.EMERALD_BLOCK; matAmount = 32; coinCost = 15; break;
+            case 4: xpCost = 60; matCost = Material.NETHERITE_BLOCK; matAmount = 3; coinCost = 20; break;
+        }
+
+        if (player.getLevel() < xpCost) {
+            player.sendMessage(ChatColor.RED + "No tienes suficiente experiencia.");
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+            return;
+        }
+        if (!player.getInventory().containsAtLeast(new ItemStack(matCost), matAmount)) {
+            player.sendMessage(ChatColor.RED + "No tienes los materiales necesarios.");
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+            return;
+        }
+        if (!hasVithiums(player, coinCost)) {
+            player.sendMessage(ChatColor.RED + "No tienes suficientes Vithiums.");
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             return;
         }
 
-        if (!hasCorruptedNetherite(player, 5)) {
-            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
-            player.sendMessage(ChatColor.of("#FF6B6B") + "Necesitas 5 Corrupted Netherite Ingot.");
-            return;
-        }
+        // Cobrar
+        player.setLevel(player.getLevel() - xpCost);
+        player.getInventory().removeItem(new ItemStack(matCost, matAmount));
+        removeVithiums(player, coinCost);
 
-        removeCorruptedNetherite(player, 5);
-        player.setLevel(player.getLevel() - costXP);
-
+        // Desbloquear
         manager.unlockHabilidad(player.getUniqueId(), type, level);
-
         player.closeInventory();
 
         HabilidadesEffects effects = new HabilidadesEffects(plugin);
         effects.playUnlockAnimation(player, type, level);
-
-        openHabilidadesGUI(player);
     }
 
-    private boolean hasCorruptedNetherite(Player player, int amount) {
+    private boolean hasVithiums(Player player, int amount) {
         int count = 0;
+        ItemStack coinItem = EconomyItems.createVithiumCoin();
         for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.isSimilar(CorruptedNetheriteItems.createCorruptedNetheriteIngot())) {
+            if (item != null && item.isSimilar(coinItem)) {
                 count += item.getAmount();
-                if (count >= amount) return true;
             }
         }
-        return false;
+        return count >= amount;
     }
 
-    private void removeCorruptedNetherite(Player player, int amount) {
+    private void removeVithiums(Player player, int amount) {
         int remaining = amount;
-        ItemStack corruptedIngot = CorruptedNetheriteItems.createCorruptedNetheriteIngot();
-
-        for (int i = 0; i < player.getInventory().getSize(); i++) {
-            ItemStack item = player.getInventory().getItem(i);
-            if (item != null && item.isSimilar(corruptedIngot)) {
+        ItemStack coinItem = EconomyItems.createVithiumCoin();
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (item != null && item.isSimilar(coinItem)) {
                 if (item.getAmount() > remaining) {
                     item.setAmount(item.getAmount() - remaining);
-                    remaining = 0;
-                    break;
+                    return;
                 } else {
                     remaining -= item.getAmount();
-                    player.getInventory().setItem(i, null);
-                    if (remaining <= 0) break;
+                    player.getInventory().remove(item);
+                    if (remaining <= 0) return;
                 }
             }
         }

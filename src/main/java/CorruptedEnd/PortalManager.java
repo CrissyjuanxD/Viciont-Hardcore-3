@@ -1,180 +1,112 @@
 package CorruptedEnd;
 
 import org.bukkit.*;
-import org.bukkit.block.Block;
+import org.bukkit.entity.BlockDisplay;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.util.HashSet;
-import java.util.Set;
+import org.bukkit.util.Transformation;
+import org.joml.AxisAngle4f;
+import org.joml.Vector3f;
 
 public class PortalManager implements Listener {
     private final JavaPlugin plugin;
     private final CorruptedEnd corruptedEnd;
-    private final Set<Location> hexagonalPortalBlocks = new HashSet<>();
+    private final NamespacedKey PORTAL_KEY;
 
     public PortalManager(JavaPlugin plugin, CorruptedEnd corruptedEnd) {
         this.plugin = plugin;
         this.corruptedEnd = corruptedEnd;
+        this.PORTAL_KEY = new NamespacedKey(plugin, "corrupted_portal_type");
     }
 
     public void createReturnPortal() {
+        if (corruptedEnd.getCorruptedWorld() == null) return;
         Location center = new Location(corruptedEnd.getCorruptedWorld(), 0, 120, 0);
-        createHexagonalPortalPlatform(center);
-        activateHexagonalPortal(center);
+        createRectangularPortal(center, false); // false = hacia overworld
     }
 
     public void createOverworldPortal(Location location) {
-        // Encontrar superficie segura
         Location safeLocation = findSafeLocation(location);
-        createHexagonalPortalPlatform(safeLocation);
-        activateHexagonalPortal(safeLocation);
+        createRectangularPortal(safeLocation, true); // true = hacia corrupted end
     }
 
-    private void createHexagonalPortalPlatform(Location center) {
+    private void createRectangularPortal(Location center, boolean toCorruptedEnd) {
         World world = center.getWorld();
-        int centerX = center.getBlockX();
-        int centerY = center.getBlockY();
-        int centerZ = center.getBlockZ();
+        int cx = center.getBlockX();
+        int cy = center.getBlockY();
+        int cz = center.getBlockZ();
 
-        // Limpiar área
-        clearArea(center, 8);
-
-        // Crear plataforma hexagonal más grande que el portal
-        Material[] terracottaColors = {
-                Material.RED_TERRACOTTA, Material.BLUE_TERRACOTTA, Material.GREEN_TERRACOTTA,
-                Material.YELLOW_TERRACOTTA, Material.PURPLE_TERRACOTTA, Material.ORANGE_TERRACOTTA,
-                Material.LIGHT_BLUE_TERRACOTTA, Material.PINK_TERRACOTTA
-        };
-
-        int colorIndex = 0;
-        for (int radius = 0; radius <= 8; radius++) { // Plataforma más grande
-            for (double angle = 0; angle < 360; angle += 10) {
-                double radians = Math.toRadians(angle);
-                int x = centerX + (int) (radius * Math.cos(radians));
-                int z = centerZ + (int) (radius * Math.sin(radians));
-
-                // Crear plataforma de solo 1 bloque de altura
-                if (isWithinHexagon(x - centerX, z - centerZ, 8)) {
-                    Location blockLoc = new Location(world, x, centerY, z); // ✅ CORREGIDO: centerY en lugar de y
-                    blockLoc.getBlock().setType(terracottaColors[colorIndex % terracottaColors.length]);
+        // 1. Limpiar área y crear plataforma base
+        for (int x = -4; x <= 4; x++) {
+            for (int z = -4; z <= 4; z++) {
+                world.getBlockAt(cx + x, cy - 1, cz + z).setType(Material.OBSIDIAN); // Suelo base
+                for (int y = 0; y <= 11; y++) {
+                    world.getBlockAt(cx + x, cy + y, cz + z).setType(Material.AIR);
                 }
-                colorIndex++;
             }
         }
 
-        // Crear estructura del portal rectangular
-        createRectangularPortalFrame(center);
-
-        // Añadir iluminación adicional alrededor de la plataforma
-        addPlatformLighting(center);
-    }
-
-    private void createRectangularPortalFrame(Location center) {
-        World world = center.getWorld();
-        int centerX = center.getBlockX();
-        int centerY = center.getBlockY();
-        int centerZ = center.getBlockZ();
-
-        // Crear marco rectangular de bedrock (7 de ancho, 12 de alto)
+        // 2. Crear Marco Rectangular (7 ancho x 12 alto exterior)
+        // El hueco interior será de 5 ancho x 10 alto
         for (int y = 0; y < 12; y++) {
-            for (int x = 0; x < 7; x++) {
-                Location buildLoc = new Location(world, centerX + x - 3, centerY + y, centerZ);
-
-                // Marco de bedrock (bordes)
-                if (x == 0 || x == 6 || y == 0 || y == 11) {
-                    buildLoc.getBlock().setType(Material.BEDROCK);
+            for (int x = -3; x <= 3; x++) {
+                boolean isEdge = (x == -3 || x == 3 || y == 0 || y == 11);
+                if (isEdge) {
+                    world.getBlockAt(cx + x, cy + y, cz).setType(Material.BEDROCK);
                 }
             }
         }
+
+        // --- CORRECCIÓN DE POSICIONAMIENTO DEL DISPLAY ---
+
+        // El centro geométrico exacto del hueco (Hueco va de Y=1 a Y=10 -> Centro = 6.0)
+        // +0.5 en X y Z para centrarlo en el bloque central
+        Location displayLoc = new Location(world, cx + 0.5, cy + 6.0, cz + 0.5);
+
+        // Eliminar portales viejos cercanos para evitar solapamiento
+        removePortalsNearby(displayLoc);
+
+        BlockDisplay display = (BlockDisplay) world.spawnEntity(displayLoc, EntityType.BLOCK_DISPLAY);
+
+        // Configurar bloque visual
+        display.setBlock(Bukkit.createBlockData(Material.BLUE_GLAZED_TERRACOTTA));
+
+        // --- TRANSFORMACIÓN CORREGIDA ---
+        // Escala: 5 ancho, 10 alto.
+        // Traslación: Movemos -2.5 (mitad de ancho) y -5.0 (mitad de alto) para que
+        // la entidad quede exactamente en el centro del rectángulo visual.
+        Transformation transformation = new Transformation(
+                new Vector3f(-2.5f, -5.0f, 0f),   // <--- AQUÍ ESTÁ EL FIX (Centrado)
+                new AxisAngle4f(0, 0, 0, 0),      // Sin rotación
+                new Vector3f(5f, 10f, 0.1f),      // Escala: 5x10 bloques
+                new AxisAngle4f(0, 0, 0, 0)
+        );
+
+        display.setTransformation(transformation);
+        display.setGlowing(true);
+        display.setGlowColorOverride(Color.AQUA);
+
+        // Guardar datos persistentes
+        String type = toCorruptedEnd ? "TO_CORRUPTED" : "TO_OVERWORLD";
+        display.getPersistentDataContainer().set(PORTAL_KEY, PersistentDataType.STRING, type);
+
+        // Efectos
+        world.playSound(center, Sound.BLOCK_END_PORTAL_SPAWN, 1.0f, 1.0f);
     }
 
-    private void activateHexagonalPortal(Location center) {
-        World world = center.getWorld();
-        int centerX = center.getBlockX();
-        int centerY = center.getBlockY();
-        int centerZ = center.getBlockZ();
-
-        // Llenar el interior rectangular con END_GATEWAY
-        for (int y = 1; y < 11; y++) {
-            for (int x = 1; x < 6; x++) {
-                Location portalLoc = new Location(world, centerX + x - 3, centerY + y, centerZ);
-                portalLoc.getBlock().setType(Material.END_GATEWAY);
-                portalLoc.getBlock().setMetadata("HexagonalPortal", new FixedMetadataValue(plugin, true));
-                hexagonalPortalBlocks.add(portalLoc);
-            }
-        }
-
-        // Efectos visuales y sonoros
-        world.playSound(center, Sound.BLOCK_END_PORTAL_FRAME_FILL, 2.0f, 1.0f);
-        world.spawnParticle(Particle.PORTAL, center.clone().add(0, 3, 0), 100, 2, 2, 2, 0.1);
-        world.spawnParticle(Particle.END_ROD, center.clone().add(0, 3, 0), 50, 2, 2, 2, 0.05);
-    }
-
-    private boolean isWithinHexagon(int x, int z, int radius) {
-        // Aproximación simple de hexágono usando distancia
-        double distance = Math.sqrt(x * x + z * z);
-        return distance <= radius;
-    }
-
-    private void createLine(World world, int x1, int y, int z1, int x2, int y2, int z2, Material material) {
-        int dx = Math.abs(x2 - x1);
-        int dz = Math.abs(z2 - z1);
-        int x = x1;
-        int z = z1;
-        int n = 1 + dx + dz;
-        int x_inc = (x2 > x1) ? 1 : -1;
-        int z_inc = (z2 > z1) ? 1 : -1;
-        int error = dx - dz;
-        dx *= 2;
-        dz *= 2;
-
-        for (; n > 0; --n) {
-            new Location(world, x, y, z).getBlock().setType(material);
-
-            if (error > 0) {
-                x += x_inc;
-                error -= dz;
-            } else {
-                z += z_inc;
-                error += dx;
-            }
-        }
-    }
-
-    private void addPlatformLighting(Location center) {
-        World world = center.getWorld();
-        int centerX = center.getBlockX();
-        int centerY = center.getBlockY();
-        int centerZ = center.getBlockZ();
-
-        // Añadir glowstone alrededor de la plataforma
-        for (double angle = 0; angle < 360; angle += 45) {
-            double radians = Math.toRadians(angle);
-            int x = centerX + (int) (10 * Math.cos(radians));
-            int z = centerZ + (int) (10 * Math.sin(radians));
-
-            Location lightLoc = new Location(world, x, centerY + 1, z);
-            lightLoc.getBlock().setType(Material.GLOWSTONE);
-        }
-    }
-
-    private void clearArea(Location center, int radius) {
-        World world = center.getWorld();
-        int centerX = center.getBlockX();
-        int centerY = center.getBlockY();
-        int centerZ = center.getBlockZ();
-
-        for (int x = centerX - radius; x <= centerX + radius; x++) {
-            for (int z = centerZ - radius; z <= centerZ + radius; z++) {
-                for (int y = centerY - 2; y <= centerY + 8; y++) {
-                    new Location(world, x, y, z).getBlock().setType(Material.AIR);
-                }
+    private void removePortalsNearby(Location loc) {
+        // Aumentamos un poco el rango vertical por si acaso
+        for (Entity e : loc.getWorld().getNearbyEntities(loc, 6, 12, 6)) {
+            if (e instanceof BlockDisplay && e.getPersistentDataContainer().has(PORTAL_KEY, PersistentDataType.STRING)) {
+                e.remove();
             }
         }
     }
@@ -183,84 +115,86 @@ public class PortalManager implements Listener {
         World world = location.getWorld();
         int x = location.getBlockX();
         int z = location.getBlockZ();
-
-        // Buscar superficie desde arriba
+        // Buscar superficie sólida
         for (int y = world.getMaxHeight() - 1; y > 0; y--) {
-            Block block = world.getBlockAt(x, y, z);
-            if (block.getType() != Material.AIR && block.getType() != Material.WATER) {
+            if (world.getBlockAt(x, y, z).getType().isSolid()) {
                 return new Location(world, x, y + 1, z);
             }
         }
-
-        // Si no encuentra superficie, usar altura por defecto
         return new Location(world, x, 100, z);
     }
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
-        if (event.getFrom().getBlock().equals(event.getTo().getBlock())) return;
+        if (event.getFrom().getBlockX() == event.getTo().getBlockX() &&
+                event.getFrom().getBlockY() == event.getTo().getBlockY() &&
+                event.getFrom().getBlockZ() == event.getTo().getBlockZ()) return;
 
         Player player = event.getPlayer();
-        Block block = event.getTo().getBlock();
+        Location pLoc = player.getLocation();
 
-        if (block.getType() == Material.END_GATEWAY &&
-                block.hasMetadata("HexagonalPortal")) {
+        // Buscar BlockDisplay muy cerca
+        for (Entity entity : pLoc.getWorld().getNearbyEntities(pLoc, 0.8, 2, 0.8)) {
+            if (entity instanceof BlockDisplay) {
+                String type = entity.getPersistentDataContainer().get(PORTAL_KEY, PersistentDataType.STRING);
 
-            if (player.getWorld().getName().equals(CorruptedEnd.WORLD_NAME)) {
-                // Ir al overworld
-                World overworld = Bukkit.getWorlds().get(0);
-                Location spawnLoc = overworld.getSpawnLocation();
-
-                // Buscar portal existente en el overworld o crear uno nuevo
-                Location portalLoc = findNearestPortal(spawnLoc, 100);
-                if (portalLoc == null) {
-                    portalLoc = spawnLoc.clone().add(0, 10, 0);
-                    createOverworldPortal(portalLoc);
+                if (type != null) {
+                    handleTeleport(player, type.equals("TO_CORRUPTED"));
+                    return;
                 }
-
-                player.teleport(portalLoc);
-                player.sendMessage(ChatColor.GREEN + "Has regresado al Overworld");
-
-            } else {
-                // Ir al Corrupted End
-                if (corruptedEnd.getCorruptedWorld() == null) {
-                    corruptedEnd.createCorruptedWorld();
-                }
-                player.teleport(corruptedEnd.getCorruptedWorld().getSpawnLocation());
-                player.sendMessage(ChatColor.DARK_PURPLE + "Has entrado al Corrupted End");
             }
-
-            // Efectos de teleportación
-            player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
-            player.getWorld().spawnParticle(Particle.PORTAL, player.getLocation(), 20, 0.5, 1, 0.5);
         }
+    }
+
+    private void handleTeleport(Player player, boolean toCorruptedEnd) {
+        if (player.hasMetadata("Teleporting")) return;
+        player.setMetadata("Teleporting", new FixedMetadataValue(plugin, true));
+
+        player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.5f);
+        player.spawnParticle(Particle.DRAGON_BREATH, player.getLocation(), 20);
+
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            player.removeMetadata("Teleporting", plugin);
+            Location target;
+
+            if (toCorruptedEnd) {
+                if (corruptedEnd.getCorruptedWorld() == null) corruptedEnd.createCorruptedWorld();
+                World cWorld = corruptedEnd.getCorruptedWorld();
+                // Aparecer fuera del portal para no buclear
+                target = new Location(cWorld, 0.5, 121, 4.5);
+                target.getBlock().getRelative(0, -1, 0).setType(Material.OBSIDIAN);
+                player.sendMessage(ChatColor.DARK_PURPLE + "Bienvenido al Corrupted End.");
+            } else {
+                World overworld = Bukkit.getWorlds().get(0);
+                target = player.getBedSpawnLocation();
+                if (target == null) target = overworld.getSpawnLocation();
+
+                // Evitar caer en bucle si el spawn está cerca del portal
+                if (isNearPortal(target)) {
+                    target.add(3, 0, 3);
+                }
+                player.sendMessage(ChatColor.GREEN + "Regresando al Overworld.");
+            }
+            player.teleport(target);
+        }, 10L);
+    }
+
+    private boolean isNearPortal(Location loc) {
+        for (Entity e : loc.getWorld().getNearbyEntities(loc, 3, 3, 3)) {
+            if (e instanceof BlockDisplay && e.getPersistentDataContainer().has(PORTAL_KEY, PersistentDataType.STRING)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @EventHandler
     public void onPlayerPortal(PlayerPortalEvent event) {
-        Player player = event.getPlayer();
-
-        // Cancelar portales de End Gateway naturales en Corrupted End
-        if (player.getWorld().getName().equals(CorruptedEnd.WORLD_NAME)) {
-            if (event.getCause() == PlayerPortalEvent.TeleportCause.END_GATEWAY) {
-                // Solo permitir nuestros portales hexagonales
-                if (!event.getFrom().getBlock().hasMetadata("HexagonalPortal")) {
-                    event.setCancelled(true);
-                }
+        if (event.getPlayer().getWorld().getName().equals(CorruptedEnd.WORLD_NAME)) {
+            if (event.getCause() == PlayerPortalEvent.TeleportCause.END_GATEWAY ||
+                    event.getCause() == PlayerPortalEvent.TeleportCause.END_PORTAL) {
+                event.setCancelled(true);
             }
         }
-    }
-
-    private Location findNearestPortal(Location center, int radius) {
-        World world = center.getWorld();
-
-        for (Location portalLoc : hexagonalPortalBlocks) {
-            if (portalLoc.getWorld().equals(world) &&
-                    portalLoc.distance(center) <= radius) {
-                return portalLoc.clone().add(0, -1, 0);
-            }
-        }
-
-        return null;
     }
 }

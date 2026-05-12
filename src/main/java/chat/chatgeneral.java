@@ -1,12 +1,12 @@
 package chat;
 
-import org.bukkit.Bukkit;
 import net.md_5.bungee.api.ChatColor;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.event.Listener;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.inventory.InventoryCreativeEvent;
@@ -26,46 +26,53 @@ public class chatgeneral implements Listener {
     @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
-        Scoreboard scoreboard = player.getScoreboard();
-        Team team = scoreboard.getEntryTeam(player.getName());
+        Team team = player.getScoreboard().getEntryTeam(player.getName());
 
-        String prefix = (team != null) ? team.getPrefix() : "";
-        String suffix = (team != null) ? team.getSuffix() : "";
+        String finalPrefix = "";
+        String suffix = "";
+        ChatColor nameColor = ChatColor.WHITE;
 
-        ChatColor playerNameColor = getTeamColor(team);
-        String teamPrefix = getTeamPrefix(team);
+        if (team != null) {
+            finalPrefix = team.getPrefix();
+            suffix = team.getSuffix();
 
-        String formattedMessage = teamPrefix + " " + playerNameColor + player.getName() + ChatColor.RESET + suffix + ChatColor.WHITE + ": " + event.getMessage();
+            try {
+                Handlers.Teams.TeamType type = Handlers.Teams.TeamType.getById(team.getName());
+                if (type != null) {
+                    nameColor = type.getBungeeColor();
+                }
+            } catch (Exception ignored) {}
+        } else {
+            finalPrefix = ChatColor.GRAY + "";
+        }
 
-        event.setFormat(formattedMessage);
+        event.setFormat(finalPrefix + nameColor + "%1$s" + ChatColor.RESET + suffix + ChatColor.WHITE + ": %2$s");
     }
 
-    // Método para obtener el color del equipo
     private ChatColor getTeamColor(Team team) {
         if (team == null) {
             return ChatColor.DARK_AQUA;
         }
         String teamName = team.getName();
 
-            switch (teamName) {
-                case "Admin":
-                    return ChatColor.of("#F6763A");
-                case "Mod":
-                    return ChatColor.of("#00BFFF");
-                case "Helper":
-                    return ChatColor.of("#67E590");
-                case "TSurvivor":
-                    return ChatColor.of("#9455ED");
-                case "Survivor+":
-                    return ChatColor.of("#F4C657");
-                case "ZFantasma":
-                    return ChatColor.of("#555555");
-                default:
-                    return ChatColor.RESET;
-            }
+        switch (teamName) {
+            case "Admin":
+                return ChatColor.of("#ff935f");
+            case "Mod":
+                return ChatColor.of("#00BFFF");
+            case "Helper":
+                return ChatColor.of("#67E590");
+            case "TSurvivor":
+                return ChatColor.of("#9455ED");
+            case "ZMiembro":
+                return ChatColor.of("#ffa39d");
+            case "ZFantasma":
+                return ChatColor.of("#555555");
+            default:
+                return ChatColor.RESET;
+        }
     }
 
-    //Metodo para obtener el Prefijo del equipo.
     private String getTeamPrefix(Team team) {
         if (team == null) {
             return "";
@@ -73,15 +80,15 @@ public class chatgeneral implements Listener {
         String teamName = team.getName();
         switch (teamName) {
             case "Admin":
-                return "\uEB87";
+                return ChatColor.GRAY + "" + ChatColor.BOLD + "[" + ChatColor.GOLD + ChatColor.BOLD + "HOKAGE" + ChatColor.GRAY + ChatColor.BOLD + "]";
             case "Mod":
-                return "\uEB88";
+                return ChatColor.GRAY + "" + ChatColor.BOLD + "[" + ChatColor.AQUA + ChatColor.BOLD + "ANBU" + ChatColor.GRAY + ChatColor.BOLD + "]";
             case "Helper":
                 return "\uEB89";
             case "TSurvivor":
                 return "\uEB8A";
-            case "Survivor+":
-                return "\uEB8B";
+            case "ZMiembro":
+                return ChatColor.GRAY + "" + ChatColor.BOLD + "[" + ChatColor.of("#ffa39d") + ChatColor.BOLD + "ALDEANO" + ChatColor.GRAY + ChatColor.BOLD + "]";
             case "ZFantasma":
                 return "\uEB8C";
             default:
@@ -90,7 +97,6 @@ public class chatgeneral implements Listener {
     }
 
     // Mensajes de Moderacion
-
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();

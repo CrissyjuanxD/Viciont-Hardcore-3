@@ -3,8 +3,6 @@ package Events.MissionSystem;
 import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Creeper;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.PiglinBrute;
@@ -18,7 +16,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.entity.LivingEntity;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -65,15 +62,7 @@ public class Mission12 implements Mission, Listener {
 
     @Override
     public void initializePlayerData(String playerName) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        data.set("players." + playerName + ".missions.12.bombitas_killed", 0);
-        data.set("players." + playerName + ".missions.12.brutes_killed", 0);
-
-        try {
-            data.save(missionHandler.getMissionFile());
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al inicializar datos de Misión 12: " + e.getMessage());
-        }
+        // No es necesario inicializar con JSON
     }
 
     @Override
@@ -83,20 +72,14 @@ public class Mission12 implements Mission, Listener {
 
     @EventHandler
     public void onEntityDeath(EntityDeathEvent event) {
-        if (!missionHandler.isMissionActive(12)) return;
-
         Entity entity = event.getEntity();
         Player killer = ((LivingEntity) entity).getKiller();
 
         if (killer == null) return;
+        if (!missionHandler.isMissionActive(killer, 12)) return;
 
-        String playerName = killer.getName();
-
-        // Verificar si ya completó la misión
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        if (data.getBoolean("players." + playerName + ".missions.12.completed", false)) {
-            return;
-        }
+        MissionData data = missionHandler.getData(killer, 12);
+        if (data.isCompleted()) return;
 
         boolean isBombita = entity instanceof Creeper &&
                 entity.getPersistentDataContainer().has(
@@ -109,36 +92,34 @@ public class Mission12 implements Mission, Listener {
                         PersistentDataType.BYTE);
 
         if (isBombita) {
-            int bombitasKilled = data.getInt("players." + playerName + ".missions.12.bombitas_killed", 0);
-            bombitasKilled++;
-            data.set("players." + playerName + ".missions.12.bombitas_killed", bombitasKilled);
+            int bombitasKilled = data.getProgressInt("bombitas_killed");
+            if (bombitasKilled < 30) {
+                bombitasKilled++;
+                data.setProgressValue("bombitas_killed", bombitasKilled);
 
-            killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Bombitas eliminadas: " +
-                    ChatColor.of("#FFB6C1") + bombitasKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "30");
+                killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Bombitas eliminadas: " +
+                        ChatColor.of("#FFB6C1") + bombitasKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "30");
+            }
         } else if (isBruteImperial) {
-            int brutesKilled = data.getInt("players." + playerName + ".missions.12.brutes_killed", 0);
-            brutesKilled++;
-            data.set("players." + playerName + ".missions.12.brutes_killed", brutesKilled);
+            int brutesKilled = data.getProgressInt("brutes_killed");
+            if (brutesKilled < 20) {
+                brutesKilled++;
+                data.setProgressValue("brutes_killed", brutesKilled);
 
-            killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Brutes Imperiales eliminados: " +
-                    ChatColor.of("#FFB6C1") + brutesKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "20");
+                killer.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Brutes Imperiales eliminados: " +
+                        ChatColor.of("#FFB6C1") + brutesKilled + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "20");
+            }
         } else {
             return;
         }
 
-        try {
-            data.save(missionHandler.getMissionFile());
+        missionHandler.saveData(killer, 12, data);
 
-            // Verificar si completó ambos objetivos
-            int bombitasKilled = data.getInt("players." + playerName + ".missions.12.bombitas_killed", 0);
-            int brutesKilled = data.getInt("players." + playerName + ".missions.12.brutes_killed", 0);
+        if (data.getProgressInt("bombitas_killed") >= 30 &&
+                data.getProgressInt("brutes_killed") >= 20) {
 
-            if (bombitasKilled >= 30 && brutesKilled >= 20) {
-                successNotification.showSuccess(killer);
-                missionHandler.completeMission(playerName, 12);
-            }
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al guardar progreso de Misión 12: " + e.getMessage());
+            successNotification.showSuccess(killer);
+            missionHandler.completeMission(killer.getName(), 12);
         }
     }
 }

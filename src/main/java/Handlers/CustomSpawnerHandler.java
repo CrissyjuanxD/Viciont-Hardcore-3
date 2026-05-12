@@ -1,6 +1,6 @@
 package Handlers;
 
-import Bosses.HellishBeeHandler;
+/*import Bosses.HellishBeeHandler;*/
 import Bosses.QueenBeeHandler;
 import Dificultades.CustomMobs.*;
 import org.bukkit.*;
@@ -153,7 +153,7 @@ public class CustomSpawnerHandler implements Listener {
         this.bombitaSpawner = new Bombita(plugin);
         this.iceologerSpawner = new Iceologer(plugin);
         this.corruptedZombieSpawner = new CorruptedZombies(plugin);
-        this.corruptedSpider = new CorruptedSpider(plugin);
+        this.corruptedSpider = new CorruptedSpider(plugin, dayHandler);
         /*this.queenBeeHandler = new QueenBeeHandler(plugin);*/
         /*this.hellishBeeHandler = new HellishBeeHandler(plugin);*/
         this.infestedBeeHandler = new InfestedBeeHandler(plugin);
@@ -825,7 +825,7 @@ public class CustomSpawnerHandler implements Listener {
                 QueenBeeHandler.spawn(plugin, location);
                 break;
             case "hellishbee":
-                HellishBeeHandler.spawn(plugin, location);
+/*                HellishBeeHandler.spawn(plugin, location);*/
                 break;
             case "infestedbee":
                 infestedBeeHandler.spawnInfestedBee(location);

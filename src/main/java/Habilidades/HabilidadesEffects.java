@@ -2,16 +2,21 @@ package Habilidades;
 
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.attribute.Attribute;
+
+import java.util.UUID;
 
 public class HabilidadesEffects {
 
     private final JavaPlugin plugin;
+    private static final UUID VITALIDAD_MODIFIER_UUID = UUID.fromString("c07bb6b6-3dc9-4a94-81d3-3561937dbf24");
 
     public HabilidadesEffects(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -38,7 +43,6 @@ public class HabilidadesEffects {
                 if (stage == 0) {
                     if (y <= 2) {
                         spawnPoofParticles(player, y);
-                        // Iniciar círculo mágico solo una vez
                         if (magicCircleTask == null) {
                             magicCircleTask = startMagicCircle(player, true);
                             magicCircleTask.runTaskTimer(plugin, 0, 2);
@@ -52,7 +56,6 @@ public class HabilidadesEffects {
                                 nearbyPlayer.playSound(loc, Sound.BLOCK_CONDUIT_ACTIVATE, 0.2f, 1.8f + (float) (y * 0.1));
                             }
                         }
-
                         y += 0.3;
                     } else {
                         stage = 1;
@@ -77,13 +80,11 @@ public class HabilidadesEffects {
                         stage = 2;
                     }
                 } else if (stage == 2) {
-                    // Detener el círculo mágico y hacer fade out
                     if (magicCircleTask != null) {
                         magicCircleTask.cancel();
                         magicCircleTask = null;
                     }
 
-                    // Iniciar fade out
                     if (fadeOutTask == null) {
                         fadeOutTask = startMagicCircleFadeOut(player);
                         fadeOutTask.runTaskTimer(plugin, 0, 2);
@@ -100,14 +101,14 @@ public class HabilidadesEffects {
                         }
                     }
 
-                    // Programar la finalización después de que termine el fade out
                     new BukkitRunnable() {
                         @Override
                         public void run() {
                             player.removePotionEffect(PotionEffectType.SLOWNESS);
-                            applyHabilidadEffect(player, type, level);
+                            HabilidadesManager manager = new HabilidadesManager(plugin);
+                            reapplyAllEffects(player, manager);
                         }
-                    }.runTaskLater(plugin, 40); // 2 segundos para el fade out
+                    }.runTaskLater(plugin, 40);
 
                     cancel();
                 }
@@ -127,23 +128,12 @@ public class HabilidadesEffects {
                     cancel();
                     return;
                 }
-
                 Location center = player.getLocation();
-                World world = center.getWorld();
-
-                if (fadeIn && fadeProgress < 1.0) {
-                    fadeProgress += 0.05;
-                }
-
+                if (fadeIn && fadeProgress < 1.0) fadeProgress += 0.05;
                 angle += 0.1;
-
                 spawnMagicCircle(center, radius, angle, fadeProgress);
                 spawnMagicStar(center, fadeProgress);
-
-                // Si ya terminó el fade in, mantener el alpha en 1.0
-                if (fadeIn && fadeProgress >= 1.0) {
-                    fadeProgress = 1.0;
-                }
+                if (fadeIn && fadeProgress >= 1.0) fadeProgress = 1.0;
             }
         };
     }
@@ -160,13 +150,9 @@ public class HabilidadesEffects {
                     cancel();
                     return;
                 }
-
                 Location center = player.getLocation();
-                World world = center.getWorld();
-
                 fadeProgress -= 0.05;
                 angle += 0.1;
-
                 spawnMagicCircle(center, radius, angle, fadeProgress);
                 spawnMagicStar(center, fadeProgress);
             }
@@ -176,35 +162,21 @@ public class HabilidadesEffects {
     private void spawnMagicCircle(Location center, double radius, double angle, double alpha) {
         World world = center.getWorld();
         int points = 60;
-
         for (int i = 0; i < points; i++) {
             double circleAngle = 2 * Math.PI * i / points;
             double x = radius * Math.cos(circleAngle + angle);
             double z = radius * Math.sin(circleAngle + angle);
-
             Color circleColor = applyAlphaToColor(Color.fromRGB(173, 216, 230), alpha);
             Particle.DustOptions dustOptions = new Particle.DustOptions(circleColor, 1.2f);
-
-            world.spawnParticle(Particle.DUST,
-                    center.getX() + x,
-                    center.getY(),
-                    center.getZ() + z,
-                    1, 0, 0, 0, 0, dustOptions);
+            world.spawnParticle(Particle.DUST, center.getX() + x, center.getY(), center.getZ() + z, 1, 0, 0, 0, 0, dustOptions);
         }
-
         for (int i = 0; i < 12; i++) {
             double orbAngle = angle + (2 * Math.PI * i / 12);
             double x = radius * Math.cos(orbAngle);
             double z = radius * Math.sin(orbAngle);
-
             Color orbColor = applyAlphaToColor(Color.fromRGB(147, 112, 219), alpha);
             Particle.DustOptions orbDust = new Particle.DustOptions(orbColor, 2.0f);
-
-            world.spawnParticle(Particle.DUST,
-                    center.getX() + x,
-                    center.getY() + 0.2,
-                    center.getZ() + z,
-                    2, 0.1, 0, 0.1, 0, orbDust);
+            world.spawnParticle(Particle.DUST, center.getX() + x, center.getY() + 0.2, center.getZ() + z, 2, 0.1, 0, 0.1, 0, orbDust);
         }
     }
 
@@ -217,62 +189,39 @@ public class HabilidadesEffects {
         for (int i = 0; i < starPoints * 2; i++) {
             double angle = Math.PI * i / starPoints;
             double radius = (i % 2 == 0) ? outerRadius : innerRadius;
-
             double x = radius * Math.cos(angle);
             double z = radius * Math.sin(angle);
-
             double progress = (double) i / (starPoints * 2);
-            Color starColor = interpolateColor(
-                    Color.fromRGB(173, 216, 230),
-                    Color.fromRGB(147, 112, 219),
-                    progress
-            );
+            Color starColor = interpolateColor(Color.fromRGB(173, 216, 230), Color.fromRGB(147, 112, 219), progress);
             starColor = applyAlphaToColor(starColor, alpha);
-
             Particle.DustOptions dustOptions = new Particle.DustOptions(starColor, 1.8f);
-
-            world.spawnParticle(Particle.DUST,
-                    center.getX() + x,
-                    center.getY() + 0.1,
-                    center.getZ() + z,
-                    1, 0, 0, 0, 0, dustOptions);
+            world.spawnParticle(Particle.DUST, center.getX() + x, center.getY() + 0.1, center.getZ() + z, 1, 0, 0, 0, 0, dustOptions);
         }
 
         Color centerColor = applyAlphaToColor(Color.fromRGB(199, 176, 224), alpha);
         Particle.DustOptions centerDust = new Particle.DustOptions(centerColor, 2.5f);
-        world.spawnParticle(Particle.DUST,
-                center.getX(), center.getY() + 0.1, center.getZ(),
-                5, 0.3, 0.1, 0.3, 0, centerDust);
+        world.spawnParticle(Particle.DUST, center.getX(), center.getY() + 0.1, center.getZ(), 5, 0.3, 0.1, 0.3, 0, centerDust);
     }
 
     private Color applyAlphaToColor(Color color, double alpha) {
-        int red = (int)(color.getRed() * alpha);
-        int green = (int)(color.getGreen() * alpha);
-        int blue = (int)(color.getBlue() * alpha);
-
         return Color.fromRGB(
-                Math.max(0, Math.min(255, red)),
-                Math.max(0, Math.min(255, green)),
-                Math.max(0, Math.min(255, blue))
+                Math.max(0, Math.min(255, (int)(color.getRed() * alpha))),
+                Math.max(0, Math.min(255, (int)(color.getGreen() * alpha))),
+                Math.max(0, Math.min(255, (int)(color.getBlue() * alpha)))
         );
     }
 
     private Color interpolateColor(Color color1, Color color2, double progress) {
-        int red = (int)(color1.getRed() + (color2.getRed() - color1.getRed()) * progress);
-        int green = (int)(color1.getGreen() + (color2.getGreen() - color1.getGreen()) * progress);
-        int blue = (int)(color1.getBlue() + (color2.getBlue() - color1.getBlue()) * progress);
-
         return Color.fromRGB(
-                Math.max(0, Math.min(255, red)),
-                Math.max(0, Math.min(255, green)),
-                Math.max(0, Math.min(255, blue))
+                Math.max(0, Math.min(255, (int)(color1.getRed() + (color2.getRed() - color1.getRed()) * progress))),
+                Math.max(0, Math.min(255, (int)(color1.getGreen() + (color2.getGreen() - color1.getGreen()) * progress))),
+                Math.max(0, Math.min(255, (int)(color1.getBlue() + (color2.getBlue() - color1.getBlue()) * progress)))
         );
     }
 
     private void spawnPoofParticles(Player player, double height) {
         World world = player.getWorld();
         Location baseLoc = player.getLocation().clone();
-
         double radius = 0.8;
         int particlesPerCircle = 15;
 
@@ -280,16 +229,8 @@ public class HabilidadesEffects {
             double angle = 2 * Math.PI * i / particlesPerCircle;
             double x = radius * Math.cos(angle);
             double z = radius * Math.sin(angle);
-
             Location particleLoc = baseLoc.clone().add(x, height, z);
-
-            Particle.DustOptions dustOptions;
-            if (i % 2 == 0) {
-                dustOptions = new Particle.DustOptions(Color.fromRGB(255, 105, 180), 1.5f);
-            } else {
-                dustOptions = new Particle.DustOptions(Color.fromRGB(147, 112, 219), 1.5f);
-            }
-
+            Particle.DustOptions dustOptions = new Particle.DustOptions(i % 2 == 0 ? Color.fromRGB(255, 105, 180) : Color.fromRGB(147, 112, 219), 1.5f);
             world.spawnParticle(Particle.DUST, particleLoc, 1, 0, 0, 0, 0, dustOptions);
         }
 
@@ -305,41 +246,26 @@ public class HabilidadesEffects {
 
         for (int line = 0; line < verticalLines; line++) {
             double theta = 2 * Math.PI * line / verticalLines;
-
             for (int i = 0; i < particlesPerLine; i++) {
                 double phi = Math.PI * i / particlesPerLine;
-
                 double x = radius * Math.sin(phi) * Math.cos(theta);
                 double y = radius * Math.cos(phi);
                 double z = radius * Math.sin(phi) * Math.sin(theta);
-
-                world.spawnParticle(Particle.ELECTRIC_SPARK,
-                        center.getX() + x,
-                        center.getY() + y,
-                        center.getZ() + z,
-                        1, 0, 0, 0, 0);
+                world.spawnParticle(Particle.ELECTRIC_SPARK, center.getX() + x, center.getY() + y, center.getZ() + z, 1, 0, 0, 0, 0);
             }
         }
 
         for (int i = 0; i < 8; i++) {
             double randomTheta = Math.random() * 2 * Math.PI;
             double randomPhi = Math.random() * Math.PI;
-
             double x = radius * Math.sin(randomPhi) * Math.cos(randomTheta);
             double y = radius * Math.cos(randomPhi);
             double z = radius * Math.sin(randomPhi) * Math.sin(randomTheta);
-
-            world.spawnParticle(Particle.ELECTRIC_SPARK,
-                    center.getX() + x,
-                    center.getY() + y,
-                    center.getZ() + z,
-                    1, 0, 0, 0, 0);
+            world.spawnParticle(Particle.ELECTRIC_SPARK, center.getX() + x, center.getY() + y, center.getZ() + z, 1, 0, 0, 0, 0);
         }
     }
 
     private void spawnExpansionExplosion(Location center) {
-        World world = center.getWorld();
-
         new BukkitRunnable() {
             double currentRadius = 0;
             final double maxRadius = 3.0;
@@ -351,14 +277,11 @@ public class HabilidadesEffects {
                     cancel();
                     return;
                 }
-
                 for (int ring = 0; ring < rings; ring++) {
                     double ringRadius = currentRadius * (1.0 - (ring * 0.15));
                     if (ringRadius < 0) continue;
-
                     spawnExplosionRing(center, ringRadius, ring);
                 }
-
                 currentRadius += 0.3;
             }
         }.runTaskTimer(plugin, 0, 1);
@@ -370,123 +293,113 @@ public class HabilidadesEffects {
 
         Particle.DustOptions dustOptions;
         switch (ring % 3) {
-            case 0:
-                dustOptions = new Particle.DustOptions(Color.fromRGB(255, 255, 255), 2f);
-                break;
-            case 1:
-                dustOptions = new Particle.DustOptions(Color.fromRGB(147, 112, 219), 2f);
-                break;
-            default:
-                dustOptions = new Particle.DustOptions(Color.fromRGB(255, 105, 180), 2f);
-                break;
+            case 0: dustOptions = new Particle.DustOptions(Color.fromRGB(255, 255, 255), 2f); break;
+            case 1: dustOptions = new Particle.DustOptions(Color.fromRGB(147, 112, 219), 2f); break;
+            default: dustOptions = new Particle.DustOptions(Color.fromRGB(255, 105, 180), 2f); break;
         }
 
         for (int i = 0; i < particles; i++) {
             double angle = 2 * Math.PI * i / particles;
             double x = center.getX() + radius * Math.cos(angle);
             double z = center.getZ() + radius * Math.sin(angle);
-
             double yVariation = (Math.random() - 0.5) * 1.5;
-
             world.spawnParticle(Particle.DUST, x, center.getY() + yVariation, z, 1, 0, 0, 0, 0, dustOptions);
         }
 
         if (ring == 0) {
             for (int i = 0; i < 10; i++) {
-                double offsetX = (Math.random() - 0.5) * 1.5;
-                double offsetY = (Math.random() - 0.5) * 1.5;
-                double offsetZ = (Math.random() - 0.5) * 1.5;
-
                 world.spawnParticle(Particle.EXPLOSION_EMITTER,
-                        center.clone().add(offsetX, offsetY, offsetZ), 1);
+                        center.clone().add((Math.random() - 0.5) * 1.5, (Math.random() - 0.5) * 1.5, (Math.random() - 0.5) * 1.5), 1);
             }
         }
     }
 
-    private void applyHabilidadEffect(Player player, HabilidadesType type, int level) {
-        switch (type) {
-            case VITALIDAD:
-                applyVitalidadEffect(player, level);
-                break;
-            case RESISTENCIA:
-                applyResistenciaEffect(player, level);
-                break;
-            case AGILIDAD:
-                applyAgilidadEffect(player, level);
-                break;
-        }
-    }
-
-    private void applyVitalidadEffect(Player player, int level) {
-        double currentMaxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue();
-        double newMaxHealth = currentMaxHealth + 4;
-
-        player.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(newMaxHealth);
-
-        double currentHealth = player.getHealth();
-        double healthPercentage = currentHealth / currentMaxHealth;
-        double newHealth = newMaxHealth * healthPercentage;
-
-        player.setHealth(Math.min(newHealth, newMaxHealth));
-    }
-
-    private void applyResistenciaEffect(Player player, int level) {
-        if (level == 1) {
-            player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, 0, false, false));
-        } else if (level == 4) {
-            player.removePotionEffect(PotionEffectType.RESISTANCE);
-            player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, 1, false, false));
-        }
-    }
-
-    private void applyAgilidadEffect(Player player, int level) {
-        if (level == 1) {
-            player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 0, false, false));
-        } else if (level == 2) {
-            player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, Integer.MAX_VALUE, 1, false, false));
-        } else if (level == 4) {
-            player.removePotionEffect(PotionEffectType.SPEED);
-            player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1, false, false));
-        }
+    // Calcula Vida (1.5 corazones = 3 pts por nivel)
+    private double calculateExtraHealth(int level) {
+        return level * 3.0;
     }
 
     public void reapplyAllEffects(Player player, HabilidadesManager manager) {
-        for (int level = 1; level <= 4; level++) {
-/*            if (manager.hasHabilidad(player.getUniqueId(), HabilidadesType.VITALIDAD, level)) {
-                double currentMaxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue();
-                double expectedMinHealth = 20 + (level * 4);
+        if (!player.isOnline()) return;
 
-                if (currentMaxHealth < expectedMinHealth) {
-                    player.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(expectedMinHealth);
-                }
-            }*/
+        applyAllInternal(player, manager);
 
-            if (manager.hasHabilidad(player.getUniqueId(), HabilidadesType.RESISTENCIA, level)) {
-                if (level == 1 || level == 4) {
-                    int amplifier = level == 1 ? 0 : 1;
-                    if (!player.hasPotionEffect(PotionEffectType.RESISTANCE) ||
-                            player.getPotionEffect(PotionEffectType.RESISTANCE).getAmplifier() < amplifier) {
-                        player.removePotionEffect(PotionEffectType.RESISTANCE);
-                        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, amplifier, false, false));
-                    }
-                }
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline()) {
+                applyAllInternal(player, manager);
+            }
+        }, 60L);
+    }
+
+    private void applyAllInternal(Player player, HabilidadesManager manager) {
+        UUID pid = player.getUniqueId();
+
+        // --- VITALIDAD (+1.5 Corazones por nivel) ---
+        int vitLevel = manager.getHighestLevel(pid, HabilidadesType.VITALIDAD);
+        AttributeInstance healthAttr = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+
+        if (healthAttr != null) {
+            healthAttr.getModifiers().stream()
+                    .filter(m -> m.getUniqueId().equals(VITALIDAD_MODIFIER_UUID))
+                    .forEach(healthAttr::removeModifier);
+
+            if (vitLevel > 0) {
+                AttributeModifier modifier = new AttributeModifier(
+                        VITALIDAD_MODIFIER_UUID,
+                        "Habilidad_Vitalidad",
+                        calculateExtraHealth(vitLevel),
+                        AttributeModifier.Operation.ADD_NUMBER
+                );
+                healthAttr.addModifier(modifier);
             }
 
-            if (manager.hasHabilidad(player.getUniqueId(), HabilidadesType.AGILIDAD, level)) {
-                if (level == 1 || level == 4) {
-                    int amplifier = level == 1 ? 0 : 1;
-                    if (!player.hasPotionEffect(PotionEffectType.SPEED) ||
-                            player.getPotionEffect(PotionEffectType.SPEED).getAmplifier() < amplifier) {
-                        player.removePotionEffect(PotionEffectType.SPEED);
-                        player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, amplifier, false, false));
-                    }
-                }
-                if (level >= 2) {
-                    if (!player.hasPotionEffect(PotionEffectType.JUMP_BOOST)) {
-                        player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, Integer.MAX_VALUE, 1, false, false));
-                    }
-                }
+            if (player.getHealth() > healthAttr.getValue()) {
+                player.setHealth(healthAttr.getValue());
             }
+        }
+
+        // --- AGILIDAD (Lógica Independiente) ---
+        // Nivel 1: Velocidad I
+        // Nivel 2: Fuerza I
+        // Nivel 3: Haste I y Doble Salto (El salto lo maneja el Listener)
+        // Nivel 4: Velocidad II y Triple Salto
+
+        // Manejamos la Velocidad primero
+        if (manager.hasHabilidad(pid, HabilidadesType.AGILIDAD, 4)) {
+            addInfiniteEffect(player, PotionEffectType.SPEED, 1);
+        } else if (manager.hasHabilidad(pid, HabilidadesType.AGILIDAD, 1)) {
+            addInfiniteEffect(player, PotionEffectType.SPEED, 0);
+        } else {
+            player.removePotionEffect(PotionEffectType.SPEED);
+        }
+
+        // Manejamos Fuerza I (Nivel 2)
+        if (manager.hasHabilidad(pid, HabilidadesType.AGILIDAD, 2)) {
+            addInfiniteEffect(player, PotionEffectType.STRENGTH, 0);
+        } else {
+            player.removePotionEffect(PotionEffectType.STRENGTH);
+        }
+
+        // Manejamos Haste I (Nivel 3)
+        if (manager.hasHabilidad(pid, HabilidadesType.AGILIDAD, 3)) {
+            addInfiniteEffect(player, PotionEffectType.HASTE, 0);
+        } else {
+            player.removePotionEffect(PotionEffectType.HASTE);
+        }
+
+        // --- RESISTENCIA (Lógica Independiente) ---
+        // Resistencia I en el Nivel 4 (el resto de resistencias al daño son del listener)
+        if (manager.hasHabilidad(pid, HabilidadesType.RESISTENCIA, 4)) {
+            addInfiniteEffect(player, PotionEffectType.RESISTANCE, 0);
+        } else {
+            player.removePotionEffect(PotionEffectType.RESISTANCE);
+        }
+    }
+
+    private void addInfiniteEffect(Player player, PotionEffectType type, int amplifier) {
+        PotionEffect effect = player.getPotionEffect(type);
+        if (effect == null || effect.getAmplifier() != amplifier || effect.getDuration() != PotionEffect.INFINITE_DURATION) {
+            player.addPotionEffect(new PotionEffect(type, PotionEffect.INFINITE_DURATION, amplifier, false, false, false));
         }
     }
 }

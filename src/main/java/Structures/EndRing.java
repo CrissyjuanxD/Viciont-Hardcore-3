@@ -1,5 +1,6 @@
 package Structures;
 
+import TitleListener.RuletaAnimation;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
@@ -12,8 +13,11 @@ import org.bukkit.potion.PotionEffectType;
 import java.util.Arrays;
 
 public class EndRing extends BaseStructure {
-    public EndRing(JavaPlugin plugin) {
+    private final RuletaAnimation ruletaAnimation;
+
+    public EndRing(JavaPlugin plugin, RuletaAnimation ruletaAnimation) {
         super(plugin, Arrays.asList("EndRingFV1.schem"));
+        this.ruletaAnimation = ruletaAnimation;
     }
 
     @Override
@@ -37,17 +41,21 @@ public class EndRing extends BaseStructure {
                     if (!pasteStructure(potentialLocation, selectedSchematic)) {
                         sender.sendMessage(ChatColor.RED + "Error al pegar la estructura.");
                     } else {
-                        // Aplicar efectos a los jugadores
+                        // Aplicar efectos y sonidos al instante
                         for (Player player : Bukkit.getOnlinePlayers()) {
                             player.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 20 * 15, 1));
                             player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 1.0f);
                         }
 
-                        String coordinatesMessage = String.format(
-                                "ruletavct [\"\",{\"text\":\"\\n\"},{\"text\":\"\\u06de Estructura \\u27a4\",\"bold\":true,\"color\":\"#6E02A5\"},{\"text\":\"\\n\\n\"},{\"text\":\"Se ha generado un End Ring en las coordenadas:\",\"color\":\"#A56CD7\"},{\"text\":\" %d %d %d\",\"color\":\"gold\"}]",
+                        String jsonMessage = String.format(
+                                "[\"\",{\"text\":\"\\n\"},{\"text\":\"\\u06de Estructura \\u25ba \",\"bold\":true,\"color\":\"#6E02A5\"},{\"text\":\"\\n\\n\"},{\"text\":\"Se ha generado un End Ring en las coordenadas:\\n\",\"color\":\"#A175D6\"},{\"text\":\"%d %d %d\",\"color\":\"gold\"},{\"text\":\"\\n \"}]",
                                 potentialLocation.getBlockX(), potentialLocation.getBlockY(), potentialLocation.getBlockZ()
                         );
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), coordinatesMessage);
+
+                        // Llamada nativa directa a la animación (Morada para estructuras)
+                        for (Player player : Bukkit.getOnlinePlayers()) {
+                            ruletaAnimation.playAnimation(player, "morado", "off", "center", jsonMessage);
+                        }
                     }
                 });
             });
@@ -99,7 +107,6 @@ public class EndRing extends BaseStructure {
                 }
             }
         }
-
         return false;
     }
 

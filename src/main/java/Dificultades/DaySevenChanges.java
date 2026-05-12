@@ -42,7 +42,7 @@ public class DaySevenChanges implements Listener {
         this.invertedGhast = new InvertedGhast(plugin);
         this.piglinGlobo = new PiglinGlobo(plugin);
         this.corruptedZombies = new CorruptedZombies(plugin);
-        this.corruptedSpider = new CorruptedSpider(plugin);
+        this.corruptedSpider = new CorruptedSpider(plugin, handler);
         this.dayHandler = handler;
     }
 

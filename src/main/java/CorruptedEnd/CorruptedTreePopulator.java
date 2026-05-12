@@ -51,21 +51,31 @@ public class CorruptedTreePopulator extends BlockPopulator {
     }
 
     private void actuallyPopulate(World world, Random random, Chunk chunk) {
-        // Intentar generar árboles múltiples veces
-        for (int attempts = 0; attempts < 3; attempts++) {
+
+        int intentos = 5;
+
+        for (int i = 0; i < intentos; i++) {
+
+            if (random.nextInt(100) < 40) continue;
+
             int x = random.nextInt(16);
             int z = random.nextInt(16);
-            int y = world.getMaxHeight() - 1;
 
-            // Encontrar superficie sólida
+            // Optimización: Empezar a buscar desde una altura razonable en lugar del techo del mundo
+            int y = 250;
+
+            // Buscar suelo sólido
             while (y > 0 && chunk.getBlock(x, y, z).getType() == Material.AIR) {
                 --y;
             }
 
-            if (y > 0 && y < 255 && y >= 90 && y < 150) {
+            // Rango de altura (Ajustado a 210 como pediste antes)
+            if (y > 0 && y < 255 && y >= 90 && y < 210) {
+
                 Location treeLocation = chunk.getBlock(x, y + 1, z).getLocation();
                 BiomeType biomeType = determineBiomeType(treeLocation);
 
+                // Si el bioma es válido (tiene suelo correcto), generamos
                 if (biomeType != null) {
                     generateOriginalTree(world, treeLocation, biomeType, random);
                 }
@@ -145,57 +155,6 @@ public class CorruptedTreePopulator extends BlockPopulator {
 
     }
 
-    private void generateCustomTreeStructure(World world, Location location, BiomeType biomeType, Random random) {
-        // Usar la generación original como base
-        world.generateTree(location, TreeType.CHORUS_PLANT, new BlockChangeDelegate() {
-            @Override
-            public boolean setBlockData(int x, int y, int z, @NotNull BlockData blockData) {
-                Material replacement;
-                if (blockData.getMaterial() == Material.CHORUS_FLOWER) {
-                    replacement = getLeafMaterial(biomeType);
-                } else if (blockData.getMaterial() == Material.CHORUS_PLANT) {
-                    replacement = getTrunkMaterial(biomeType);
-                } else {
-                    return true;
-                }
-                world.getBlockAt(x, y, z).setType(replacement);
-
-                // Añadir iluminación para Obsidian Peaks
-                if (biomeType == BiomeType.OBSIDIAN_PEAKS && replacement == Material.GRAY_GLAZED_TERRACOTTA) {
-                    Location lightLoc = new Location(world, x, y + 1, z);
-                    if (lightLoc.getBlock().getType() == Material.AIR) {
-                        lightLoc.getBlock().setType(Material.LIGHT);
-                        lightLoc.getBlock().setBlockData(
-                                Bukkit.createBlockData(Material.LIGHT, "[level=8]")
-                        );
-                    }
-                }
-
-                return true;
-            }
-
-            @Override
-            public @NotNull BlockData getBlockData(int x, int y, int z) {
-                return world.getBlockAt(x, y, z).getBlockData();
-            }
-
-            @Override
-            public int getHeight() {
-                return 255;
-            }
-
-            @Override
-            public boolean isEmpty(int x, int y, int z) {
-                return world.getBlockAt(x, y, z).getType() == Material.AIR;
-            }
-        });
-
-        // Para Obsidian Peaks, añadir ramificaciones adicionales
-        if (biomeType == BiomeType.OBSIDIAN_PEAKS) {
-            addExtraRamifications(world, location, random);
-        }
-    }
-
     private Material getTrunkMaterial(BiomeType biomeType) {
         switch (biomeType) {
             case CELESTIAL_FOREST:
@@ -219,75 +178,6 @@ public class CorruptedTreePopulator extends BlockPopulator {
                 return Material.SHROOMLIGHT;
             default: // SCULK_PLAINS
                 return Material.SEA_LANTERN;
-        }
-    }
-
-    private void generateLeaves(World world, Location center, Material leafMaterial, BiomeType biomeType, Random random) {
-        // Generar hojas en forma de cruz
-        int[][] leafPositions = {
-                {0, 0, 0}, {0, 1, 0}, // Centro y arriba
-                {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}, // Lados
-                {1, 0, 1}, {-1, 0, -1}, {1, 0, -1}, {-1, 0, 1} // Diagonales
-        };
-
-        for (int[] pos : leafPositions) {
-            if (random.nextDouble() < 0.8) { // 80% probabilidad por hoja
-                Location leafLoc = center.clone().add(pos[0], pos[1], pos[2]);
-                if (leafLoc.getBlock().getType() == Material.AIR) {
-                    leafLoc.getBlock().setType(leafMaterial);
-
-                    // Añadir iluminación para Obsidian Peaks
-                    if (biomeType == BiomeType.OBSIDIAN_PEAKS && leafMaterial == Material.GRAY_GLAZED_TERRACOTTA) {
-                        Location lightLoc = leafLoc.clone().add(0, 1, 0);
-                        if (lightLoc.getBlock().getType() == Material.AIR) {
-                            lightLoc.getBlock().setType(Material.LIGHT);
-                            lightLoc.getBlock().setBlockData(
-                                    Bukkit.createBlockData(Material.LIGHT, "[level=8]")
-                            );
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private void addExtraRamifications(World world, Location base, Random random) {
-        // Añadir ramificaciones adicionales más variadas para Obsidian Peaks
-        int extraBranches = 3 + random.nextInt(4); // 3-6 ramas extra
-
-        for (int i = 0; i < extraBranches; i++) {
-            int branchY = 3 + random.nextInt(8); // Altura variable
-            int branchLength = 3 + random.nextInt(5); // Longitud variable
-
-            // Dirección completamente aleatoria
-            double angle = random.nextDouble() * Math.PI * 2;
-            int dx = (int) Math.round(Math.cos(angle));
-            int dz = (int) Math.round(Math.sin(angle));
-
-            Material trunkMaterial = getTrunkMaterial(BiomeType.OBSIDIAN_PEAKS);
-            Material leafMaterial = getLeafMaterial(BiomeType.OBSIDIAN_PEAKS);
-
-            // Generar rama
-            for (int j = 1; j <= branchLength; j++) {
-                Location branchLoc = base.clone().add(dx * j, branchY, dz * j);
-                if (branchLoc.getBlock().getType() == Material.AIR) {
-                    branchLoc.getBlock().setType(trunkMaterial);
-                }
-
-                // Hojas al final de la rama con iluminación
-                if (j == branchLength && random.nextBoolean()) {
-                    branchLoc.getBlock().setType(leafMaterial);
-
-                    // Añadir iluminación
-                    Location lightLoc = branchLoc.clone().add(0, 1, 0);
-                    if (lightLoc.getBlock().getType() == Material.AIR) {
-                        lightLoc.getBlock().setType(Material.LIGHT);
-                        lightLoc.getBlock().setBlockData(
-                                Bukkit.createBlockData(Material.LIGHT, "[level=8]")
-                        );
-                    }
-                }
-            }
         }
     }
 

@@ -1,7 +1,11 @@
 package Bosses;
 
-import org.bukkit.*;
+import org.bukkit.Color;
+import org.bukkit.Location;
+import org.bukkit.Particle;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
 
 public class AreaZone {
 
@@ -24,7 +28,6 @@ public class AreaZone {
     public boolean isInside(Location loc) {
         if (!loc.getWorld().equals(center.getWorld())) return false;
 
-        // 1. VALIDAR ALTURA (Y)
         double y = loc.getY();
         double centerY = center.getY();
 
@@ -32,15 +35,10 @@ public class AreaZone {
             return false;
         }
 
-/*        if (shape == Shape.CIRCULAR) {
-            return loc.distanceSquared(center) <= radius * radius;
-        }*/
-
         if (shape == Shape.CIRCULAR) {
             return Math.pow(loc.getX() - center.getX(), 2) + Math.pow(loc.getZ() - center.getZ(), 2) <= radius * radius;
         }
 
-        // SQUARE
         return Math.abs(loc.getX() - center.getX()) <= radius &&
                 Math.abs(loc.getZ() - center.getZ()) <= radius;
     }
@@ -49,47 +47,87 @@ public class AreaZone {
         World w = center.getWorld();
         if (w == null) return;
 
-        // Dibujar el Límite SUPERIOR (Techo) - Color AQUA
-        drawBorder(w, center.clone().add(0, heightUp, 0), Color.AQUA);
+        double minY = center.getY() - heightDown;
+        double maxY = center.getY() + heightUp;
 
-        // Dibujar el Límite INFERIOR (Suelo/Profundidad) - Color ROJO
-        drawBorder(w, center.clone().subtract(0, heightDown, 0), Color.RED);
+        double density = 0.8;
 
-        // Dibujar el CENTRO (Referencia) - Color BLANCO (Opcional, solo una partícula central)
+        for (double y = minY; y <= maxY; y += density) {
+            Location layerCenter = center.clone();
+            layerCenter.setY(y);
+
+            drawPerimeter(w, layerCenter, radius, Color.WHITE);
+        }
+
+        drawCap(w, minY, Color.RED);
+
+        drawCap(w, maxY, Color.AQUA);
+
         w.spawnParticle(Particle.END_ROD, center, 1, 0, 0, 0, 0);
     }
 
-    private void drawBorder(World w, Location loc, Color color) {
-        Particle.DustOptions dust = new Particle.DustOptions(color, 1.2f);
+    private void drawPerimeter(World w, Location loc, double r, Color color) {
+        Particle.DustOptions dust = new Particle.DustOptions(color, 1.0f);
 
         if (shape == Shape.CIRCULAR) {
-            for (double angle = 0; angle < 360; angle += 5) {
+            double step = 5;
+            for (double angle = 0; angle < 360; angle += step) {
                 double rad = Math.toRadians(angle);
-                Location l = loc.clone().add(Math.cos(rad)*radius, 0, Math.sin(rad)*radius);
-                w.spawnParticle(Particle.DUST, l, 1, dust);
+                double x = loc.getX() + Math.cos(rad) * r;
+                double z = loc.getZ() + Math.sin(rad) * r;
+                w.spawnParticle(Particle.DUST, new Location(w, x, loc.getY(), z), 1, dust);
             }
         } else {
-            // Cuadrado: Dibujar 4 líneas
+            double minX = loc.getX() - r;
+            double maxX = loc.getX() + r;
+            double minZ = loc.getZ() - r;
+            double maxZ = loc.getZ() + r;
+            double y = loc.getY();
+
+            drawLine(w, new Location(w, minX, y, minZ), new Location(w, maxX, y, minZ), dust); // Norte
+            drawLine(w, new Location(w, maxX, y, minZ), new Location(w, maxX, y, maxZ), dust); // Este
+            drawLine(w, new Location(w, maxX, y, maxZ), new Location(w, minX, y, maxZ), dust); // Sur
+            drawLine(w, new Location(w, minX, y, maxZ), new Location(w, minX, y, minZ), dust); // Oeste
+        }
+    }
+
+    // Dibuja la tapa (relleno o rejilla) en una altura Y específica
+    private void drawCap(World w, double y, Color color) {
+        Particle.DustOptions dust = new Particle.DustOptions(color, 1.0f);
+        Location loc = center.clone();
+        loc.setY(y);
+
+        if (shape == Shape.CIRCULAR) {
+            for (double r = 1; r <= radius; r += 1.0) {
+                drawPerimeter(w, loc, r, color);
+            }
+        } else {
             double minX = loc.getX() - radius;
             double maxX = loc.getX() + radius;
             double minZ = loc.getZ() - radius;
             double maxZ = loc.getZ() + radius;
-            double y = loc.getY();
 
-            // Lado X
-            for (double x = minX; x <= maxX; x += 1.0) {
-                w.spawnParticle(Particle.DUST, new Location(w, x, y, minZ), 1, dust);
-                w.spawnParticle(Particle.DUST, new Location(w, x, y, maxZ), 1, dust);
-            }
-            // Lado Z
             for (double z = minZ; z <= maxZ; z += 1.0) {
-                w.spawnParticle(Particle.DUST, new Location(w, minX, y, z), 1, dust);
-                w.spawnParticle(Particle.DUST, new Location(w, maxX, y, z), 1, dust);
+                drawLine(w, new Location(w, minX, y, z), new Location(w, maxX, y, z), dust);
+            }
+            for (double x = minX; x <= maxX; x += 1.0) {
+                drawLine(w, new Location(w, x, y, minZ), new Location(w, x, y, maxZ), dust);
             }
         }
     }
 
-    // Getters útiles para ataques
+    private void drawLine(World w, Location p1, Location p2, Particle.DustOptions dust) {
+        double distance = p1.distance(p2);
+        double space = 0.8;
+        Vector v = p2.toVector().subtract(p1.toVector()).normalize().multiply(space);
+
+        Location current = p1.clone();
+        for (double d = 0; d < distance; d += space) {
+            w.spawnParticle(Particle.DUST, current, 1, dust);
+            current.add(v);
+        }
+    }
+
     public int getHeightUp() { return heightUp; }
     public int getHeightDown() { return heightDown; }
     public Location getCenter() { return center.clone(); }

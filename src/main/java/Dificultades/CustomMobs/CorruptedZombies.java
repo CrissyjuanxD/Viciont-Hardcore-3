@@ -29,12 +29,17 @@ public class CorruptedZombies implements Listener {
     private static BukkitTask mainTask;
 
     private final Random random = new Random();
-    private final MobSoundManager soundManager;
 
     public CorruptedZombies(JavaPlugin plugin) {
         this.plugin = plugin;
         this.corruptedKey = new NamespacedKey(plugin, "corrupted_zombie");
-        this.soundManager = new MobSoundManager(plugin);
+        MobSoundManager.register(
+                corruptedKey,
+                Sound.ENTITY_ZOMBIE_AMBIENT,
+                Sound.ENTITY_ZOMBIE_STEP,
+                0.6f,
+                1.0f
+        );
     }
 
     public void apply() {
@@ -134,12 +139,6 @@ public class CorruptedZombies implements Listener {
         zombie.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, PotionEffect.INFINITE_DURATION, 0));
         zombie.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, PotionEffect.INFINITE_DURATION, 0));
         zombie.setSilent(true);
-
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (zombie.isValid() && !zombie.isDead()) {
-                soundManager.addCustomMob(zombie);
-            }
-        }, 5L);
 
         if (zombie.getVehicle() instanceof Chicken) {
             zombie.getVehicle().remove();

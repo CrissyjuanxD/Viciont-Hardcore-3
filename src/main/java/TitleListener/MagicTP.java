@@ -7,6 +7,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class MagicTP implements CommandExecutor, TabCompleter {
 
@@ -21,7 +22,7 @@ public class MagicTP implements CommandExecutor, TabCompleter {
         // Validación básica
         if (args.length != 4 && args.length != 5 && args.length != 2) {
             sender.sendMessage(ChatColor.RED + "Uso correcto:");
-            sender.sendMessage(ChatColor.RED + "/magictp <jugador|@a> <x> <y> <z> [nether|end|dimensioncustom]");
+            sender.sendMessage(ChatColor.RED + "/magictp <jugador|@a> <x> <y> <z> [nombre_mundo]");
             sender.sendMessage(ChatColor.RED + "/magictp <jugador|@a> spawn");
             return true;
         }
@@ -39,40 +40,24 @@ public class MagicTP implements CommandExecutor, TabCompleter {
 
                 // Determinar la dimensión
                 World targetWorld;
+
                 if (args.length == 5) {
-                    String dimension = args[4].toLowerCase();
-                    switch (dimension) {
-                        case "nether":
-                            targetWorld = getWorldByEnvironment(World.Environment.NETHER);
-                            if (targetWorld == null) {
-                                sender.sendMessage(ChatColor.RED + "No se encontró un mundo del Nether.");
-                                return true;
-                            }
-                            break;
-                        case "end":
-                            targetWorld = getWorldByEnvironment(World.Environment.THE_END);
-                            if (targetWorld == null) {
-                                sender.sendMessage(ChatColor.RED + "No se encontró un mundo del End.");
-                                return true;
-                            }
-                            break;
-                        case "dimensioncustom":
-                            // Buscar una dimensión custom (que no sea overworld, nether o end)
-                            targetWorld = getCustomDimension();
-                            if (targetWorld == null) {
-                                sender.sendMessage(ChatColor.RED + "No se encontró una dimensión custom.");
-                                return true;
-                            }
-                            break;
-                        default:
-                            sender.sendMessage(ChatColor.RED + "Dimensión no válida. Use: nether, end, o dimensioncustom");
-                            return true;
+                    // AQUÍ ESTÁ EL CAMBIO: Buscamos el mundo por su nombre real
+                    String worldName = args[4];
+                    targetWorld = Bukkit.getWorld(worldName);
+
+                    if (targetWorld == null) {
+                        sender.sendMessage(ChatColor.RED + "El mundo '" + worldName + "' no existe o no está cargado.");
+                        sender.sendMessage(ChatColor.GRAY + "Mundos disponibles: " +
+                                Bukkit.getWorlds().stream().map(World::getName).collect(Collectors.joining(", ")));
+                        return true;
                     }
                 } else {
-                    // Por defecto usar overworld
-                    targetWorld = getWorldByEnvironment(World.Environment.NORMAL);
-                    if (targetWorld == null) {
-                        targetWorld = Bukkit.getWorlds().get(0); // Fallback al primer mundo
+                    // Por defecto usar el mundo donde está el sender (si es jugador) o el default
+                    if (sender instanceof Player) {
+                        targetWorld = ((Player) sender).getWorld();
+                    } else {
+                        targetWorld = Bukkit.getWorlds().get(0);
                     }
                 }
 
@@ -98,16 +83,17 @@ public class MagicTP implements CommandExecutor, TabCompleter {
             players.add(player);
         }
 
-        // Efectos visuales y de sonido
+        // Efectos visuales y de sonido antes de teletransportar
         for (Player player : players) {
-            player.playSound(player.getLocation(), "minecraft:custom.transition_1", 1.0f, 1.0f);
+            player.playSound(player.getLocation(), "minecraft:custom.transition_1", 1.0f, 1.3f);
             player.sendTitle("\uEAA4", "", 80, 80, 20);
         }
 
+        // Tarea diferida para el teletransporte
         new BukkitRunnable() {
             @Override
             public void run() {
-                World overworld = Bukkit.getWorlds().get(0);
+                World mainWorld = Bukkit.getWorlds().get(0);
 
                 for (Player player : players) {
                     if (useSpawn) {
@@ -115,14 +101,14 @@ public class MagicTP implements CommandExecutor, TabCompleter {
                         if (bedSpawn != null) {
                             player.teleport(bedSpawn);
                         } else {
-                            player.teleport(overworld.getSpawnLocation());
+                            player.teleport(mainWorld.getSpawnLocation());
                         }
                     } else if (targetLocation != null) {
                         player.teleport(targetLocation);
                     }
                 }
             }
-        }.runTaskLater(plugin, 120);
+        }.runTaskLater(plugin, 120); // 120 ticks = 6 segundos
 
         return true;
     }
@@ -141,62 +127,26 @@ public class MagicTP implements CommandExecutor, TabCompleter {
             // Segundo argumento: spawn o coordenada X
             completions.add("spawn");
             if (sender instanceof Player) {
-                Player p = (Player) sender;
-                completions.add(String.valueOf(p.getLocation().getBlockX()));
+                completions.add(String.valueOf(((Player) sender).getLocation().getBlockX()));
             }
         } else if (args.length == 3 && !args[1].equalsIgnoreCase("spawn")) {
             // Tercer argumento: coordenada Y
             if (sender instanceof Player) {
-                Player p = (Player) sender;
-                completions.add(String.valueOf(p.getLocation().getBlockY()));
+                completions.add(String.valueOf(((Player) sender).getLocation().getBlockY()));
             }
         } else if (args.length == 4 && !args[1].equalsIgnoreCase("spawn")) {
             // Cuarto argumento: coordenada Z
             if (sender instanceof Player) {
-                Player p = (Player) sender;
-                completions.add(String.valueOf(p.getLocation().getBlockZ()));
+                completions.add(String.valueOf(((Player) sender).getLocation().getBlockZ()));
             }
         } else if (args.length == 5 && !args[1].equalsIgnoreCase("spawn")) {
-            // Quinto argumento: dimensión
-            completions.add("nether");
-            completions.add("end");
-            if (getCustomDimension() != null) {
-                completions.add("dimensioncustom");
+            // Quinto argumento: LISTA DINÁMICA DE MUNDOS
+            // Esto buscará todos los mundos (vanilla y custom) y los pondrá en la lista
+            for (World world : Bukkit.getWorlds()) {
+                completions.add(world.getName());
             }
         }
 
         return completions;
-    }
-
-    /**
-     * Busca un mundo por su tipo de entorno
-     */
-    private World getWorldByEnvironment(World.Environment environment) {
-        for (World world : Bukkit.getWorlds()) {
-            if (world.getEnvironment() == environment) {
-                return world;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Busca una dimensión custom (que no sea overworld, nether o end)
-     */
-    private World getCustomDimension() {
-        for (World world : Bukkit.getWorlds()) {
-            if (world.getEnvironment() != World.Environment.NORMAL &&
-                    world.getEnvironment() != World.Environment.NETHER &&
-                    world.getEnvironment() != World.Environment.THE_END) {
-                return world;
-            }
-        }
-        // Si no hay mundos custom, buscar por nombre que contenga "custom"
-        for (World world : Bukkit.getWorlds()) {
-            if (world.getName().toLowerCase().contains("custom")) {
-                return world;
-            }
-        }
-        return null;
     }
 }

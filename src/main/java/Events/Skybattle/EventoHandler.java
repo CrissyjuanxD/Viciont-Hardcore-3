@@ -1,11 +1,27 @@
 package Events.Skybattle;
 
+import Commands.TiempoCommand;
+import Habilidades.HabilidadesEffects;
+import Habilidades.HabilidadesManager;
+import Handlers.EventInventoryManager;
+import Handlers.Teams.TeamType;
+import TitleListener.DiscoCommand;
+import TitleListener.RuletaAnimation;
+import com.viciontmedia.api.ViciontMediaAPI;
+import com.viciontcinematics.api.ViciontCinematicAPI;
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.chat.ComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -14,85 +30,306 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.event.Listener;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.enchantments.Enchantment;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.*;
-import net.md_5.bungee.api.ChatColor;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class EventoHandler implements Listener {
+
+    private final HabilidadesManager habilidadesManager;
+    private final HabilidadesEffects habilidadesEffects;
+    private final RuletaAnimation eventoAnimation;
+    private EventInventoryManager eventInventoryManager;
+    private final DiscoCommand discoCommand;
+
     private final Set<String> participantes = new HashSet<>();
     private final Map<String, Integer> kills = new HashMap<>();
     private final List<String> ordenEliminados = new ArrayList<>();
 
     private List<Location> ubicacionesShroomlightOriginales = new ArrayList<>();
+    private final Map<String, String> originalTeams = new HashMap<>();
     private final List<BukkitTask> tareasActivas = new ArrayList<>();
+
     private boolean eventoActivo = false;
-    private boolean eventoEnCurso = false;
-    private boolean preparacion = false;
+    private boolean secuenciaBatallaIniciada = false;
     private final int MAX_PARTICIPANTES = 20;
     private final JavaPlugin plugin;
     private final CofresHandler cofresHandler;
+    private Scoreboard eventoScoreboard;
 
+    // --- CONFIGURACIÓN ---
+    private File configFile;
+    private FileConfiguration config;
+    private String modoIngreso = "block";
+    private String timerStart = "00:04:00";
+    private int tiempoBordeInicial = 120;
+    private int tiempoReglasSegundos = 150;
+    private Location zonaEspectadores;
+
+    private int arenaMinX, arenaMaxX, arenaMinY, arenaMaxY, arenaMinZ, arenaMaxZ;
+    private int minX, maxX, minY, maxY, minZ, maxZ;
     private int tiempoBorde = 120;
-    private int minX = 19904;
-    private int maxX = 20096;
-    private int minY = 27;
-    private int maxY = 110;
-    private int minZ = 19904;
-    private int maxZ = 20096;
+
     private boolean bordeReduciendose = false;
+    private boolean eventoEnCurso = false;
+    private boolean preparacion = false;
     private final File estadoArchivo;
 
     private BukkitRunnable taskBordeParticulas;
     private BukkitRunnable taskReduccionBorde;
     private BukkitRunnable taskReduccionBordeContinuo;
 
+    // Variables para el monitor de pausa
+    private BukkitTask pauseMonitorTask;
+    private String lastPauseText = "";
+
     private Material bloqueActual;
     private String nombreBloqueActual;
 
-    public EventoHandler(JavaPlugin plugin) {
+    public EventoHandler(JavaPlugin plugin, HabilidadesManager habilidadesManager, HabilidadesEffects habilidadesEffects) {
         this.plugin = plugin;
+        this.habilidadesManager = habilidadesManager;
+        this.habilidadesEffects = habilidadesEffects;
         this.cofresHandler = new CofresHandler(plugin);
+        this.eventoAnimation = new RuletaAnimation(plugin);
+        this.discoCommand = new DiscoCommand(plugin);
         this.estadoArchivo = new File(plugin.getDataFolder(), "estado_evento.yml");
+
+        crearYcargarConfig();
         verificarEstadoEvento();
     }
 
+    public void crearYcargarConfig() {
+        configFile = new File(plugin.getDataFolder(), "lavaclashconfig.yml");
+
+        if (!configFile.exists()) {
+            configFile.getParentFile().mkdirs();
+            try {
+                configFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        config = YamlConfiguration.loadConfiguration(configFile);
+
+        config.options().header("=== Configuración de LavaClash ===");
+        config.options().copyHeader(true);
+
+        if (!config.contains("modo_ingreso")) {
+            config.set("modo_ingreso", "block"); // "block" o "random"
+            config.set("timer_start", "00:04:00");
+            config.set("tiempo_borde_segundos", 120);
+            config.set("tiempo_reglas_segundos", 150);
+
+            config.set("zona.minX", 19904);
+            config.set("zona.maxX", 20096);
+            config.set("zona.minY", 27);
+            config.set("zona.maxY", 110);
+            config.set("zona.minZ", 19904);
+            config.set("zona.maxZ", 20096);
+
+            config.set("espectadores.x", 20015.00);
+            config.set("espectadores.y", 106.00);
+            config.set("espectadores.z", 20000.27);
+            config.set("espectadores.yaw", -1979.64);
+            config.set("espectadores.pitch", 0.46);
+
+            try { config.save(configFile); } catch (IOException ignored) {}
+        }
+
+        modoIngreso = config.getString("modo_ingreso", "block");
+        timerStart = config.getString("timer_start", "00:04:00");
+        tiempoBordeInicial = config.getInt("tiempo_borde_segundos", 120);
+        tiempoReglasSegundos = config.getInt("tiempo_reglas_segundos", 150);
+
+        arenaMinX = config.getInt("zona.minX", 19904);
+        arenaMaxX = config.getInt("zona.maxX", 20096);
+        arenaMinY = config.getInt("zona.minY", 27);
+        arenaMaxY = config.getInt("zona.maxY", 110);
+        arenaMinZ = config.getInt("zona.minZ", 19904);
+        arenaMaxZ = config.getInt("zona.maxZ", 20096);
+
+        minX = arenaMinX;
+        maxX = arenaMaxX;
+        minY = arenaMinY;
+        maxY = arenaMaxY;
+        minZ = arenaMinZ;
+        maxZ = arenaMaxZ;
+        tiempoBorde = tiempoBordeInicial;
+
+        double espX = config.getDouble("espectadores.x", 20015.00);
+        double espY = config.getDouble("espectadores.y", 106.00);
+        double espZ = config.getDouble("espectadores.z", 20000.27);
+        float espYaw = (float) config.getDouble("espectadores.yaw", -1979.64);
+        float espPitch = (float) config.getDouble("espectadores.pitch", 0.46);
+        zonaEspectadores = new Location(Bukkit.getWorld("world"), espX, espY, espZ, espYaw, espPitch);
+    }
+
+    private int parseTimeToSeconds(String timeString) {
+        String[] parts = timeString.split(":");
+        if (parts.length == 3) {
+            int hours = Integer.parseInt(parts[0]);
+            int minutes = Integer.parseInt(parts[1]);
+            int seconds = Integer.parseInt(parts[2]);
+            return hours * 3600 + minutes * 60 + seconds;
+        }
+        return 240;
+    }
+
+    private boolean isInsideArenaGeneral(Location loc) {
+        return loc.getBlockX() >= arenaMinX && loc.getBlockX() <= arenaMaxX
+                && loc.getBlockY() >= arenaMinY && loc.getBlockY() <= arenaMaxY
+                && loc.getBlockZ() >= arenaMinZ && loc.getBlockZ() <= arenaMaxZ;
+    }
+
+    private List<Player> getJugadoresEnZona() {
+        return Bukkit.getOnlinePlayers().stream()
+                .filter(p -> isInsideArenaGeneral(p.getLocation()))
+                .collect(Collectors.toList());
+    }
+
+    private void enviarMensajeZona(String mensaje) {
+        getJugadoresEnZona().forEach(p -> p.sendMessage(mensaje));
+    }
+
+    public void setEventInventoryManager(EventInventoryManager manager) {
+        this.eventInventoryManager = manager;
+    }
+
+    public boolean isEventoActivo() {
+        return eventoActivo;
+    }
+
+    public boolean isSecuenciaBatallaIniciada() {
+        return secuenciaBatallaIniciada;
+    }
+
+    public boolean isParticipante(String name) {
+        return participantes.contains(name);
+    }
+
     public void iniciarEvento() {
+        if (eventoActivo) return;
         eventoActivo = true;
-        List<Material> bloquesPosibles = List.of(
-                Material.POPPY,
-                Material.STRIPPED_OAK_LOG,
-                Material.GLASS,
-                Material.IRON_ORE,
-                Material.DIAMOND_BLOCK
-        );
+        secuenciaBatallaIniciada = false;
 
-        Map<Material, String> nombresBloques = Map.of(
-                Material.POPPY, "Flor Roja (Amapola)",
-                Material.STRIPPED_OAK_LOG, "Tronco de Roble sin corteza",
-                Material.GLASS, "Cristal",
-                Material.IRON_ORE, "Mineral de hierro",
-                Material.DIAMOND_BLOCK, "Bloque de diamante"
-        );
+        crearYcargarConfig();
+        participantes.clear();
+        ordenEliminados.clear();
+        kills.clear();
 
-        bloqueActual = bloquesPosibles.get(new Random().nextInt(bloquesPosibles.size()));
-        nombreBloqueActual = nombresBloques.get(bloqueActual);
+        inicializarTeamLavaClashMain();
 
-        String jsonMessage = "[\"\",{\"text\":\"\\n\"},{\"text\":\"\\u06de Evento\",\"bold\":true,\"color\":\"#F977F9\"},{\"text\":\" \\u27a4\",\"bold\":true,\"color\":\"gray\"},{\"text\":\"\\n\\n\"},{\"text\":\"¡Ha comenzado el evento \",\"color\":\"#c55cf3\"},{\"text\":\"LAVACLASH\",\"bold\":true,\"color\":\"#D98836\"},{\"text\":\"!\\nLos primeros \",\"color\":\"#c55cf3\"},{\"text\":\"20\",\"bold\":true,\"color\":\"#c55cf3\"},{\"text\":\" jugadores en obtener\\nun \",\"color\":\"#c55cf3\"},{\"text\":\"Manu Ticket\",\"bold\":true,\"color\":\"#E9BF66\"},{\"text\":\" participarán\\n\\nPara obtener el ticket deberan romper un \",\"color\":\"#c55cf3\"},{\"text\":\"\\n\"},{\"text\":\"" + nombreBloqueActual + "\",\"bold\":true,\"color\":\"#57A9CB\"},{\"text\":\"\\n \"}]";
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ruletavct " + jsonMessage);
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule sendCommandFeedback false");
-        //test
-        guardarEstadoEvento();
+        if (modoIngreso.equalsIgnoreCase("random")) {
+            List<Player> onlinePlayers = new ArrayList<>(Bukkit.getOnlinePlayers());
+            Collections.shuffle(onlinePlayers);
+            int amount = Math.min(MAX_PARTICIPANTES, onlinePlayers.size());
+
+            for (int i = 0; i < amount; i++) {
+                Player p = onlinePlayers.get(i);
+                participantes.add(p.getName());
+                aplicarTeamLavaClash(p);
+            }
+
+            String jsonMessage = "[\"\",{\"text\":\"\\n\"},{\"text\":\"\\u06de Evento\",\"bold\":true,\"color\":\"#F977F9\"},{\"text\":\" \\u27a4\",\"bold\":true,\"color\":\"gray\"},{\"text\":\"\\n\\n\"},{\"text\":\"¡Ha comenzado el evento \",\"color\":\"#c55cf3\"},{\"text\":\"LAVACLASH\",\"bold\":true,\"color\":\"#D98836\"},{\"text\":\"!\\n\",\"color\":\"#c55cf3\"},{\"text\":\"" + amount + " jugadores aleatorios han sido seleccionados.\\nSerán teletransportados en breve.\",\"color\":\"#c55cf3\"},{\"text\":\"\\n \"}]";
+
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                eventoAnimation.playAnimation(p, "rosa", "evento", "center", jsonMessage);
+            }
+
+            World world = Bukkit.getWorld("world");
+            if (world != null) world.setGameRule(GameRule.SEND_COMMAND_FEEDBACK, false);
+            guardarEstadoEvento();
+
+            // Solo hacemos auto-tp si se llenaron los 20 cupos obligatoriamente
+            if (participantes.size() == MAX_PARTICIPANTES) {
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        if (eventoActivo && !preparacion) {
+                            teletransportarJugadores();
+                        }
+                    }
+                }.runTaskLater(plugin, 840L); // 42s de espera para no cortar el video ni el mensaje de la ruleta
+            }
+
+        } else {
+            List<Material> bloquesPosibles = List.of(
+                    Material.POPPY, Material.STRIPPED_OAK_LOG, Material.GLASS,
+                    Material.IRON_ORE, Material.DIAMOND_BLOCK
+            );
+
+            Map<Material, String> nombresBloques = Map.of(
+                    Material.POPPY, "Flor Roja (Amapola)",
+                    Material.STRIPPED_OAK_LOG, "Tronco de Roble sin corteza",
+                    Material.GLASS, "Cristal",
+                    Material.IRON_ORE, "Mineral de hierro",
+                    Material.DIAMOND_BLOCK, "Bloque de diamante"
+            );
+
+            bloqueActual = bloquesPosibles.get(new Random().nextInt(bloquesPosibles.size()));
+            nombreBloqueActual = nombresBloques.get(bloqueActual);
+
+            String jsonMessage = "[\"\",{\"text\":\"\\n\"},{\"text\":\"\\u06de Evento\",\"bold\":true,\"color\":\"#F977F9\"},{\"text\":\" \\u27a4\",\"bold\":true,\"color\":\"gray\"},{\"text\":\"\\n\\n\"},{\"text\":\"¡Ha comenzado el evento \",\"color\":\"#c55cf3\"},{\"text\":\"LAVACLASH\",\"bold\":true,\"color\":\"#D98836\"},{\"text\":\"!\\nLos primeros \",\"color\":\"#c55cf3\"},{\"text\":\"20\",\"bold\":true,\"color\":\"#c55cf3\"},{\"text\":\" jugadores en obtener\\nun \",\"color\":\"#c55cf3\"},{\"text\":\"Manu Ticket\",\"bold\":true,\"color\":\"#E9BF66\"},{\"text\":\" participarán\\n\\nPara obtener el ticket deberan romper un \",\"color\":\"#c55cf3\"},{\"text\":\"\\n\"},{\"text\":\"" + nombreBloqueActual + "\",\"bold\":true,\"color\":\"#57A9CB\"},{\"text\":\"\\n \"}]";
+
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                eventoAnimation.playAnimation(p, "rosa", "evento", "center", jsonMessage);
+            }
+
+            World world = Bukkit.getWorld("world");
+            if (world != null) world.setGameRule(GameRule.SEND_COMMAND_FEEDBACK, false);
+            guardarEstadoEvento();
+        }
+    }
+
+    private void inicializarTeamLavaClashMain() {
+        Scoreboard mainBoard = Bukkit.getScoreboardManager().getMainScoreboard();
+        Team t = mainBoard.getTeam(TeamType.LAVACLASH.getId());
+        if (t == null) {
+            t = mainBoard.registerNewTeam(TeamType.LAVACLASH.getId());
+        }
+        t.setPrefix(TeamType.LAVACLASH.getChatPrefix());
+        t.setColor(TeamType.LAVACLASH.getBukkitColor());
+        t.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
+        t.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
+    }
+
+    private void aplicarTeamLavaClash(Player p) {
+        Scoreboard mainBoard = Bukkit.getScoreboardManager().getMainScoreboard();
+        Team oldTeam = mainBoard.getEntryTeam(p.getName());
+        if (oldTeam != null) {
+            originalTeams.put(p.getName(), oldTeam.getName());
+        } else {
+            originalTeams.put(p.getName(), null);
+        }
+
+        Team lcTeam = mainBoard.getTeam(TeamType.LAVACLASH.getId());
+        if (lcTeam != null) lcTeam.addEntry(p.getName());
+    }
+
+    private void restaurarTeamOriginal(String playerName) {
+        Player p = Bukkit.getPlayer(playerName);
+        if (p == null) return;
+
+        Scoreboard mainBoard = Bukkit.getScoreboardManager().getMainScoreboard();
+        Team lcTeam = mainBoard.getTeam(TeamType.LAVACLASH.getId());
+        if (lcTeam != null) lcTeam.removeEntry(playerName);
+
+        if (originalTeams.containsKey(playerName)) {
+            String oldTeamName = originalTeams.get(playerName);
+            if (oldTeamName != null) {
+                Team old = mainBoard.getTeam(oldTeamName);
+                if (old != null) old.addEntry(playerName);
+            }
+        }
     }
 
     public void forzarEvento() {
@@ -107,25 +344,42 @@ public class EventoHandler implements Listener {
         eventoActivo = false;
         eventoEnCurso = false;
         preparacion = false;
+        secuenciaBatallaIniciada = false;
+
+        borrarTextoPausa();
+        if (pauseMonitorTask != null && !pauseMonitorTask.isCancelled()) {
+            pauseMonitorTask.cancel();
+        }
+
+        for (String nombre : originalTeams.keySet()) {
+            restaurarTeamOriginal(nombre);
+            Player p = Bukkit.getPlayer(nombre);
+            if (p != null) {
+                habilidadesManager.enableHabilidades(p);
+                habilidadesEffects.reapplyAllEffects(p, habilidadesManager);
+            }
+        }
+
         participantes.clear();
+        originalTeams.clear();
         ordenEliminados.clear();
         kills.clear();
 
-        Bukkit.broadcastMessage(" ");
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound @a");
-        Bukkit.broadcastMessage("§c۞ El evento ha terminado.");
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule sendCommandFeedback true");
-
-        // Eliminar solo la scoreboard del evento
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            Scoreboard board = p.getScoreboard();
-            if (board != null) {
-                Objective objective = board.getObjective("skybattle");
-                if (objective != null) {
-                    objective.unregister();
-                }
-            }
+        for (Player p : getJugadoresEnZona()) {
+            p.sendMessage(" ");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound " + p.getName());
+            p.sendMessage("§c۞ El evento ha terminado.");
+            p.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
         }
+
+        if (eventoScoreboard != null) {
+            Objective obj = eventoScoreboard.getObjective("skybattle");
+            if (obj != null) obj.unregister();
+            eventoScoreboard = null;
+        }
+
+        World world = Bukkit.getWorld("world");
+        if (world != null) world.setGameRule(GameRule.SEND_COMMAND_FEEDBACK, true);
 
         restaurarShroomlights();
         eliminarPurpleConcrete();
@@ -138,38 +392,38 @@ public class EventoHandler implements Listener {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             File archivo = new File(plugin.getDataFolder(), "contenido_cofres.yml");
             if (archivo.exists()) {
-                if (archivo.delete()) {
-                    plugin.getLogger().info("Archivo de cofres eliminado correctamente.");
-                } else {
-                    plugin.getLogger().warning("No se pudo eliminar el archivo de cofres.");
-                }
+                archivo.delete();
             }
         }, 140L);
-    }
 
-    private boolean isInsideZone(Location loc) {
-        return loc.getBlockX() >= minX && loc.getBlockX() <= maxX
-                && loc.getBlockY() >= minY && loc.getBlockY() <= maxY
-                && loc.getBlockZ() >= minZ && loc.getBlockZ() <= maxZ;
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    if (isInsideArenaGeneral(p.getLocation())) {
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "magictp " + p.getName() + " spawn");
+                    }
+                }
+            }
+        }.runTaskLater(plugin, 300L);
     }
 
     private void reiniciarVariablesBorde() {
-        minX = 19904;
-        maxX = 20096;
-        minZ = 19904;
-        maxZ = 20096;
-        tiempoBorde = 120;
+        minX = arenaMinX;
+        maxX = arenaMaxX;
+        minZ = arenaMinZ;
+        maxZ = arenaMaxZ;
+        tiempoBorde = tiempoBordeInicial;
         bordeReduciendose = false;
     }
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         if (!eventoActivo || preparacion || participantes.size() >= MAX_PARTICIPANTES) return;
+        if (!modoIngreso.equalsIgnoreCase("block")) return;
 
         Player jugador = event.getPlayer();
-        if (participantes.contains(jugador.getName())) {
-            return;
-        }
+        if (participantes.contains(jugador.getName())) return;
 
         if (event.getBlock().getType() == bloqueActual) {
             ItemStack ticket = new ItemStack(Material.ECHO_SHARD);
@@ -178,7 +432,9 @@ public class EventoHandler implements Listener {
             meta.setCustomModelData(1);
             ticket.setItemMeta(meta);
             jugador.getInventory().addItem(ticket);
+
             participantes.add(jugador.getName());
+            aplicarTeamLavaClash(jugador);
 
             String jsonMessage = "[\"\","
                     + "{\"text\":\"\u06de\",\"color\":\"#BA7FD0\"},"
@@ -199,7 +455,9 @@ public class EventoHandler implements Listener {
                 new BukkitRunnable() {
                     @Override
                     public void run() {
-                        teletransportarJugadores();
+                        if (eventoActivo && !preparacion) {
+                            teletransportarJugadores();
+                        }
                     }
                 }.runTaskLater(plugin, 200L);
             }
@@ -214,11 +472,19 @@ public class EventoHandler implements Listener {
             return;
         }
 
-        String tellrawCommand2 = "[\"\",{\"text\":\"\\n\"},{\"text\":\"\\u06de Evento \",\"bold\":true,\"color\":\"#F977F9\"},{\"text\":\"\\u27a4\",\"color\":\"gray\"},{\"text\":\"\\n\\n\"},{\"text\":\"El evento empezará en\",\"color\":\"#C55CF3\"},{\"text\":\" 4 minutos.\",\"bold\":true,\"color\":\"gold\"},{\"text\":\"\\n\"},{\"text\":\"Se recomienda a los\",\"color\":\"#C55CF3\"},{\"text\":\" jugadores\",\"bold\":true,\"color\":\"gold\"},{\"text\":\" que entraron en el evento\",\"color\":\"#C55CF3\"},{\"text\":\"\\n\"},{\"text\":\"que\",\"color\":\"#C55CF3\"},{\"text\":\" guarden\",\"bold\":true,\"color\":\"gold\"},{\"text\":\" sus cosas en\",\"color\":\"#C55CF3\"},{\"text\":\" cofres por seguridad.\",\"bold\":true,\"color\":\"gold\"},{\"text\":\"\\n\\n\"},{\"text\":\"IMPORTANTE\",\"bold\":true,\"color\":\"#F12C51\"},{\"text\":\":\",\"bold\":true,\"color\":\"gray\"},{\"text\":\" Guardar spawn en una cama antes del tp.\",\"bold\":true,\"color\":\"#C55CF3\"},{\"text\":\"\\n \"}]";
+        int totalSegundos = parseTimeToSeconds(timerStart);
+        int m = totalSegundos / 60;
+        int s = totalSegundos % 60;
+        String tiempoTexto = m + (s > 0 ? " min y " + s + " seg" : " minutos");
+
+        String tellrawCommand2 = "[\"\",{\"text\":\"\\n\"},{\"text\":\"\\u06de Evento \",\"bold\":true,\"color\":\"#F977F9\"},{\"text\":\"\\u27a4\",\"color\":\"gray\"},{\"text\":\"\\n\\n\"},{\"text\":\"El evento empezará en\",\"color\":\"#C55CF3\"},{\"text\":\" " + tiempoTexto + ".\",\"bold\":true,\"color\":\"gold\"},{\"text\":\"\\n\"},{\"text\":\"Se recomienda a los\",\"color\":\"#C55CF3\"},{\"text\":\" jugadores\",\"bold\":true,\"color\":\"gold\"},{\"text\":\" que entraron en el evento\",\"color\":\"#C55CF3\"},{\"text\":\"\\n\"},{\"text\":\"que\",\"color\":\"#C55CF3\"},{\"text\":\" guarden\",\"bold\":true,\"color\":\"gold\"},{\"text\":\" sus cosas en\",\"color\":\"#C55CF3\"},{\"text\":\" cofres por seguridad.\",\"bold\":true,\"color\":\"gold\"},{\"text\":\"\\n\\n\"},{\"text\":\"IMPORTANTE\",\"bold\":true,\"color\":\"#F12C51\"},{\"text\":\":\",\"bold\":true,\"color\":\"gray\"},{\"text\":\" Guardar spawn en una cama antes del tp.\",\"bold\":true,\"color\":\"#C55CF3\"},{\"text\":\"\\n \"}]";
+
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a " + tellrawCommand2);
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.noti ambient @a ~ ~ ~ 1 1.3 1");
 
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "addtiempo 00:04:00 on");
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "timers crear @a tiempo=" + timerStart + " sonido=on");
+
+        long delayTicks = (totalSegundos * 20L) + 50L;
 
         Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, () -> {
             guardarContenidoCofres();
@@ -231,25 +497,32 @@ public class EventoHandler implements Listener {
             for (String jugador : participantes) {
                 Player p = Bukkit.getPlayer(jugador);
                 if (p != null && i < shroomlightLocations.size()) {
-                    // Obtener la ubicación y convertirla a coordenadas
+
+                    if (habilidadesManager != null) {
+                        habilidadesManager.disableHabilidades(p);
+                    }
+                    if (habilidadesEffects != null && habilidadesManager != null) {
+                        habilidadesEffects.reapplyAllEffects(p, habilidadesManager);
+                    }
+
+                    if (eventInventoryManager != null) {
+                        eventInventoryManager.saveAndClearInventory(p);
+                    }
+
                     Location loc = shroomlightLocations.get(i).add(0.5, 1, 0.5);
-                    double x = loc.getX();
-                    double y = loc.getY();
-                    double z = loc.getZ();
-                    String comando = String.format("magictp %s %.2f %.2f %.2f", jugador, x, y, z);
+                    String comando = String.format(Locale.US, "magictp %s %.2f %.2f %.2f", jugador, loc.getX(), loc.getY(), loc.getZ());
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), comando);
                     i++;
                 }
             }
-        }, 4850L);
+        }, delayTicks);
     }
-
 
     private List<Location> obtenerShroomlightLocations() {
         List<Location> locations = new ArrayList<>();
-        for (int x = minX; x <= maxX; x++) {
-            for (int y = minY; y <= maxY; y++) {
-                for (int z = minZ; z <= maxZ; z++) {
+        for (int x = arenaMinX; x <= arenaMaxX; x++) {
+            for (int y = arenaMinY; y <= arenaMaxY; y++) {
+                for (int z = arenaMinZ; z <= arenaMaxZ; z++) {
                     Location loc = new Location(Bukkit.getWorld("world"), x, y, z);
                     if (loc.getBlock().getType() == Material.SHROOMLIGHT) {
                         locations.add(loc);
@@ -260,45 +533,113 @@ public class EventoHandler implements Listener {
         return locations;
     }
 
-    public void iniciarSecuenciaInicioSkyBattle() {
-        List<String> offlinePlayers = new ArrayList<>();
+    private List<String> obtenerJugadoresOffline() {
+        List<String> offline = new ArrayList<>();
         for (String nombre : participantes) {
             Player p = Bukkit.getPlayer(nombre);
             if (p == null || !p.isOnline()) {
-                offlinePlayers.add(nombre);
+                offline.add(nombre);
             }
         }
+        return offline;
+    }
+
+    private void iniciarMonitorPausa() {
+        pauseMonitorTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!eventoActivo) {
+                    borrarTextoPausa();
+                    this.cancel();
+                    return;
+                }
+
+                List<String> offlinePlayers = obtenerJugadoresOffline();
+
+                if (offlinePlayers.isEmpty()) {
+                    borrarTextoPausa();
+                    this.cancel();
+                } else {
+                    actualizarTextoPausa(offlinePlayers);
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
+    }
+
+    private void actualizarTextoPausa(List<String> offlinePlayers) {
+        String nuevosNombres = String.join(" ", offlinePlayers);
+        String newText = "&fSe ha sufrido una desconexion de los jugadores\n&#00FFFF" + nuevosNombres + "\n&fel evento ha sido pausado";
+
+        if (!newText.equals(lastPauseText)) {
+            for (Player p : getJugadoresEnZona()) {
+                if (!lastPauseText.isEmpty()) {
+                    ViciontMediaAPI.removeText(p, lastPauseText);
+                }
+                ViciontMediaAPI.sendText(p, "", 9999, "topleft", newText);
+            }
+            lastPauseText = newText;
+        }
+    }
+
+    private void borrarTextoPausa() {
+        if (!lastPauseText.isEmpty()) {
+            for (Player p : getJugadoresEnZona()) {
+                ViciontMediaAPI.removeText(p, lastPauseText);
+            }
+            lastPauseText = "";
+        }
+    }
+
+    public void iniciarSecuenciaInicioSkyBattle() {
+        if (!eventoActivo) return;
+
+        List<String> offlinePlayers = obtenerJugadoresOffline();
 
         if (!offlinePlayers.isEmpty()) {
-            StringBuilder mensaje = new StringBuilder();
-            mensaje.append(ChatColor.RED).append("No se puede iniciar el evento. Los siguientes jugadores están offline:\n");
-            for (String nombre : offlinePlayers) {
-                mensaje.append(ChatColor.YELLOW).append("- ").append(nombre).append("\n");
+            if (pauseMonitorTask == null || pauseMonitorTask.isCancelled()) {
+                iniciarMonitorPausa();
+            } else {
+                actualizarTextoPausa(offlinePlayers);
             }
-            Bukkit.broadcastMessage(mensaje.toString());
             return;
         }
 
+        if (pauseMonitorTask != null) pauseMonitorTask.cancel();
+        borrarTextoPausa();
+
+        // Evitar doble inicio
+        if (secuenciaBatallaIniciada) return;
+        secuenciaBatallaIniciada = true;
+
+        ejecutarSecuenciaBatalla();
+    }
+
+    private void ejecutarSecuenciaBatalla() {
         cancelarTareasActivas();
         int duracionPrimerSonido = 390 * 20;
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound @a record minecraft:custom.espera1");
+
+        getJugadoresEnZona().forEach(p -> {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound " + p.getName() + " * minecraft:custom.fondo_reglas");
+        });
+
         BukkitTask tarea1 = Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!eventoActivo) return;
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.music1_skybattle record @a ~ ~ ~ 1 1 1");
+            getJugadoresEnZona().forEach(p -> p.playSound(p.getLocation(), "minecraft:custom.music1_skybattle", SoundCategory.RECORDS, 0.7f, 1.0f));
 
             BukkitTask tarea2 = Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (!eventoActivo) return;
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound @a * minecraft:custom.music1_skybattle");
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.music2_skybattle record @a ~ ~ ~ 1 1 1");
+                getJugadoresEnZona().forEach(p -> {
+                    p.stopSound("minecraft:custom.music1_skybattle", SoundCategory.RECORDS);
+                    p.playSound(p.getLocation(), "minecraft:custom.music2_skybattle", SoundCategory.RECORDS, 0.7f, 1.0f);
+                });
 
                 BukkitTask tarea3 = Bukkit.getScheduler().runTaskLater(plugin, () -> {
                     if (!eventoActivo) return;
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tick rate 25");
-                    for (Player player : Bukkit.getOnlinePlayers()) {
-                        player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 2, true, false, false));
-                    }
-                    for (Player player : Bukkit.getOnlinePlayers()) {
-                        player.sendTitle("\uE077", " ", 10, 50, 10);
+                    for (String nombreJugador : participantes) {
+                        Player player = Bukkit.getPlayer(nombreJugador);
+                        if (player != null) {
+                            player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 0, true, false, false));
+                        }
                     }
                 }, 180);
                 tareasActivas.add(tarea3);
@@ -307,6 +648,11 @@ public class EventoHandler implements Listener {
         }, 20);
         tareasActivas.add(tarea1);
 
+        BukkitTask tareaCountdownAudio = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!eventoActivo) return;
+            getJugadoresEnZona().forEach(p -> p.playSound(p.getLocation(), "minecraft:custom.lavaclash_countdown", SoundCategory.VOICE, 1.0f, 1.0f));
+        }, 300L);
+        tareasActivas.add(tareaCountdownAudio);
 
         new BukkitRunnable() {
             int contador = 10;
@@ -317,47 +663,42 @@ public class EventoHandler implements Listener {
                     this.cancel();
                     return;
                 }
+
                 if (contador > 0) {
                     String color = "#D172F6";
+
                     if (contador == 3) {
                         color = "yellow";
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.321_fight_mortal_kombat record @a ~ ~ ~ 1 1 1");
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:block.note_block.pling record @a ~ ~ ~ 1 1.8 1");
-                    } else if (contador == 2) {
-                        color = "gold";
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:block.note_block.pling record @a ~ ~ ~ 1 1.9 1");
-                    } else if (contador == 1) {
+                        getJugadoresEnZona().forEach(p -> {
+                            p.playSound(p.getLocation(), "minecraft:custom.321_fight_mortal_kombat", SoundCategory.RECORDS, 1.0f, 1.0f);
+                        });
+                    }
+                    else if (contador == 2) { color = "gold"; }
+                    else if (contador == 1) {
                         color = "red";
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "difficulty peaceful");
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:block.note_block.pling record @a ~ ~ ~ 1 2 1");
-                    } else if (contador == 10) {
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:block.note_block.pling record @a ~ ~ ~ 1 1.1 1");
-                    } else if (contador == 9) {
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:block.note_block.pling record @a ~ ~ ~ 1 1.2 1");
-                    } else if (contador == 8) {
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:block.note_block.pling record @a ~ ~ ~ 1 1.3 1");
-                    } else if (contador == 7) {
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:block.note_block.pling record @a ~ ~ ~ 1 1.4 1");
-                    } else if (contador == 6) {
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:block.note_block.pling record @a ~ ~ ~ 1 1.5 1");
-                    } else if (contador == 5) {
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:block.note_block.pling record @a ~ ~ ~ 1 1.6 1");
-                    } else if (contador == 4) {
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:block.note_block.pling record @a ~ ~ ~ 1 1.7 1");
                     }
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title @a times 0 40 0");
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title @a title [\"\",{\"text\":\"Start\",\"bold\":true,\"color\":\"#D172F6\"},{\"text\":\":\",\"bold\":true,\"color\":\"gray\"}]");
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title @a subtitle [\"\",{\"text\":\"\\u25b6\",\"bold\":true},{\"text\":\"" + contador + "\",\"bold\":true,\"color\":\"" + color + "\"},{\"text\":\"\\u25c0\",\"bold\":true}]");
+
+                    for (Player p : getJugadoresEnZona()) {
+                        String jsonAB = "{\"text\":\"" + contador + "...\",\"bold\":true,\"color\":\"" + color + "\"}";
+                        p.spigot().sendMessage(ChatMessageType.ACTION_BAR, ComponentSerializer.parse(jsonAB));
+                    }
                     contador--;
                 } else {
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title @a title {\"text\":\"Fight!\",\"bold\":true,\"color\":\"#7E5FE6\"}");
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title @a subtitle {\"text\":\"\",\"bold\":true,\"color\":\"#7E5FE6\"}");
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.fight_box record @a ~ ~ ~ 1 1 1");
+                    for (Player p : getJugadoresEnZona()) {
+                        String jsonFight = "{\"text\":\"Fight!\",\"bold\":true,\"color\":\"#7E5FE6\"}";
+                        p.spigot().sendMessage(ChatMessageType.ACTION_BAR, ComponentSerializer.parse(jsonFight));
+
+                        p.playSound(p.getLocation(), "minecraft:custom.fight_box", SoundCategory.RECORDS, 1.0f, 1.0f);
+                        if (discoCommand != null) {
+                            discoCommand.startDisco(p);
+                        }
+                        ViciontMediaAPI.sendShaderApply(p, "wobbleslow");
+                    }
                     this.cancel();
+
                     if (eventoActivo) {
                         iniciarSkyBattle();
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playdisco");
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title @a times 15 25 15");
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "difficulty hard");
                     }
                 }
@@ -365,123 +706,153 @@ public class EventoHandler implements Listener {
         }.runTaskTimer(plugin, 350, 20);
     }
 
-
     public void iniciarSkyBattle() {
         this.eventoEnCurso = true;
-        // Código existente para iniciar SkyBattle
+
+        int colorIndex = 0;
         for (String jugador : participantes) {
             Player p = Bukkit.getPlayer(jugador);
             if (p != null) {
-                p.getInventory().clear();
-                p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 200, 4));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 0));// 10 segundos de resistencia
-
-                ItemStack[] kit = {
-                        new ItemStack(Material.LEATHER_CHESTPLATE),
-                        new ItemStack(Material.LEATHER_LEGGINGS),
-                        new ItemStack(Material.LEATHER_BOOTS),
-                        new ItemStack(Material.STONE_SWORD),
-                        new ItemStack(Material.COOKED_BEEF, 32),
-                        new ItemStack(Material.IRON_PICKAXE),
-                        new ItemStack(Material.PURPLE_CONCRETE, 64)
-                };
-
-                for (ItemStack item : kit) {
-                    if (item.getType() == Material.LEATHER_CHESTPLATE ||
-                            item.getType() == Material.LEATHER_LEGGINGS || item.getType() == Material.LEATHER_BOOTS) {
-                        ItemMeta meta = item.getItemMeta();
-                        meta.addEnchant(Enchantment.PROTECTION, 1, true);
-                        item.setItemMeta(meta);
-                    }
-                    p.getInventory().addItem(item);
-                }
-
-                inicializarScoreboard();
+                darKitBatalla(p, colorIndex);
+                colorIndex++;
             }
         }
 
-        // Guardar ubicaciones originales y romper todos los shroomlight debajo de los jugadores
+        inicializarScoreboard();
+
         ubicacionesShroomlightOriginales = obtenerShroomlightLocations();
         for (Location loc : ubicacionesShroomlightOriginales) {
             loc.getBlock().setType(Material.AIR);
         }
 
         iniciarReduccionBorde();
-
         aplicarDanioFueraDelBorde();
     }
 
+    private void darKitBatalla(Player p, int colorIndex) {
+        p.getInventory().clear();
+        p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 200, 4));
+        p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 0));
+
+        // Paleta de 20 colores distintos para diferenciar a cada jugador
+        Color[] COLORES_ARMADURA = {
+                Color.fromRGB(255, 0, 0), Color.fromRGB(0, 0, 255), Color.fromRGB(0, 255, 0),
+                Color.fromRGB(255, 255, 0), Color.fromRGB(255, 128, 0), Color.fromRGB(128, 0, 128),
+                Color.fromRGB(255, 192, 203), Color.fromRGB(0, 255, 255), Color.fromRGB(0, 255, 128),
+                Color.fromRGB(255, 0, 255), Color.fromRGB(0, 128, 128), Color.fromRGB(0, 0, 128),
+                Color.fromRGB(128, 0, 0), Color.fromRGB(128, 128, 0), Color.fromRGB(255, 255, 255),
+                Color.fromRGB(128, 128, 128), Color.fromRGB(0, 0, 0), Color.fromRGB(192, 192, 192),
+                Color.fromRGB(255, 215, 0), Color.fromRGB(75, 0, 130)
+        };
+
+        Color colorArmadura = COLORES_ARMADURA[colorIndex % COLORES_ARMADURA.length];
+
+        ItemStack pechera = new ItemStack(Material.LEATHER_CHESTPLATE);
+        ItemStack pantalones = new ItemStack(Material.LEATHER_LEGGINGS);
+        ItemStack botas = new ItemStack(Material.LEATHER_BOOTS);
+
+        ItemStack[] armadura = {pechera, pantalones, botas};
+        for (ItemStack pieza : armadura) {
+            org.bukkit.inventory.meta.LeatherArmorMeta meta = (org.bukkit.inventory.meta.LeatherArmorMeta) pieza.getItemMeta();
+            if (meta != null) {
+                meta.setColor(colorArmadura);
+                meta.addEnchant(Enchantment.PROTECTION, 1, true);
+                pieza.setItemMeta(meta);
+            }
+        }
+
+        p.getInventory().setChestplate(pechera);
+        p.getInventory().setLeggings(pantalones);
+        p.getInventory().setBoots(botas);
+
+        p.getInventory().addItem(new ItemStack(Material.STONE_SWORD));
+        p.getInventory().addItem(new ItemStack(Material.COOKED_BEEF, 32));
+        p.getInventory().addItem(new ItemStack(Material.IRON_PICKAXE));
+        p.getInventory().addItem(new ItemStack(Material.PURPLE_CONCRETE, 64));
+    }
+
     private void inicializarScoreboard() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            Scoreboard board = player.getScoreboard();
+        if (eventoScoreboard == null) {
+            eventoScoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+        }
 
-            // Verificar si el objetivo "skybattle" ya existe
-            Objective objective = board.getObjective("skybattle");
-            if (objective == null) {
-                objective = board.registerNewObjective("skybattle", "dummy", "\u3201\uE080\u3201\u3201 ");
-                objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+        Scoreboard mainBoard = Bukkit.getScoreboardManager().getMainScoreboard();
+        for (org.bukkit.scoreboard.Team mainTeam : mainBoard.getTeams()) {
+            if (eventoScoreboard.getTeam(mainTeam.getName()) == null) {
+                org.bukkit.scoreboard.Team t = eventoScoreboard.registerNewTeam(mainTeam.getName());
+                t.setPrefix(mainTeam.getPrefix());
+                t.setSuffix(mainTeam.getSuffix());
+                t.setColor(mainTeam.getColor());
             }
+        }
 
-            for (String entry : board.getEntries()) {
-                board.resetScores(entry);
+        TeamType lc = TeamType.LAVACLASH;
+        org.bukkit.scoreboard.Team teamLC = eventoScoreboard.getTeam(lc.getId());
+        if (teamLC == null) teamLC = eventoScoreboard.registerNewTeam(lc.getId());
+        teamLC.setPrefix(lc.getChatPrefix());
+        teamLC.setColor(lc.getBukkitColor());
+
+        for (String pName : participantes) {
+            if (Bukkit.getPlayer(pName) != null) {
+                teamLC.addEntry(pName);
             }
+        }
 
-            addLine(objective, "§r  ", 9);
-            addLine(objective, "        \uE078", 8);
-            addLine(objective, "§r   ", 7);
-            addLine(objective, "§r     ", 6);
-            addLine(objective, "§r      ", 5);
-            addLine(objective, "§r       ", 4);
-            addLine(objective, "§r        ", 4);
+        Objective objective = eventoScoreboard.getObjective("skybattle");
+        if (objective == null) {
+            objective = eventoScoreboard.registerNewObjective("skybattle", "dummy", "\u3201\uE080\u3201\u3201 ");
+            objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+        }
 
-            addLine(objective, "  §5\uD83D\uDDE1§6§l Players Left§r§l: §a§l" + participantes.size(), 3);
+        crearTeamScoreboard("sb_players", "  §5\uD83D\uDDE1§6§l Players Left§r§l: ", "§a§l" + participantes.size(), 3);
+        crearTeamScoreboard("sb_borde", "  §e⚠§c§l Borde§r§l: ", "§7§l" + obtenerTiempoBorde(), 1);
 
-            addLine(objective, "§r          ", 2);
+        objective.getScore("§r  ").setScore(9);
+        objective.getScore("        \uE078").setScore(8);
+        objective.getScore("§r   ").setScore(7);
+        objective.getScore("§r     ").setScore(6);
+        objective.getScore("§r      ").setScore(5);
+        objective.getScore("§r       ").setScore(4);
+        objective.getScore("§r          ").setScore(2);
+        objective.getScore("§r           ").setScore(0);
 
-            addLine(objective, "  §e⚠§c§l Borde§r§l: §7§l02:00", 1);
-
-            addLine(objective, "§r           ", 0);
+        for (Player player : getJugadoresEnZona()) {
+            player.setScoreboard(eventoScoreboard);
         }
     }
 
-    private void addLine(Objective objective, String text, int score) {
-        Score line = objective.getScore(text);
-        line.setScore(score);
+    private void crearTeamScoreboard(String teamName, String prefix, String suffix, int score) {
+        Objective obj = eventoScoreboard.getObjective("skybattle");
+        org.bukkit.scoreboard.Team team = eventoScoreboard.getTeam(teamName);
+        if (team == null) team = eventoScoreboard.registerNewTeam(teamName);
+
+        String entry = ChatColor.values()[score].toString();
+        team.addEntry(entry);
+        team.setPrefix(prefix);
+        team.setSuffix(suffix);
+        obj.getScore(entry).setScore(score);
     }
 
     private void actualizarScoreboard() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            Scoreboard board = player.getScoreboard();
-            if (board == null) continue;
+        if (eventoScoreboard == null) return;
 
-            Objective objective = board.getObjective("skybattle");
-            if (objective == null) continue;
+        org.bukkit.scoreboard.Team tPlayers = eventoScoreboard.getTeam("sb_players");
+        if (tPlayers != null) {
+            tPlayers.setSuffix("§a§l" + participantes.size());
+        }
 
-            // Actualizar los valores dinámicos
-            String jugadoresRestantesTexto = "  §5\uD83D\uDDE1§6§l Players Left§r§l: §a§l" + participantes.size();
-            String tiempoBordeTexto = bordeReduciendose ? "§4§l> > >" :
-                    (tiempoBorde == -1 ? "§7§l00:00" : "§7§l" + obtenerTiempoBorde());
+        org.bukkit.scoreboard.Team tBorde = eventoScoreboard.getTeam("sb_borde");
+        if (tBorde != null) {
+            String tiempo = bordeReduciendose ? "§4§l> > >" : (tiempoBorde == -1 ? "§7§l00:00" : "§7§l" + obtenerTiempoBorde());
+            tBorde.setSuffix(tiempo);
+        }
 
-            // Actualizar jugadores restantes
-            for (String entry : board.getEntries()) {
-                if (entry.startsWith("  §5\uD83D\uDDE1§6§l Players Left§r§l: §a§l")) {
-                    board.resetScores(entry);
-                    break;
-                }
+        for (Player p : getJugadoresEnZona()) {
+            if (p.getScoreboard() != eventoScoreboard) {
+                p.setScoreboard(eventoScoreboard);
             }
-            objective.getScore(jugadoresRestantesTexto).setScore(3);
-
-            // Actualizar borde
-            for (String entry : board.getEntries()) {
-                if (entry.startsWith("  §e⚠§c§l Borde")) {
-                    board.resetScores(entry);
-                    break;
-                }
-            }
-            objective.getScore("  §e⚠§c§l Borde§r§l: " + tiempoBordeTexto).setScore(1);
         }
     }
-
 
     private String obtenerTiempoBorde() {
         if (tiempoBorde == -1) {
@@ -493,16 +864,31 @@ public class EventoHandler implements Listener {
     }
 
     private void mostrarBordeParticulas(int minX, int maxX, int minZ, int maxZ) {
-        World world = Bukkit.getWorld("world");
+        List<Player> espectadores = getJugadoresEnZona();
+        if (espectadores.isEmpty()) return;
 
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                if ((x == minX || x == maxX || z == minZ || z == maxZ) &&
-                        !(x == 20000 && z == 20000)) {
-                    for (int y = 27; y <= 110; y++) {
-                        world.spawnParticle(Particle.ANGRY_VILLAGER, new Location(world, x, y, z), 1);
-                    }
-                }
+        Particle particula = Particle.ANGRY_VILLAGER;
+        int stepY = 3, stepXZ = 3;
+
+        for (int y = minY; y <= maxY; y += stepY) {
+            for (int z = minZ; z <= maxZ; z += stepXZ) {
+                spawnParticleIfClose(espectadores, particula, minX, y, z);
+                spawnParticleIfClose(espectadores, particula, maxX, y, z);
+            }
+            for (int x = minX; x <= maxX; x += stepXZ) {
+                spawnParticleIfClose(espectadores, particula, x, y, minZ);
+                spawnParticleIfClose(espectadores, particula, x, y, maxZ);
+            }
+        }
+    }
+
+    private void spawnParticleIfClose(List<Player> players, Particle p, int x, int y, int z) {
+        if (x == 20000 && z == 20000) return;
+
+        Location loc = new Location(Bukkit.getWorld("world"), x + 0.5, y + 0.5, z + 0.5);
+        for (Player player : players) {
+            if (player.getLocation().distanceSquared(loc) < 1600) {
+                player.spawnParticle(p, loc, 1, 0, 0, 0, 0);
             }
         }
     }
@@ -520,7 +906,6 @@ public class EventoHandler implements Listener {
         };
         taskBordeParticulas.runTaskTimer(plugin, 0L, 20L);
     }
-
 
     private void iniciarReduccionBorde() {
         taskReduccionBorde = new BukkitRunnable() {
@@ -541,11 +926,12 @@ public class EventoHandler implements Listener {
                         maxZ = 20001;
                         tiempoBorde = -1;
 
-                        Bukkit.broadcastMessage("§§§e§l۞§6§l El borde ha llegado a su límite.§r§§ ");
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title @a title {\"text\":\" \",\"bold\":true,\"color\":\"red\"}");
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title @a subtitle [\"\",{\"text\":\"\\u26a0\",\"bold\":true,\"color\":\"yellow\"},{\"text\":\" El borde ya no se moverá.\",\"bold\":true,\"color\":\"gold\"},{\"text\":\" \\u26a0\",\"bold\":true,\"color\":\"yellow\"}]");
-
-                        Bukkit.getOnlinePlayers().forEach(player -> player.playSound(player.getLocation(), "block.note_block.bell", 1, 0.1f));
+                        enviarMensajeZona("§§§e§l۞§6§l El borde ha llegado a su límite.§r§§ ");
+                        for(Player p : getJugadoresEnZona()) {
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title " + p.getName() + " title {\"text\":\" \",\"bold\":true,\"color\":\"red\"}");
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title " + p.getName() + " subtitle [\"\",{\"text\":\"\\u26a0\",\"bold\":true,\"color\":\"yellow\"},{\"text\":\" El borde ya no se moverá.\",\"bold\":true,\"color\":\"gold\"},{\"text\":\" \\u26a0\",\"bold\":true,\"color\":\"yellow\"}]");
+                            p.playSound(p.getLocation(), "block.note_block.bell", 1, 0.1f);
+                        }
 
                         bordeReduciendose = false;
                         actualizarScoreboard();
@@ -559,11 +945,12 @@ public class EventoHandler implements Listener {
                         @Override
                         public void run() {
                             if (countdown == 0) {
-                                Bukkit.broadcastMessage("§§§c§l۞§4§l El borde ha comenzado a reducirse!!§r§§ ");
-                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title @a title {\"text\":\" \",\"bold\":true,\"color\":\"red\"}");
-                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title @a subtitle [\"\",{\"text\":\"\\u26a0\",\"bold\":true,\"color\":\"red\"},{\"text\":\" Borde reduciéndose. \",\"bold\":true,\"color\":\"dark_red\"},{\"text\":\"\\u26a0\",\"bold\":true,\"color\":\"red\"}]");
-
-                                Bukkit.getOnlinePlayers().forEach(player -> player.playSound(player.getLocation(), "block.note_block.bell", 1, 2f));
+                                enviarMensajeZona("§§§c§l۞§4§l El borde ha comenzado a reducirse!!§r§§ ");
+                                for(Player p : getJugadoresEnZona()) {
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title " + p.getName() + " title {\"text\":\" \",\"bold\":true,\"color\":\"red\"}");
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title " + p.getName() + " subtitle [\"\",{\"text\":\"\\u26a0\",\"bold\":true,\"color\":\"red\"},{\"text\":\" Borde reduciéndose. \",\"bold\":true,\"color\":\"dark_red\"},{\"text\":\"\\u26a0\",\"bold\":true,\"color\":\"red\"}]");
+                                    p.playSound(p.getLocation(), "block.note_block.bell", 1, 2f);
+                                }
 
                                 iniciarReduccionBordeContinuo();
                                 this.cancel();
@@ -575,8 +962,8 @@ public class EventoHandler implements Listener {
                                     default -> "§f§l";
                                 };
 
-                                Bukkit.broadcastMessage("§c۞§7§l El §4§lborde§7§l se reducirá en " + color + countdown);
-                                Bukkit.getOnlinePlayers().forEach(player -> player.playSound(player.getLocation(), "block.note_block.bell", 1, 1.5f));
+                                enviarMensajeZona("§c۞§7§l El §4§lborde§7§l se reducirá en " + color + countdown);
+                                getJugadoresEnZona().forEach(p -> p.playSound(p.getLocation(), "block.note_block.bell", 1, 1.5f));
                                 countdown--;
                             }
                         }
@@ -592,7 +979,6 @@ public class EventoHandler implements Listener {
         mostrarBordeParticulasContinuo();
     }
 
-
     private void iniciarReduccionBordeContinuo() {
         taskReduccionBordeContinuo = new BukkitRunnable() {
             int steps = 10;
@@ -601,14 +987,15 @@ public class EventoHandler implements Listener {
             @Override
             public void run() {
                 if (steps <= 0) {
-                    tiempoBorde = 120;
+                    tiempoBorde = tiempoBordeInicial;
                     bordeReduciendose = false;
 
-                    Bukkit.broadcastMessage("§§§6§l۞ §c§lEl borde se ha detenido. §r§l§§§7§lTiempo reiniciado a§6§l 2 minutos");
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title @a title {\"text\":\" \",\"bold\":true,\"color\":\"red\"}");
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title @a subtitle [\"\",{\"text\":\"\\u26a0\",\"bold\":true,\"color\":\"gold\"},{\"text\":\" Borde Detenido.\",\"bold\":true,\"color\":\"red\"},{\"text\":\" \\u26a0\",\"bold\":true,\"color\":\"gold\"}]");
-
-                    Bukkit.getOnlinePlayers().forEach(player -> player.playSound(player.getLocation(), "block.note_block.bell", 1, 0.1f));
+                    enviarMensajeZona("§§§6§l۞ §c§lEl borde se ha detenido. §r§l§§§7§lTiempo reiniciado a§6§l " + (tiempoBordeInicial / 60) + " minutos");
+                    for(Player p : getJugadoresEnZona()) {
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title " + p.getName() + " title {\"text\":\" \",\"bold\":true,\"color\":\"red\"}");
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title " + p.getName() + " subtitle [\"\",{\"text\":\"\\u26a0\",\"bold\":true,\"color\":\"gold\"},{\"text\":\" Borde Detenido.\",\"bold\":true,\"color\":\"red\"},{\"text\":\" \\u26a0\",\"bold\":true,\"color\":\"gold\"}]");
+                        p.playSound(p.getLocation(), "block.note_block.bell", 1, 0.1f);
+                    }
 
                     actualizarScoreboard();
                     this.cancel();
@@ -627,8 +1014,6 @@ public class EventoHandler implements Listener {
         taskReduccionBordeContinuo.runTaskTimer(plugin, 0L, 20L);
     }
 
-
-
     private void procesarEliminacionJugador(Player jugador, Player atacante, String eliminado, String asesino) {
         jugador.setHealth(jugador.getMaxHealth());
 
@@ -639,12 +1024,17 @@ public class EventoHandler implements Listener {
         });
         jugador.getInventory().clear();
 
-        // Agrega al orden de eliminados
+        if (eventInventoryManager != null) {
+            eventInventoryManager.restoreInventory(jugador);
+        }
+
+        habilidadesManager.enableHabilidades(jugador);
+        habilidadesEffects.reapplyAllEffects(jugador, habilidadesManager);
+
         if (!ordenEliminados.contains(eliminado)) {
             ordenEliminados.add(eliminado);
         }
 
-        // Suma kills al asesino
         if (asesino != null && !asesino.isEmpty()) {
             kills.put(asesino, kills.getOrDefault(asesino, 0) + 1);
         }
@@ -668,17 +1058,14 @@ public class EventoHandler implements Listener {
             atacante.playSound(atacante.getLocation(), Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 2.0f, 2.0f);
         }
 
-        Bukkit.broadcastMessage(mensaje);
-        Bukkit.getOnlinePlayers().forEach(player -> {
+        enviarMensajeZona(mensaje);
+        getJugadoresEnZona().forEach(player -> {
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 2.0f, 0.5f);
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 2.0f, 0.1f);
         });
 
-        // Teletransporta al jugador fuera del evento
-        Location ubiEspec = new Location(jugador.getWorld(), 20015.00, 106.00, 20000.27, -1979.64f, 0.46f);
-        jugador.teleport(ubiEspec);
+        jugador.teleport(zonaEspectadores);
 
-        // Elimina al jugador de la lista de participantes
         participantes.remove(eliminado);
         actualizarScoreboard();
 
@@ -695,11 +1082,9 @@ public class EventoHandler implements Listener {
         String nombreJugador = jugador.getName();
 
         if (participantes.contains(nombreJugador)) {
-            // Solo procesar como eliminación si el evento ya comenzó (iniciarSkyBattle fue llamado)
-            if (this.eventoEnCurso) { // Necesitarás añadir este campo booleano a tu clase
+            if (this.eventoEnCurso) {
                 procesarEliminacionJugador(jugador, null, nombreJugador, "");
-                Bukkit.broadcastMessage("§8§l[§c§l☠§8§l]§6§l " + nombreJugador +
-                        " §r§7ha abandonado el evento");
+                enviarMensajeZona("§8§l[§c§l☠§8§l]§6§l " + nombreJugador + " §r§7ha abandonado el evento");
             }
         }
     }
@@ -710,7 +1095,6 @@ public class EventoHandler implements Listener {
 
         Player jugador = (Player) event.getEntity();
 
-        // Solo procesar eliminaciones si el jugador es participante Y el evento está en curso
         if (participantes.contains(jugador.getName())) {
             if (eventoEnCurso) {
                 double nuevaVida = jugador.getHealth() - event.getFinalDamage();
@@ -766,7 +1150,6 @@ public class EventoHandler implements Listener {
                 lastDamage.getCause() == EntityDamageEvent.DamageCause.PROJECTILE) {
             return jugador.getKiller();
         }
-
         return null;
     }
 
@@ -786,11 +1169,11 @@ public class EventoHandler implements Listener {
             }
 
             String[] colores = {
-                    ChatColor.of("#ffbf00").toString(), // 1° - Oro
-                    ChatColor.of("#e3e4e5").toString(), // 2° - Plata
-                    ChatColor.of("#cd7f32").toString(), // 3° - Bronce
-                    ChatColor.of("#00aaaa").toString(), // 4° - Cian
-                    ChatColor.of("#00aaaa").toString()  // 5° - Cian
+                    ChatColor.of("#ffbf00").toString(),
+                    ChatColor.of("#e3e4e5").toString(),
+                    ChatColor.of("#cd7f32").toString(),
+                    ChatColor.of("#00aaaa").toString(),
+                    ChatColor.of("#00aaaa").toString()
             };
 
             for (int i = 0; i < Math.min(5, topJugadores.size()); i++) {
@@ -814,9 +1197,8 @@ public class EventoHandler implements Listener {
 
             mensaje.append(ChatColor.DARK_PURPLE + "" + ChatColor.STRIKETHROUGH + "                                             " + ChatColor.RESET + "\n");
 
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                player.sendMessage(mensaje.toString());
-            }
+            enviarMensajeZona(mensaje.toString());
+
         }, 100L);
     }
 
@@ -826,27 +1208,40 @@ public class EventoHandler implements Listener {
             if (ganador != null) {
                 cancelarEfectosBorde();
                 reiniciarVariablesBorde();
-                Bukkit.broadcastMessage("§d۞§6§l " + ganador.getName() + " §f§lha ganado el evento §e§lLavaClash!§7§l.");
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound @a record minecraft:custom.music1_skybattle");
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound @a record minecraft:custom.music2_skybattle");
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopdisco");
+                enviarMensajeZona("§d۞§6§l " + ganador.getName() + " §f§lha ganado el evento §e§lLavaClash!§7§l.");
+
+                getJugadoresEnZona().forEach(p -> {
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound " + p.getName() + " record minecraft:custom.music1_skybattle");
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound " + p.getName() + " record minecraft:custom.music2_skybattle");
+                    if (discoCommand != null) {
+                        discoCommand.stopDisco(p);
+                    }
+                    ViciontMediaAPI.sendShaderRemove(p, "wobbleslow");
+                });
+
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tick rate 20");
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect clear @a minecraft:speed");
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect clear @a minecraft:night_vision");
-                // Teletransporta al ganador a la ubicación de espectadores
-                Location ubiEspec = new Location(ganador.getWorld(), 20015.00, 106.00, 20000.27, -1979.64f, 0.46f);
-                ganador.teleport(ubiEspec);
+
+                habilidadesManager.enableHabilidades(ganador);
+                habilidadesEffects.reapplyAllEffects(ganador, habilidadesManager);
+
+                ganador.teleport(zonaEspectadores);
                 ganador.getInventory().clear();
 
-                for (Player p : Bukkit.getOnlinePlayers()) {
+                if (eventInventoryManager != null) {
+                    eventInventoryManager.restoreInventory(ganador);
+                }
+
+                for (Player p : getJugadoresEnZona()) {
                     p.sendTitle(
                             "\uE082 ",
                             "§8§l>§6§l " + ganador.getName() + "§8§l <",
                             15, 200, 15
                     );
 
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:ui.toast.challenge_complete record @a ~ ~ ~ 5 1 1");
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.win_box record @a ~ ~ ~ 2 1 1");
+                    p.playSound(p.getLocation(), "minecraft:ui.toast.challenge_complete", SoundCategory.RECORDS, 5, 1);
+                    p.playSound(p.getLocation(), "minecraft:custom.win_box", SoundCategory.RECORDS, 2, 1);
                 }
 
                 Bukkit.getScheduler().runTaskLater(plugin, this::mostrarTopJugadores, 100L);
@@ -856,7 +1251,6 @@ public class EventoHandler implements Listener {
         }
     }
 
-
     private void restaurarShroomlights() {
         for (Location loc : ubicacionesShroomlightOriginales) {
             loc.getBlock().setType(Material.SHROOMLIGHT);
@@ -864,9 +1258,9 @@ public class EventoHandler implements Listener {
     }
 
     public void eliminarPurpleConcrete() {
-        for (int x = minX; x <= maxX; x++) {
-            for (int y = minY; y <= maxY; y++) {
-                for (int z = minZ; z <= maxZ; z++) {
+        for (int x = arenaMinX; x <= arenaMaxX; x++) {
+            for (int y = arenaMinY; y <= arenaMaxY; y++) {
+                for (int z = arenaMinZ; z <= arenaMaxZ; z++) {
                     Location loc = new Location(Bukkit.getWorld("world"), x, y, z);
                     if (loc.getBlock().getType() == Material.PURPLE_CONCRETE || loc.getBlock().getType() == Material.COBWEB) {
                         loc.getBlock().setType(Material.AIR);
@@ -903,12 +1297,11 @@ public class EventoHandler implements Listener {
         }.runTaskTimer(plugin, 0L, 20L);
     }
 
-
     private void guardarEstadoEvento() {
-        FileConfiguration config = YamlConfiguration.loadConfiguration(estadoArchivo);
-        config.set("eventoActivo", eventoActivo);
+        FileConfiguration configState = YamlConfiguration.loadConfiguration(estadoArchivo);
+        configState.set("eventoActivo", eventoActivo);
         try {
-            config.save(estadoArchivo);
+            configState.save(estadoArchivo);
         } catch (IOException e) {
             plugin.getLogger().severe("No se pudo guardar el estado del evento: " + e.getMessage());
         }
@@ -917,8 +1310,8 @@ public class EventoHandler implements Listener {
     private void verificarEstadoEvento() {
         if (!estadoArchivo.exists()) return;
 
-        FileConfiguration config = YamlConfiguration.loadConfiguration(estadoArchivo);
-        boolean estadoGuardado = config.getBoolean("eventoActivo", false);
+        FileConfiguration configState = YamlConfiguration.loadConfiguration(estadoArchivo);
+        boolean estadoGuardado = configState.getBoolean("eventoActivo", false);
 
         if (estadoGuardado) {
             plugin.getLogger().warning("El evento estaba activo antes del reinicio. Finalizando automáticamente...");
@@ -926,7 +1319,6 @@ public class EventoHandler implements Listener {
         }
     }
 
-    // Evento para permitir romper cualquier bloque en modo creativo
     @EventHandler
     public void onBlockEvent(BlockBreakEvent event) {
         Block block = event.getBlock();
@@ -936,7 +1328,7 @@ public class EventoHandler implements Listener {
             return;
         }
 
-        if (isInsideZone(block.getLocation())) {
+        if (isInsideArenaGeneral(block.getLocation())) {
             if (block.getType() == Material.PURPLE_CONCRETE || block.getType() == Material.COBWEB || block.getType() == Material.SCAFFOLDING) {
                 event.setDropItems(false);
             } else {
@@ -955,15 +1347,24 @@ public class EventoHandler implements Listener {
             return;
         }
 
+        if (event.getBlockReplacedState().getType() == Material.LAVA) {
+            org.bukkit.block.data.Levelled lava = (org.bukkit.block.data.Levelled) event.getBlockReplacedState().getBlockData();
+            if (lava.getLevel() == 0) { // Nivel 0 significa que es el bloque fuente completo
+                event.setCancelled(true);
+                player.sendMessage(ChatColor.RED + "No puedes colocar bloques sobre la lava.");
+                return;
+            }
+        }
+
         if (!eventoActivo) {
-            if (isInsideZone(block.getLocation())) {
+            if (isInsideArenaGeneral(block.getLocation())) {
                 event.setCancelled(true);
                 player.sendMessage(ChatColor.RED + "No puedes colocar este bloque aquí.");
             }
             return;
         }
 
-        if (isInsideZone(block.getLocation())) {
+        if (isInsideArenaGeneral(block.getLocation())) {
             if (block.getType() == Material.PURPLE_CONCRETE || block.getType() == Material.COBWEB || block.getType() == Material.SCAFFOLDING) {
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     EquipmentSlot hand = event.getHand();
@@ -981,7 +1382,7 @@ public class EventoHandler implements Listener {
                 });
             } else if (block.getType() == Material.TNT) {
                 TNTPrimed tnt = (TNTPrimed) block.getWorld().spawn(block.getLocation(), TNTPrimed.class);
-                tnt.setFuseTicks(80);
+                tnt.setFuseTicks(60);
                 block.setType(Material.AIR);
             } else {
                 event.setCancelled(true);
@@ -990,20 +1391,18 @@ public class EventoHandler implements Listener {
         }
     }
 
-    // Prevenir daño por explosiones
     @EventHandler
     public void onEntityExplode(EntityExplodeEvent event) {
-        if (isInsideZone(event.getLocation())) {
+        if (isInsideArenaGeneral(event.getLocation())) {
             event.blockList().removeIf(block -> block.getType() != Material.PURPLE_CONCRETE);
         }
     }
 
     @EventHandler
     public void onEntitySpawn(EntitySpawnEvent event) {
-        if (eventoActivo && isInsideZone(event.getLocation())) {
+        if (eventoActivo && isInsideArenaGeneral(event.getLocation())) {
             if (event.getEntity() instanceof Monster) {
                 if (event instanceof CreatureSpawnEvent creatureEvent) {
-
                     if (creatureEvent.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG) {
                         Player player = creatureEvent.getEntity().getWorld().getNearbyEntities(event.getLocation(), 1, 1, 1).stream()
                                 .filter(e -> e instanceof Player)
@@ -1032,8 +1431,7 @@ public class EventoHandler implements Listener {
     public void onChunkLoad(ChunkLoadEvent event) {
         if (eventoActivo) {
             for (Entity entity : event.getChunk().getEntities()) {
-                if (entity instanceof Monster mob && isInsideZone(entity.getLocation())) {
-
+                if (entity instanceof Monster mob && isInsideArenaGeneral(entity.getLocation())) {
                     if (!mob.getScoreboardTags().stream().anyMatch(tag -> tag.startsWith("owner:"))) {
                         mob.remove();
                     }
@@ -1045,7 +1443,6 @@ public class EventoHandler implements Listener {
     @EventHandler
     public void onEntityTarget(EntityTargetLivingEntityEvent event) {
         if (eventoActivo && event.getEntity() instanceof Monster mob && event.getTarget() instanceof Player player) {
-
             if (mob.getScoreboardTags().contains("owner:" + player.getUniqueId())) {
                 event.setCancelled(true);
             }
@@ -1053,79 +1450,105 @@ public class EventoHandler implements Listener {
     }
 
     public void eliminarMobsExistentes() {
-        if (eventoActivo) {
-            for (World world : Bukkit.getWorlds()) {
-                for (Entity entity : world.getEntities()) {
-                    if (entity instanceof Monster mob && isInsideZone(entity.getLocation())) {
+        if (!eventoActivo) return;
+        World world = Bukkit.getWorld("world");
+        if (world == null) return;
 
-                        if (!mob.getScoreboardTags().stream().anyMatch(tag -> tag.startsWith("owner:"))) {
-                            mob.remove();
-                        }
-                    }
+        org.bukkit.util.BoundingBox arenaBox = new org.bukkit.util.BoundingBox(arenaMinX, arenaMinY, arenaMinZ, arenaMaxX, arenaMaxY, arenaMaxZ);
+
+        for (Entity entity : world.getNearbyEntities(arenaBox)) {
+            if (entity instanceof Monster mob) {
+                if (!mob.getScoreboardTags().stream().anyMatch(tag -> tag.startsWith("owner:"))) {
+                    mob.remove();
                 }
             }
         }
     }
 
     public void espera1() {
-        new BukkitRunnable() {
+        for (Player p : getJugadoresEnZona()) {
+            p.playSound(p, "minecraft:custom.fondo_reglas", SoundCategory.RECORDS, 1.0f, 1.0f);
+        }
+
+        BukkitTask t1 = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            for (Player p : getJugadoresEnZona()) {
+                ViciontCinematicAPI.sendPlay(p, "lavaclash", "LINEAR", true, 1);
+            }
+        }, 200L);
+        tareasActivas.add(t1);
+
+        BukkitTask t2 = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            getJugadoresEnZona().forEach(p -> {
+                p.playSound(p, "minecraft:custom.evento_lavaclash_audio", SoundCategory.MASTER, 1.0f, 1.0f);
+            });
+        }, 260L);
+        tareasActivas.add(t2);
+
+        sendPersistentActionBar("{\"text\":\"Bienvenidos a todos al primer\\nevento. Este evento se llama.\\n\\\"LavaClash\\\"\"}", 260L, 120L);
+
+        BukkitTask t3 = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            getJugadoresEnZona().forEach(p -> p.sendTitle("\uE086", "", 20, 40, 20));
+        }, 350L);
+        tareasActivas.add(t3);
+
+        sendPersistentActionBar("{\"text\":\"En este evento deberán\\nlootear los cofres y\\nderrotar a sus oponentes.\"}", 380L, 80L);
+        sendPersistentActionBar("{\"text\":\"Cada 2 minutos, el borde se\\nirá cerrando hacia el centro.\"}", 460L, 80L);
+        sendPersistentActionBar("{\"text\":\"Todos los jugadores poseen bloques\\nque se pueden colocar infinitamente,\\nya sea para cubrirse o escapar.\"}", 540L, 160L);
+        sendPersistentActionBar("{\"text\":\"Los últimos 2 jugadores que\\nqueden vivos tendrán recompensa,\\ny el primer lugar obtendrá una\\norbe de resurrección.\"}", 700L, 160L);
+        sendPersistentActionBar("{\"text\":\"Buena Suerte!\"}", 860L, 40L);
+
+        BukkitTask t9 = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            TiempoCommand tiempoCommand = (TiempoCommand) plugin.getCommand("timers").getExecutor();
+
+            int m = tiempoReglasSegundos / 60;
+            int s = tiempoReglasSegundos % 60;
+            String timeFormat = String.format("%02d:%02d:%02d", 0, m, s);
+
+            for (Player p : getJugadoresEnZona()) {
+                ViciontCinematicAPI.sendPlay(p, "lavaclash_bucle", "SMOOTH", false, -1);
+                ViciontMediaAPI.sendMedia(p, "instrucciones_lavaclash.png", null, -1L, 0, "center", 100, false, true);
+
+                if (tiempoCommand != null) {
+                    tiempoCommand.createPlayerBossBar(p, "sinNombre", tiempoReglasSegundos, timeFormat, "on");
+                }
+            }
+        }, 892L);
+        tareasActivas.add(t9);
+
+        long endTicks = 892L + (tiempoReglasSegundos * 20L);
+        BukkitTask t10 = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            for (Player p : getJugadoresEnZona()) {
+                ViciontCinematicAPI.sendStop(p, "lavaclash_bucle");
+                ViciontMediaAPI.stopSpecific(p, "instrucciones_lavaclash.png");
+            }
+        }, endTicks);
+        tareasActivas.add(t10);
+    }
+
+    private void sendPersistentActionBar(String jsonText, long delayTicks, long durationTicks) {
+        BukkitTask task = new BukkitRunnable() {
+            long elapsed = 0;
+
             @Override
             public void run() {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.espera1 record @a ~ ~ ~ 0.2 1 1");
+                if (elapsed >= durationTicks) {
+                    this.cancel();
+                    return;
+                }
 
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a [\"\",{\"text\":\"\\n\\n\\n\\n\\n\"},{\"text\":\"\\u06de instrucciones \",\"bold\":true,\"color\":\"#F977F9\"},{\"text\":\"\\u27a4\",\"color\":\"gray\"},{\"text\":\"\\n\\n\"},{\"text\":\"Bienvenidos todos al primer evento \",\"color\":\"#C55CF3\"},{\"text\":\"\\\"Lavaclash\\\"\",\"bold\":true,\"color\":\"gold\"},{\"text\":\".\\nAquí unas pequeñas instrucciones para que sepan\\nde qué trata:\",\"color\":\"#C55CF3\"},{\"text\":\"\\n\\n\"}]");
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.noti ambient @a ~ ~ ~ 1 1.3 1");
+                getJugadoresEnZona().forEach(p -> {
+                    p.spigot().sendMessage(ChatMessageType.ACTION_BAR, ComponentSerializer.parse(jsonText));
+                });
 
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a [\"\",{\"text\":\"\\n\\n\\n\\n\\n\"},{\"text\":\"El \",\"color\":\"#C55CF3\"},{\"text\":\"LavaClash\",\"bold\":true,\"color\":\"gold\"},{\"text\":\" básicamente consiste en una\\ncombinación de \",\"color\":\"#C55CF3\"},{\"text\":\"\\\"skywars\\\"\",\"bold\":true,\"color\":\"#518BEC\"},{\"text\":\" y \",\"color\":\"#C55CF3\"},{\"text\":\"\\\"skybattle\\\"\",\"bold\":true,\"color\":\"#518BEC\"},{\"text\":\". Básicamente,\\ndeberán \",\"color\":\"#C55CF3\"},{\"text\":\"lootear\",\"bold\":true,\"color\":\"#C55CF3\"},{\"text\":\" y \",\"color\":\"#C55CF3\"},{\"text\":\"matar\",\"bold\":true,\"color\":\"#C55CF3\"},{\"text\":\" a los jugadores.\",\"color\":\"#C55CF3\"},{\"text\":\"\\n\\n\\n\"}]");
-                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.noti ambient @a ~ ~ ~ 1 1.3 1");
-
-                                new BukkitRunnable() {
-                                    @Override
-                                    public void run() {
-                                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a [\"\",{\"text\":\"\\n\\n\\n\\n\\n\"},{\"text\":\"En el mapa habran \",\"color\":\"#C55CF3\"},{\"text\":\"items especiales\",\"bold\":true,\"color\":\"light_purple\"},{\"text\":\" que les ayudara\\na tener ventajas de otros, como las \",\"color\":\"#C55CF3\"},{\"text\":\"\\\"WindCharge\\\"\",\"bold\":true,\"color\":\"gray\"},{\"text\":\"\\n\"},{\"text\":\"\\\"Manzana de vida\\\"\",\"bold\":true,\"color\":\"#EC6451\"},{\"text\":\" o la \",\"color\":\"#C55CF3\"},{\"text\":\"\\\"Pluma de Levitación\\\"\",\"bold\":true,\"color\":\"#518BEC\"},{\"text\":\"\\n\\n\\n\"}]");
-                                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.noti ambient @a ~ ~ ~ 1 1.3 1");
-
-                                        new BukkitRunnable() {
-                                            @Override
-                                            public void run() {
-                                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a [\"\",{\"text\":\"\\n\\n\\n\\n\\n\"},{\"text\":\"Cada \",\"color\":\"#C55CF3\"},{\"text\":\"2 minutos\",\"bold\":true,\"color\":\"red\"},{\"text\":\" habrá un borde que se \",\"color\":\"#C55CF3\"},{\"text\":\"reducirá\",\"bold\":true,\"color\":\"#C55CF3\"},{\"text\":\"\\nhasta llegar al \",\"color\":\"#C55CF3\"},{\"text\":\"centro del mapa\",\"bold\":true,\"color\":\"light_purple\"},{\"text\":\".\",\"color\":\"#C55CF3\"},{\"text\":\"\\n\\n\\n\"}]");
-                                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.noti ambient @a ~ ~ ~ 1 1.3 1");
-
-                                                new BukkitRunnable() {
-                                                    @Override
-                                                    public void run() {
-                                                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a [\"\",{\"text\":\"\\n\\n\\n\\n\\n\"},{\"text\":\"El \",\"color\":\"#C55CF3\"},{\"text\":\"último\",\"bold\":true,\"color\":\"#C55CF3\"},{\"text\":\" que quede vivo \",\"color\":\"#C55CF3\"},{\"text\":\"ganará\",\"bold\":true,\"color\":\"gold\"},{\"text\":\", y habrá un\",\"color\":\"#C55CF3\"},{\"text\":\"\\n\"},{\"text\":\"top 5\",\"bold\":true,\"color\":\"red\"},{\"text\":\" de los últimos supervivientes con un contador\\nde kills.\",\"color\":\"#C55CF3\"},{\"text\":\"\\n\\n\\n\"}]");
-                                                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.noti ambient @a ~ ~ ~ 1 1.3 1");
-
-                                                        new BukkitRunnable() {
-                                                            @Override
-                                                            public void run() {
-                                                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a [\"\",{\"text\":\"\\n\\n\\n\\n\\n\"},{\"text\":\"Los últimos 3\",\"bold\":true,\"color\":\"#C55CF3\"},{\"text\":\" que sobrevivan al \",\"color\":\"#C55CF3\"},{\"text\":\"LavaClash\",\"bold\":true,\"color\":\"gold\"},{\"text\":\" recibirán\\nuna \",\"color\":\"#C55CF3\"},{\"text\":\"recompensa\",\"bold\":true,\"color\":\"#B8F794\"},{\"text\":\".\",\"color\":\"#C55CF3\"},{\"text\":\"\\n\\n\"},{\"text\":\"¡Buena suerte a los participantes!\",\"bold\":true,\"color\":\"light_purple\"},{\"text\":\"\\n\\n\\n\"}]");
-                                                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "playsound minecraft:custom.noti ambient @a ~ ~ ~ 1 1.3 1");
-                                                            }
-                                                        }.runTaskLater(plugin, 20 * 6);
-                                                    }
-                                                }.runTaskLater(plugin, 20 * 5);
-                                            }
-                                        }.runTaskLater(plugin, 20 * 10);
-                                    }
-                                }.runTaskLater(plugin, 20 * 10);
-                            }
-                        }.runTaskLater(plugin, 20 * 10);
-                    }
-                }.runTaskLater(plugin, 20 * 5);
+                elapsed += 20;
             }
-        }.runTaskLater(plugin, 20 * 4);
+        }.runTaskTimer(plugin, delayTicks, 20L);
+
+        tareasActivas.add(task);
     }
 
     public void guardarContenidoCofres() {
-        cofresHandler.guardarContenidoCofres(minX, maxX, minZ, maxZ);
+        cofresHandler.guardarContenidoCofres(arenaMinX, arenaMaxX, arenaMinZ, arenaMaxZ);
     }
 
     public void restaurarContenidoCofres() {
@@ -1135,21 +1558,23 @@ public class EventoHandler implements Listener {
     public void cargarCofresDesdeArchivo() {
         cofresHandler.cargarCofresDesdeArchivo();
     }
+
     private void guardarDatosFinales() {
         File archivo = new File(plugin.getDataFolder(), "resultados.yml");
-        FileConfiguration config = YamlConfiguration.loadConfiguration(archivo);
+        FileConfiguration resultsConfig = YamlConfiguration.loadConfiguration(archivo);
 
-        config.set("orden_eliminados", ordenEliminados);
+        resultsConfig.set("orden_eliminados", ordenEliminados);
         for (Map.Entry<String, Integer> entry : kills.entrySet()) {
-            config.set("kills." + entry.getKey(), entry.getValue());
+            resultsConfig.set("kills." + entry.getKey(), entry.getValue());
         }
 
         try {
-            config.save(archivo);
+            resultsConfig.save(archivo);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
     private void cancelarTareasActivas() {
         for (BukkitTask tarea : tareasActivas) {
             if (tarea != null && !tarea.isCancelled()) {
@@ -1158,16 +1583,17 @@ public class EventoHandler implements Listener {
         }
         tareasActivas.clear();
     }
-    private void cancelarEfectosBorde() {
-        // Detener los títulos del borde
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title @a clear");
 
-        // Detener cualquier sonido relacionado con el borde
-        Bukkit.getOnlinePlayers().forEach(player -> {
-            player.stopSound("block.note_block.bell");
+    private void cancelarEfectosBorde() {
+        getJugadoresEnZona().forEach(p -> {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "title " + p.getName() + " clear");
+            p.stopSound("block.note_block.bell");
+            if (discoCommand != null) {
+                discoCommand.stopDisco(p);
+            }
+            ViciontMediaAPI.sendShaderRemove(p, "wobbleslow");
         });
 
-        // Cancelar solo las tareas del borde
         if (taskBordeParticulas != null) {
             taskBordeParticulas.cancel();
             taskBordeParticulas = null;
@@ -1184,11 +1610,9 @@ public class EventoHandler implements Listener {
         }
     }
 
-    //COMANDO
-    // Añade este método a la clase EventoHandler
     public void gestionarParticipantes(CommandSender sender, String[] args) {
         if (args.length < 1) {
-            sender.sendMessage(ChatColor.RED + "Uso: /evento1 participantes <list|add|remove> [jugador]");
+            sender.sendMessage(ChatColor.RED + "Uso: /lavaclash <list|add|remove> [jugador]");
             return;
         }
 
@@ -1198,14 +1622,14 @@ public class EventoHandler implements Listener {
                 break;
             case "add":
                 if (args.length < 2) {
-                    sender.sendMessage(ChatColor.RED + "Uso: /evento1 participantes add <jugador>");
+                    sender.sendMessage(ChatColor.RED + "Uso: /lavaclash add <jugador>");
                     return;
                 }
                 agregarParticipante(sender, args[1]);
                 break;
             case "remove":
                 if (args.length < 2) {
-                    sender.sendMessage(ChatColor.RED + "Uso: /evento1 participantes remove <jugador>");
+                    sender.sendMessage(ChatColor.RED + "Uso: /lavaclash remove <jugador>");
                     return;
                 }
                 removerParticipante(sender, args[1]);
@@ -1240,9 +1664,25 @@ public class EventoHandler implements Listener {
         }
 
         participantes.add(nombreJugador);
+        Player p = Bukkit.getPlayer(nombreJugador);
+        if (p != null) {
+            aplicarTeamLavaClash(p);
+
+            if (eventoEnCurso || preparacion) {
+                habilidadesManager.disableHabilidades(p);
+                habilidadesEffects.reapplyAllEffects(p, habilidadesManager);
+
+                if (eventInventoryManager != null) {
+                    eventInventoryManager.saveAndClearInventory(p);
+                }
+
+                if (eventoEnCurso) {
+                    darKitBatalla(p, participantes.size());
+                }
+            }
+        }
         sender.sendMessage(ChatColor.GREEN + "Jugador " + nombreJugador + " agregado al evento");
 
-        // Mensaje como en onBlockBreak
         String jsonMessage = "[\"\","
                 + "{\"text\":\"\u06de\",\"color\":\"#BA7FD0\"},"
                 + "{\"text\":\" " + nombreJugador + "\",\"bold\":true,\"color\":\"#863ECF\"},"
@@ -1265,15 +1705,17 @@ public class EventoHandler implements Listener {
         }
 
         participantes.remove(nombreJugador);
-        sender.sendMessage(ChatColor.GREEN + "Jugador " + nombreJugador + " eliminado del evento");
-
-/*        // Si el evento no ha empezado, teletransportar al spawn
-        if (!eventoActivo) {
-            Player jugador = Bukkit.getPlayer(nombreJugador);
-            if (jugador != null) {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "magictp " + nombreJugador + " spawn");
+        restaurarTeamOriginal(nombreJugador);
+        Player p = Bukkit.getPlayer(nombreJugador);
+        if (p != null) {
+            p.getInventory().clear();
+            if (eventInventoryManager != null) {
+                eventInventoryManager.restoreInventory(p);
             }
-        }*/
-    }
 
+            habilidadesManager.enableHabilidades(p);
+            habilidadesEffects.reapplyAllEffects(p, habilidadesManager);
+        }
+        sender.sendMessage(ChatColor.GREEN + "Jugador " + nombreJugador + " eliminado del evento");
+    }
 }

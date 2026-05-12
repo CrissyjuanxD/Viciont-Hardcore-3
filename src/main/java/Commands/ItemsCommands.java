@@ -47,6 +47,7 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
     private final GuardianShulkerHeart guardianShulkerHeart;
     private final CustomBoat customBoat;
     private final TridenteEspectral tridenteEspectral;
+    private final ItemsEventos itemsEventos;
 
     //Items No configurados en las demas clases de items
     private final FlashlightItem flashlightItem;
@@ -70,6 +71,7 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
         this.customBoat = new CustomBoat(plugin);
         this.tridenteEspectral = new TridenteEspectral(plugin);
         this.flashlightItem = new FlashlightItem(plugin);
+        this.itemsEventos = new ItemsEventos(plugin);
         plugin.getCommand("givevct").setExecutor(this);
         plugin.getCommand("givevct").setTabCompleter(this);
     }
@@ -426,18 +428,6 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
                 item = EconomyItems.createPurpleMochila();
                 item.setAmount(cantidad);
                 break;
-            case "mochila_negra":
-                item = EconomyItems.createBlackMochila();
-                item.setAmount(cantidad);
-                break;
-            case "mochila_blanca":
-                item = EconomyItems.createWhiteMochila();
-                item.setAmount(cantidad);
-                break;
-            case "mochila_amarilla":
-                item = EconomyItems.createYellowMochila();
-                item.setAmount(cantidad);
-                break;
             case "enderbag":
                 item = EconomyItems.createEnderBag();
                 item.setAmount(cantidad);
@@ -514,6 +504,31 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
                 break;
             case "serum_de_serenidad":
                 item = CorrupcionAnsiosaItems.createSerumSerenidad();
+                item.setAmount(cantidad);
+                break;
+            case "sculk_crystal_raw":
+                item = InfestedCaveItems.createRawSculkCrystal(cantidad);
+                item.setAmount(cantidad);
+                break;
+            case "sculk_crystal_fragment":
+                item = InfestedCaveItems.createSculkCrystalFragment();
+                item.setAmount(cantidad);
+                break;
+            case "runa_vacia":
+                item = InfestedCaveItems.createEmptyRune();
+                item.setAmount(cantidad);
+                break;
+            case "runa_de_sculk":
+                item = InfestedCaveItems.createNormalRune();
+                item.setAmount(cantidad);
+                break;
+                //ITEMS NUEVOS
+            case "manzana_vida":
+                item = itemsEventos.createManzanaVida();
+                item.setAmount(cantidad);
+                break;
+            case "pluma_levitacion":
+                item = itemsEventos.createPlumaLevitacion();
                 item.setAmount(cantidad);
                 break;
             default:
@@ -605,9 +620,6 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
             completions.add("mochila_roja");
             completions.add("mochila_azul");
             completions.add("mochila_morada");
-            completions.add("mochila_negra");
-            completions.add("mochila_blanca");
-            completions.add("mochila_amarilla");
             completions.add("enderbag");
             completions.add("gancho");
             completions.add("panic_apple");
@@ -627,6 +639,13 @@ public class ItemsCommands implements CommandExecutor, TabCompleter {
             completions.add("manzana_marchita");
             completions.add("compuesto_s13");
             completions.add("serum_de_serenidad");
+            completions.add("sculk_crystal_raw");
+            completions.add("sculk_crystal_fragment");
+            completions.add("runa_vacia");
+            completions.add("runa_de_sculk");
+            //ITEMS NUEVOS
+            completions.add("manzana_vida");
+            completions.add("pluma_levitacion");
         } else if (args.length == 2) {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 completions.add(player.getName());

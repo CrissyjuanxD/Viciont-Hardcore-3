@@ -4,8 +4,6 @@ import TitleListener.SuccessNotification;
 import items.DoubleLifeTotem;
 import items.EconomyItems;
 import org.bukkit.Material;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -17,7 +15,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import net.md_5.bungee.api.ChatColor;
 import vct.hardcore3.ViciontHardcore3;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -73,20 +70,7 @@ public class Mission5 implements Mission, Listener {
 
     @Override
     public void initializePlayerData(String playerName) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-
-        // Inicializar progreso de armadura de netherite
-        String[] armorPieces = {"helmet", "chestplate", "leggings", "boots"};
-        for (String piece : armorPieces) {
-            data.set("players." + playerName + ".missions.5.netherite_armor." + piece, false);
-            data.set("players." + playerName + ".missions.5.protection." + piece, false);
-        }
-
-        try {
-            data.save(missionHandler.getMissionFile());
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al inicializar datos de Misión 5: " + e.getMessage());
-        }
+        // No es necesario inicializar con JSON
     }
 
     @Override
@@ -96,18 +80,12 @@ public class Mission5 implements Mission, Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) return;
-        if (!missionHandler.isMissionActive(5)) return;
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!missionHandler.isMissionActive(player, 5)) return;
 
-        Player player = (Player) event.getWhoClicked();
+        MissionData data = missionHandler.getData(player, 5);
+        if (data.isCompleted()) return;
 
-        // Verificar si ya completó la misión
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        if (data.getBoolean("players." + player.getName() + ".missions.5.completed", false)) {
-            return;
-        }
-
-        // Verificar después de un tick
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             checkNetheriteArmorWithProtection(player);
         }, 1L);
@@ -115,25 +93,20 @@ public class Mission5 implements Mission, Listener {
 
     @EventHandler
     public void onItemHeld(PlayerItemHeldEvent event) {
-        if (!missionHandler.isMissionActive(5)) return;
-
         Player player = event.getPlayer();
+        if (!missionHandler.isMissionActive(player, 5)) return;
 
-        // Verificar si ya completó la misión
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        if (data.getBoolean("players." + player.getName() + ".missions.5.completed", false)) {
-            return;
-        }
+        MissionData data = missionHandler.getData(player, 5);
+        if (data.isCompleted()) return;
 
-        // Verificar después de un tick
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             checkNetheriteArmorWithProtection(player);
         }, 1L);
     }
 
     private void checkNetheriteArmorWithProtection(Player player) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        String playerName = player.getName();
+        MissionData data = missionHandler.getData(player, 5);
+        if (data.isCompleted()) return;
 
         ItemStack helmet = player.getInventory().getHelmet();
         ItemStack chestplate = player.getInventory().getChestplate();
@@ -145,55 +118,51 @@ public class Mission5 implements Mission, Listener {
         boolean hasLeggings = hasNetheriteWithProtectionIV(leggings, Material.NETHERITE_LEGGINGS);
         boolean hasBoots = hasNetheriteWithProtectionIV(boots, Material.NETHERITE_BOOTS);
 
-        // Actualizar progreso
         boolean updated = false;
 
-        if (hasHelmet && !data.getBoolean("players." + playerName + ".missions.5.netherite_armor.helmet", false)) {
-            data.set("players." + playerName + ".missions.5.netherite_armor.helmet", true);
-            data.set("players." + playerName + ".missions.5.protection.helmet", true);
+        // Utilizamos netherite_armor_X y protection_X para que coincida con lo que lee la GUI
+        if (hasHelmet && !data.getProgressBool("netherite_armor_helmet")) {
+            data.setProgressValue("netherite_armor_helmet", true);
+            data.setProgressValue("protection_helmet", true);
             successNotification.showSuccess(player);
             updated = true;
         }
 
-        if (hasChestplate && !data.getBoolean("players." + playerName + ".missions.5.netherite_armor.chestplate", false)) {
-            data.set("players." + playerName + ".missions.5.netherite_armor.chestplate", true);
-            data.set("players." + playerName + ".missions.5.protection.chestplate", true);
+        if (hasChestplate && !data.getProgressBool("netherite_armor_chestplate")) {
+            data.setProgressValue("netherite_armor_chestplate", true);
+            data.setProgressValue("protection_chestplate", true);
             successNotification.showSuccess(player);
             updated = true;
         }
 
-        if (hasLeggings && !data.getBoolean("players." + playerName + ".missions.5.netherite_armor.leggings", false)) {
-            data.set("players." + playerName + ".missions.5.netherite_armor.leggings", true);
-            data.set("players." + playerName + ".missions.5.protection.leggings", true);
+        if (hasLeggings && !data.getProgressBool("netherite_armor_leggings")) {
+            data.setProgressValue("netherite_armor_leggings", true);
+            data.setProgressValue("protection_leggings", true);
             successNotification.showSuccess(player);
             updated = true;
         }
 
-        if (hasBoots && !data.getBoolean("players." + playerName + ".missions.5.netherite_armor.boots", false)) {
-            data.set("players." + playerName + ".missions.5.netherite_armor.boots", true);
-            data.set("players." + playerName + ".missions.5.protection.boots", true);
+        if (hasBoots && !data.getProgressBool("netherite_armor_boots")) {
+            data.setProgressValue("netherite_armor_boots", true);
+            data.setProgressValue("protection_boots", true);
             successNotification.showSuccess(player);
             updated = true;
         }
 
         if (updated) {
-            try {
-                data.save(missionHandler.getMissionFile());
-            } catch (IOException e) {
-                plugin.getLogger().severe("Error al guardar progreso de Misión 5: " + e.getMessage());
-                return;
-            }
+            missionHandler.saveData(player, 5, data);
 
-            // Verificar si completó toda la armadura
-            if (hasHelmet && hasChestplate && hasLeggings && hasBoots) {
-                missionHandler.completeMission(playerName, 5);
+            if (data.getProgressBool("netherite_armor_helmet") &&
+                    data.getProgressBool("netherite_armor_chestplate") &&
+                    data.getProgressBool("netherite_armor_leggings") &&
+                    data.getProgressBool("netherite_armor_boots")) {
+                missionHandler.completeMission(player.getName(), 5);
             } else {
-                // Mostrar progreso
                 int completed = 0;
-                if (data.getBoolean("players." + playerName + ".missions.5.netherite_armor.helmet", false)) completed++;
-                if (data.getBoolean("players." + playerName + ".missions.5.netherite_armor.chestplate", false)) completed++;
-                if (data.getBoolean("players." + playerName + ".missions.5.netherite_armor.leggings", false)) completed++;
-                if (data.getBoolean("players." + playerName + ".missions.5.netherite_armor.boots", false)) completed++;
+                if (data.getProgressBool("netherite_armor_helmet")) completed++;
+                if (data.getProgressBool("netherite_armor_chestplate")) completed++;
+                if (data.getProgressBool("netherite_armor_leggings")) completed++;
+                if (data.getProgressBool("netherite_armor_boots")) completed++;
 
                 player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Progreso de armadura de netherite: " + ChatColor.of("#FFB6C1") + completed + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "4");
             }

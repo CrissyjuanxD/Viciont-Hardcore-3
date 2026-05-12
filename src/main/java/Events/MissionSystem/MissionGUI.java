@@ -2,8 +2,6 @@ package Events.MissionSystem;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -48,10 +46,6 @@ public class MissionGUI implements Listener {
             gui.setItem(i, grayPane);
         }
 
-        // Obtener datos del jugador
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        String playerName = player.getName();
-
         // Colocar misiones en slots 27-53
         Map<Integer, Mission> allMissions = missionHandler.getMissions();
         for (int missionNum = 1; missionNum <= 27; missionNum++) {
@@ -61,10 +55,14 @@ public class MissionGUI implements Listener {
 
             if (allMissions.containsKey(missionNum)) {
                 Mission mission = allMissions.get(missionNum);
-                boolean isActive = missionHandler.isMissionActive(missionNum);
-                boolean isCompleted = data.getBoolean("players." + playerName + ".missions." + missionNum + ".completed", false);
 
-                gui.setItem(slot, createMissionItem(mission, isActive, isCompleted, playerName));
+                // Obtener datos del jugador desde la base de datos (estilo Quaso)
+                MissionData data = missionHandler.getData(player, missionNum);
+
+                boolean isActive = data.isActive();
+                boolean isCompleted = data.isCompleted();
+
+                gui.setItem(slot, createMissionItem(mission, isActive, isCompleted, data));
             } else {
                 // Misión no implementada aún
                 gui.setItem(slot, createUnknownMissionItem(missionNum));
@@ -74,7 +72,7 @@ public class MissionGUI implements Listener {
         player.openInventory(gui);
     }
 
-    private ItemStack createMissionItem(Mission mission, boolean isActive, boolean isCompleted, String playerName) {
+    private ItemStack createMissionItem(Mission mission, boolean isActive, boolean isCompleted, MissionData data) {
         ItemStack item = new ItemStack(Material.PAPER);
         ItemMeta meta = item.getItemMeta();
 
@@ -102,8 +100,8 @@ public class MissionGUI implements Listener {
             lore.add("");
             lore.add(isCompleted ? ChatColor.of("#98FB98") + "✔ Completada" : ChatColor.of("#FFA07A") + "✖ Pendiente");
 
-            // Agregar progreso específico para misiones con listas
-            addMissionSpecificProgress(mission, playerName, lore);
+            // Agregar progreso específico usando MissionData
+            addMissionSpecificProgress(mission, data, lore);
         } else {
             lore.add(ChatColor.of("#D3D3D3") + "Misión no descubierta");
         }
@@ -128,9 +126,7 @@ public class MissionGUI implements Listener {
         return item;
     }
 
-    private void addMissionSpecificProgress(Mission mission, String playerName, List<String> lore) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-
+    private void addMissionSpecificProgress(Mission mission, MissionData data, List<String> lore) {
         if (mission instanceof Mission1) {
             lore.add("");
             lore.add(ChatColor.of("#F0E68C") + "Progreso de armadura:");
@@ -139,8 +135,7 @@ public class MissionGUI implements Listener {
             String[] armorNames = {"Casco", "Peto", "Pantalones", "Botas"};
 
             for (int i = 0; i < armorPieces.length; i++) {
-                boolean hasArmor = data.getBoolean(
-                        "players." + playerName + ".missions.1.armor." + armorPieces[i], false);
+                boolean hasArmor = data.getProgressBool("armor_" + armorPieces[i]);
                 lore.add((hasArmor ? ChatColor.of("#98FB98") : ChatColor.of("#D3D3D3")) + "- " + armorNames[i] + " de Diamante");
             }
         } else if (mission instanceof Mission2) {
@@ -151,8 +146,7 @@ public class MissionGUI implements Listener {
             String[] armorNames = {"Casco", "Peto", "Pantalones", "Botas"};
 
             for (int i = 0; i < armorPieces.length; i++) {
-                boolean hasEnchant = data.getBoolean(
-                        "players." + playerName + ".missions.2.protection." + armorPieces[i], false);
+                boolean hasEnchant = data.getProgressBool("protection_" + armorPieces[i]);
                 lore.add((hasEnchant ? ChatColor.of("#98FB98") : ChatColor.of("#D3D3D3")) + "- " + armorNames[i] + " con Protección IV");
             }
         } else if (mission instanceof Mission5) {
@@ -163,8 +157,8 @@ public class MissionGUI implements Listener {
             String[] armorNames = {"Casco", "Peto", "Pantalones", "Botas"};
 
             for (int i = 0; i < armorPieces.length; i++) {
-                boolean hasArmor = data.getBoolean("players." + playerName + ".missions.5.netherite_armor." + armorPieces[i], false);
-                boolean hasProtection = data.getBoolean("players." + playerName + ".missions.5.protection." + armorPieces[i], false);
+                boolean hasArmor = data.getProgressBool("netherite_armor_" + armorPieces[i]);
+                boolean hasProtection = data.getProgressBool("protection_" + armorPieces[i]);
 
                 if (hasArmor && hasProtection) {
                     lore.add(ChatColor.of("#98FB98") + "- " + armorNames[i] + " de Netherite con Protección IV");
@@ -178,8 +172,8 @@ public class MissionGUI implements Listener {
             lore.add("");
             lore.add(ChatColor.of("#F0E68C") + "Progreso de eliminaciones:");
 
-            int zombiesKilled = data.getInt("players." + playerName + ".missions.6.corrupted_zombies_killed", 0);
-            int spidersKilled = data.getInt("players." + playerName + ".missions.6.corrupted_spiders_killed", 0);
+            int zombiesKilled = data.getProgressInt("corrupted_zombies_killed");
+            int spidersKilled = data.getProgressInt("corrupted_spiders_killed");
 
             lore.add(ChatColor.of("#DDA0DD") + "- Corrupted Zombies: " + ChatColor.of("#98FB98") + zombiesKilled + ChatColor.of("#D3D3D3") + "/25");
             lore.add(ChatColor.of("#DDA0DD") + "- Corrupted Spiders: " + ChatColor.of("#98FB98") + spidersKilled + ChatColor.of("#D3D3D3") + "/25");
@@ -187,8 +181,8 @@ public class MissionGUI implements Listener {
             lore.add("");
             lore.add(ChatColor.of("#F0E68C") + "Progreso de eliminaciones:");
 
-            int skeletonsKilled = data.getInt("players." + playerName + ".missions.7.corrupted_skeletons_killed", 0);
-            int creepersKilled = data.getInt("players." + playerName + ".missions.7.corrupted_creepers_killed", 0);
+            int skeletonsKilled = data.getProgressInt("corrupted_skeletons_killed");
+            int creepersKilled = data.getProgressInt("corrupted_creepers_killed");
 
             lore.add(ChatColor.of("#DDA0DD") + "- Corrupted Skeletons: " + ChatColor.of("#98FB98") + skeletonsKilled + ChatColor.of("#D3D3D3") + "/30");
             lore.add(ChatColor.of("#DDA0DD") + "- Corrupted Creepers: " + ChatColor.of("#98FB98") + creepersKilled + ChatColor.of("#D3D3D3") + "/30");
@@ -200,23 +194,22 @@ public class MissionGUI implements Listener {
             String[] armorNames = {"Casco", "Peto", "Pantalones", "Botas"};
 
             for (int i = 0; i < armorPieces.length; i++) {
-                boolean hasArmor = data.getBoolean(
-                        "players." + playerName + ".missions.8.corrupted_armor." + armorPieces[i], false);
+                boolean hasArmor = data.getProgressBool("corrupted_armor_" + armorPieces[i]);
                 lore.add((hasArmor ? ChatColor.of("#98FB98") : ChatColor.of("#D3D3D3")) + "- " + armorNames[i] + " Corrupto");
             }
         } else if (mission instanceof Mission9) {
             lore.add("");
             lore.add(ChatColor.of("#F0E68C") + "Progreso de raids:");
 
-            int raidsCompleted = data.getInt("players." + playerName + ".missions.9.raids_completed", 0);
+            int raidsCompleted = data.getProgressInt("raids_completed");
             lore.add(ChatColor.of("#DDA0DD") + "- Raids completadas: " + ChatColor.of("#98FB98") + raidsCompleted + ChatColor.of("#D3D3D3") + "/5");
         } else if (mission instanceof Mission10) {
             lore.add("");
             lore.add(ChatColor.of("#F0E68C") + "Progreso de totems:");
 
-            boolean hasInfernal = data.getBoolean("players." + playerName + ".missions.10.totems.infernal", false);
-            boolean hasSpider = data.getBoolean("players." + playerName + ".missions.10.totems.spider", false);
-            boolean hasLife = data.getBoolean("players." + playerName + ".missions.10.totems.life", false);
+            boolean hasInfernal = data.getProgressBool("totems_infernal");
+            boolean hasSpider = data.getProgressBool("totems_spider");
+            boolean hasLife = data.getProgressBool("totems_life");
 
             lore.add((hasInfernal ? ChatColor.of("#98FB98") : ChatColor.of("#D3D3D3")) + "- Infernal Totem");
             lore.add((hasSpider ? ChatColor.of("#98FB98") : ChatColor.of("#D3D3D3")) + "- Spider Totem");
@@ -225,7 +218,9 @@ public class MissionGUI implements Listener {
             lore.add("");
             lore.add(ChatColor.of("#F0E68C") + "Progreso de tiempo:");
 
-            long timeInMushroom = data.getLong("players." + playerName + ".missions.11.time_in_mushroom", 0);
+            // Asumiendo que MissionData tiene un método para Long.
+            // Si solo tienes getProgressInt en tu clase MissionData, tendrás que castearlo o crear getProgressLong().
+            long timeInMushroom = data.getProgressLong("time_in_mushroom");
             long requiredTime = 23500;
 
             lore.add(ChatColor.of("#DDA0DD") + "- Tiempo en Mushroom Island: " +
@@ -234,8 +229,8 @@ public class MissionGUI implements Listener {
             lore.add("");
             lore.add(ChatColor.of("#F0E68C") + "Progreso de eliminaciones:");
 
-            int bombitasKilled = data.getInt("players." + playerName + ".missions.12.bombitas_killed", 0);
-            int brutesKilled = data.getInt("players." + playerName + ".missions.12.brutes_killed", 0);
+            int bombitasKilled = data.getProgressInt("bombitas_killed");
+            int brutesKilled = data.getProgressInt("brutes_killed");
 
             lore.add(ChatColor.of("#DDA0DD") + "- Bombitas: " + ChatColor.of("#98FB98") + bombitasKilled + ChatColor.of("#D3D3D3") + "/30");
             lore.add(ChatColor.of("#DDA0DD") + "- Brutes Imperiales: " + ChatColor.of("#98FB98") + brutesKilled + ChatColor.of("#D3D3D3") + "/20");
@@ -243,8 +238,8 @@ public class MissionGUI implements Listener {
             lore.add("");
             lore.add(ChatColor.of("#F0E68C") + "Progreso de preparación:");
 
-            boolean raidCompleted = data.getBoolean("players." + playerName + ".missions.3.raid_completed", false);
-            int goldenApplesCrafted = data.getInt("players." + playerName + ".missions.3.golden_apples_crafted", 0);
+            boolean raidCompleted = data.getProgressBool("raid_completed");
+            int goldenApplesCrafted = data.getProgressInt("golden_apples_crafted");
 
             lore.add((raidCompleted ? ChatColor.of("#98FB98") : ChatColor.of("#D3D3D3")) + "- Raid completada");
             lore.add(ChatColor.of("#DDA0DD") + "- Manzanas de oro: " + ChatColor.of("#98FB98") + goldenApplesCrafted + ChatColor.of("#D3D3D3") + "/20");

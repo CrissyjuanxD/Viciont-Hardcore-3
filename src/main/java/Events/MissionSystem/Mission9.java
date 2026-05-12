@@ -3,8 +3,6 @@ package Events.MissionSystem;
 import TitleListener.SuccessNotification;
 import items.EconomyItems;
 import org.bukkit.Material;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -13,7 +11,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import net.md_5.bungee.api.ChatColor;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -60,14 +57,7 @@ public class Mission9 implements Mission, Listener {
 
     @Override
     public void initializePlayerData(String playerName) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        data.set("players." + playerName + ".missions.9.raids_completed", 0);
-
-        try {
-            data.save(missionHandler.getMissionFile());
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al inicializar datos de Misión 9: " + e.getMessage());
-        }
+        // No es necesario inicializar con JSON
     }
 
     @Override
@@ -77,8 +67,6 @@ public class Mission9 implements Mission, Listener {
 
     @EventHandler
     public void onRaidFinish(RaidFinishEvent event) {
-        if (!missionHandler.isMissionActive(9)) return;
-
         // Verificar que la raid fue exitosa
         if (event.getRaid().getStatus() != org.bukkit.Raid.RaidStatus.VICTORY) {
             return;
@@ -87,30 +75,25 @@ public class Mission9 implements Mission, Listener {
         List<Player> participants = event.getWinners();
 
         for (Player player : participants) {
-            String playerName = player.getName();
+            if (!missionHandler.isMissionActive(player, 9)) continue;
 
-            // Verificar si ya completó la misión
-            FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-            if (data.getBoolean("players." + playerName + ".missions.9.completed", false)) {
-                continue;
-            }
+            MissionData data = missionHandler.getData(player, 9);
+            if (data.isCompleted()) continue;
 
-            int raidsCompleted = data.getInt("players." + playerName + ".missions.9.raids_completed", 0);
-            raidsCompleted++;
-            data.set("players." + playerName + ".missions.9.raids_completed", raidsCompleted);
+            int raidsCompleted = data.getProgressInt("raids_completed");
 
-            try {
-                data.save(missionHandler.getMissionFile());
+            if (raidsCompleted < 5) {
+                raidsCompleted++;
+                data.setProgressValue("raids_completed", raidsCompleted);
+                missionHandler.saveData(player, 9, data);
 
                 player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Raids completadas: " +
                         ChatColor.of("#FFB6C1") + raidsCompleted + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "5");
 
                 if (raidsCompleted >= 5) {
                     successNotification.showSuccess(player);
-                    missionHandler.completeMission(playerName, 9);
+                    missionHandler.completeMission(player.getName(), 9);
                 }
-            } catch (IOException e) {
-                plugin.getLogger().severe("Error al guardar progreso de Misión 9: " + e.getMessage());
             }
         }
     }

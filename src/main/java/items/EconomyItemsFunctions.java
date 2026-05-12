@@ -1,87 +1,131 @@
 package items;
 
-import org.bukkit.*;
-import org.bukkit.enchantments.Enchantment;
+import Handlers.DatabaseManager;
+import net.md_5.bungee.api.ChatColor;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import net.md_5.bungee.api.ChatColor;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.PrepareAnvilEvent;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockDispenseEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.inventory.*;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BundleMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
-import java.sql.*;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class EconomyItemsFunctions implements Listener {
 
     private final JavaPlugin plugin;
-    private Connection connection;
-    private final Map<UUID, String> mochilasAbiertas = new ConcurrentHashMap<>();
-    private final Set<UUID> cooldownGancho = ConcurrentHashMap.newKeySet();
-    private final Map<String, ItemStack[]> mochilasCache = new ConcurrentHashMap<>();
-    private final Map<UUID, Boolean> mochilasGuardando = new ConcurrentHashMap<>();
+    private final DatabaseManager dbManager;
+    private final NamespacedKey backpackKey;
 
-    public EconomyItemsFunctions(JavaPlugin plugin) {
+    // Mapas de control
+    private final Map<UUID, String> mochilasAbiertas = new ConcurrentHashMap<>();
+    private final Map<String, ItemStack[]> mochilasCache = new ConcurrentHashMap<>();
+    private final Set<UUID> processing = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> cooldownGancho = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, String> pendingDeletion = new ConcurrentHashMap<>();
+
+    public EconomyItemsFunctions(JavaPlugin plugin, DatabaseManager dbManager) {
         this.plugin = plugin;
-        setupDatabase();
+        this.dbManager = dbManager;
+        this.backpackKey = new NamespacedKey(plugin, "backpack_uuid");
     }
 
-    // Configuración mejorada de la base de datos SQLite
-    private void setupDatabase() {
-        try {
-            Class.forName("org.sqlite.JDBC");
-            connection = DriverManager.getConnection("jdbc:sqlite:" + plugin.getDataFolder() + "/mochilas.db");
+    // --- EVENTOS PRINCIPALES ---
 
-            try (Statement stmt = connection.createStatement()) {
-                // Verificar si la tabla existe
-                ResultSet rs = connection.getMetaData().getTables(null, null, "mochilas", null);
-                if (!rs.next()) {
-                    // Crear tabla si no existe
-                    stmt.execute("CREATE TABLE mochilas (" +
-                            "id TEXT PRIMARY KEY, " +
-                            "items TEXT)");
-                } else {
-                    // Verificar si la columna 'id' existe
-                    try {
-                        stmt.execute("SELECT id FROM mochilas LIMIT 1");
-                    } catch (SQLException e) {
-                        // Si falla, la columna no existe - recrear tabla
-                        stmt.execute("DROP TABLE mochilas");
-                        stmt.execute("CREATE TABLE mochilas (" +
-                                "id TEXT PRIMARY KEY, " +
-                                "items TEXT)");
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            plugin.getLogger().severe("Error al configurar la base de datos de mochilas!");
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onBlockPlace(BlockPlaceEvent event) {
+        ItemStack item = event.getItemInHand();
+
+        if (item.getType() == Material.SUNFLOWER && item.hasItemMeta() &&
+                item.getItemMeta().hasCustomModelData() && item.getItemMeta().getCustomModelData() == 2000) {
+            event.setCancelled(true);
         }
     }
 
     @EventHandler
+    public void onAnvilPrepare(PrepareAnvilEvent event) {
+        ItemStack leftItem = event.getInventory().getItem(0);
+        if (leftItem == null || leftItem.getType() == Material.AIR) return;
+
+        // Mantener el color y la negrita al renombrar la mochila
+        if (isMochila(leftItem)) {
+            String renameText = event.getInventory().getRenameText();
+            ItemStack result = event.getResult();
+
+            if (result != null && renameText != null && !renameText.isEmpty()) {
+                ItemMeta meta = result.getItemMeta();
+                ChatColor color = getMochilaColor(leftItem);
+
+                String cleanName = ChatColor.stripColor(renameText);
+                meta.setDisplayName(color + "" + ChatColor.BOLD + cleanName);
+
+                result.setItemMeta(meta);
+                event.setResult(result);
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerInteract(PlayerInteractEvent event) {
         ItemStack item = event.getItem();
-        if (item == null || !event.getAction().toString().contains("RIGHT")) return;
+        if (item == null || item.getType() == Material.AIR) return;
 
         Player player = event.getPlayer();
 
-        if (mochilasGuardando.getOrDefault(player.getUniqueId(), false)) {
+        if (isMochila(item)) {
+            event.setCancelled(true);
+
+            if (event.getHand() == EquipmentSlot.OFF_HAND) return;
+
+            if (event.getAction().toString().contains("RIGHT")) {
+
+                if (player.getOpenInventory().getType() != InventoryType.CRAFTING &&
+                        player.getOpenInventory().getType() != InventoryType.CREATIVE) {
+                    return;
+                }
+
+                if (processing.contains(player.getUniqueId())) {
+                    player.sendMessage(ChatColor.RED + "⌚ Procesando... espera un segundo.");
+                    return;
+                }
+
+                player.setCooldown(item.getType(), 20);
+
+                player.updateInventory();
+
+                abrirMochila(player, item);
+            }
+            return;
+        }
+
+        if (!event.getAction().toString().contains("RIGHT")) return;
+
+        if (processing.contains(player.getUniqueId())) {
             event.setCancelled(true);
             return;
         }
 
-        // Ender Bag
         if (isEnderBag(item)) {
             event.setCancelled(true);
             player.playSound(player.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, 1.0f, 1.0f);
@@ -89,35 +133,17 @@ public class EconomyItemsFunctions implements Listener {
             return;
         }
 
-        // Mochila
-        if (isMochila(item)) {
-            event.setCancelled(true);
-            abrirMochila(player, item);
-            return;
-        }
-
-        // Gancho
         if (isGancho(item)) {
             event.setCancelled(true);
             usarGancho(player, item);
             return;
         }
 
-        // Yunque Reparador Nivel 1
-        if (isYunqueNivel1(item)) {
+        if (checkAndUseYunque(player, item)) {
             event.setCancelled(true);
-            usarYunque(player, item, 0.25);
             return;
         }
 
-        // Yunque Reparador Nivel 2
-        if (isYunqueNivel2(item)) {
-            event.setCancelled(true);
-            usarYunque(player, item, 1.0);
-            return;
-        }
-
-        // Manzana del Pánico
         if (isManzanaPanico(item)) {
             event.setCancelled(true);
             usarManzanaPanico(player, item);
@@ -125,273 +151,276 @@ public class EconomyItemsFunctions implements Listener {
         }
     }
 
-    private boolean isEnderBag(ItemStack item) {
-        if (item == null || item.getType() != Material.ECHO_SHARD) return false;
-        ItemMeta meta = item.getItemMeta();
-        return meta != null && meta.hasCustomModelData() && meta.getCustomModelData() == 2030;
-    }
-
-    private boolean isMochila(ItemStack item) {
-        if (item == null || item.getType() != Material.ECHO_SHARD) return false;
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null || !meta.hasCustomModelData()) return false;
-
-        int customModelData = meta.getCustomModelData();
-        return customModelData >= 2020 && customModelData <= 2027;
-    }
-
-    private boolean isGancho(ItemStack item) {
-        if (item == null || item.getType() != Material.FISHING_ROD) return false;
-        ItemMeta meta = item.getItemMeta();
-        return meta != null && meta.hasCustomModelData() && meta.getCustomModelData() == 10;
-    }
-
-    private boolean isManzanaPanico(ItemStack item) {
-        if (item == null || item.getType() != Material.GOLDEN_APPLE) return false;
-        ItemMeta meta = item.getItemMeta();
-        return meta != null && meta.hasCustomModelData() && meta.getCustomModelData() == 10;
-    }
-
-    private boolean isYunqueNivel1(ItemStack item) {
-        if (item == null || item.getType() != Material.ECHO_SHARD) return false;
-        ItemMeta meta = item.getItemMeta();
-        return meta != null && meta.hasCustomModelData() && meta.getCustomModelData() == 2040;
-    }
-
-    private boolean isYunqueNivel2(ItemStack item) {
-        if (item == null || item.getType() != Material.ECHO_SHARD) return false;
-        ItemMeta meta = item.getItemMeta();
-        return meta != null && meta.hasCustomModelData() && meta.getCustomModelData() == 2050;
-    }
+    // --- LÓGICA CORE DE MOCHILAS ---
 
     private void abrirMochila(Player player, ItemStack mochila) {
-        if (mochilasGuardando.getOrDefault(player.getUniqueId(), false)) {
-            player.sendMessage(ChatColor.RED + "Espera un momento antes de abrir la mochila nuevamente");
-            return;
-        }
+        processing.add(player.getUniqueId());
+
+        ItemMeta meta = mochila.getItemMeta();
+        int modelData = meta.getCustomModelData();
+        int size = getBackpackSize(modelData);
 
         String mochilaId = getMochilaId(mochila);
         if (mochilaId == null) {
-            if (isNewMochila(mochila)) {
-                mochilaId = UUID.randomUUID().toString();
-                setMochilaId(mochila, mochilaId);
-                plugin.getLogger().info("Nueva mochila creada con ID: " + mochilaId);
+            mochilaId = UUID.randomUUID().toString();
+            setMochilaId(mochila, mochilaId);
+            if (player.getInventory().getItemInMainHand().getType() == mochila.getType()) {
+                player.getInventory().setItemInMainHand(mochila);
             } else {
-                player.sendMessage(ChatColor.RED + "Error: Esta mochila no tiene un ID válido");
-                return;
+                player.getInventory().setItemInOffHand(mochila);
             }
         }
 
-        mochilasAbiertas.put(player.getUniqueId(), mochilaId);
-        ChatColor color = getMochilaColor(mochila);
-        String guiTitle = color + "" + ChatColor.BOLD + "Mochila";
+        final String finalId = mochilaId;
+        final String guiTitle = getMochilaColor(mochila) + "" + ChatColor.BOLD + "Mochila";
 
-        Inventory mochilaInv = Bukkit.createInventory(null, 27, guiTitle);
+        Inventory mochilaInv = Bukkit.createInventory(null, size, guiTitle);
 
-        if (mochilasCache.containsKey(mochilaId)) {
-            mochilaInv.setContents(Arrays.copyOf(mochilasCache.get(mochilaId), 27));
+        if (mochilasCache.containsKey(finalId)) {
+            ItemStack[] contents = mochilasCache.get(finalId);
+            cargarContenidoSeguro(mochilaInv, contents);
+            openInventorySafely(player, mochilaInv, finalId);
         } else {
-            try {
-                ItemStack[] items = cargarMochila(mochilaId);
-                if (items != null) {
-                    mochilaInv.setContents(items);
-                    mochilasCache.put(mochilaId, Arrays.copyOf(items, 27));
+            player.sendMessage(ChatColor.GRAY + "⚙ Cargando mochila...");
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    ItemStack[] contents = dbManager.loadBackpackContents(finalId);
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            if (!player.isOnline()) {
+                                processing.remove(player.getUniqueId());
+                                return;
+                            }
+                            if (contents != null) {
+                                mochilasCache.put(finalId, contents);
+                                cargarContenidoSeguro(mochilaInv, contents);
+                            }
+                            openInventorySafely(player, mochilaInv, finalId);
+                        }
+                    }.runTask(plugin);
                 }
-            } catch (SQLException e) {
-                player.sendMessage(ChatColor.RED + "Error al cargar la mochila");
-                plugin.getLogger().severe("Error al cargar mochila " + mochilaId + ": " + e.getMessage());
-                return;
-            }
-        }
-
-        player.playSound(player.getLocation(), Sound.ITEM_BUNDLE_DROP_CONTENTS, 2.0f, 1.0f);
-        player.openInventory(mochilaInv);
-    }
-
-    private boolean isNewMochila(ItemStack mochila) {
-        return true;
-    }
-
-    public ChatColor getMochilaColor(ItemStack mochila) {
-        ItemMeta meta = mochila.getItemMeta();
-        if (meta == null || !meta.hasCustomModelData()) return ChatColor.of("#ffffcc");
-
-        switch (meta.getCustomModelData()) {
-            case 2021: return ChatColor.GREEN;
-            case 2022: return ChatColor.RED;
-            case 2023: return ChatColor.BLUE;
-            case 2024: return ChatColor.DARK_PURPLE;
-            case 2025: return ChatColor.BLACK;
-            case 2026: return ChatColor.WHITE;
-            case 2027: return ChatColor.YELLOW;
-            default: return ChatColor.of("#ffffcc");
+            }.runTaskAsynchronously(plugin);
         }
     }
 
-    private void usarGancho(Player player, ItemStack gancho) {
-        UUID playerId = player.getUniqueId();
-        if (cooldownGancho.contains(playerId)) {
-            return;
-        }
-
-        cooldownGancho.add(playerId);
-        player.setCooldown(Material.FISHING_ROD, 40);
+    private void openInventorySafely(Player player, Inventory inv, String mochilaId) {
         new BukkitRunnable() {
             @Override
             public void run() {
-                cooldownGancho.remove(playerId);
+                mochilasAbiertas.put(player.getUniqueId(), mochilaId);
+
+                player.openInventory(inv);
+                player.playSound(player.getLocation(), Sound.ITEM_BUNDLE_DROP_CONTENTS, 1.0f, 1.0f);
+
+                processing.remove(player.getUniqueId());
             }
-        }.runTaskLater(plugin, 40);
+        }.runTaskLater(plugin, 2L);
+    }
 
-        if (gancho.getDurability() < gancho.getType().getMaxDurability()) {
-            gancho.setDurability((short) (gancho.getDurability() + 1));
+    private void cargarContenidoSeguro(Inventory inv, ItemStack[] contents) {
+        if (contents == null) return;
+        for (int i = 0; i < contents.length; i++) {
+            if (contents[i] == null) contents[i] = new ItemStack(Material.AIR);
+        }
+        if (contents.length > inv.getSize()) {
+            ItemStack[] resized = new ItemStack[inv.getSize()];
+            System.arraycopy(contents, 0, resized, 0, inv.getSize());
+            inv.setContents(resized);
         } else {
-            player.getInventory().removeItem(gancho);
-            player.sendMessage(ChatColor.RED + "¡Tu gancho se ha roto!");
-            player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
+            inv.setContents(contents);
         }
-
-        Location playerLocation = player.getLocation();
-
-        crearEsferaParticulas(playerLocation.clone().add(0, 1, 0), 1.0, 30, Particle.CLOUD);
-
-        crearTrailPies(player, 20);
-
-        Vector direction = player.getLocation().getDirection().normalize().multiply(1.6);
-        player.setVelocity(direction);
-        player.playSound(player.getLocation(), Sound.ENTITY_FISHING_BOBBER_RETRIEVE, 1.0f, 1.5f);
-        player.playSound(player.getLocation(), Sound.BLOCK_TRIAL_SPAWNER_SPAWN_MOB, 1.0f, 2.0f);
-    }
-
-    // Método para crear esfera de partículas
-    private void crearEsferaParticulas(Location center, double radius, int particles, Particle tipoParticula) {
-        for (int i = 0; i < particles; i++) {
-            double phi = Math.acos(-1.0 + (2.0 * i) / particles);
-            double theta = Math.sqrt(particles * Math.PI) * phi;
-
-            double x = radius * Math.cos(theta) * Math.sin(phi);
-            double y = radius * Math.sin(theta) * Math.sin(phi);
-            double z = radius * Math.cos(phi);
-
-            Location particleLoc = center.clone().add(x, y, z);
-            center.getWorld().spawnParticle(tipoParticula, particleLoc, 1, 0, 0, 0, 0.05);
-        }
-    }
-
-    // Método para crear trail en los pies del jugador
-    private void crearTrailPies(Player player, int duracionTicks) {
-        new BukkitRunnable() {
-            int tiempo = 0;
-
-            @Override
-            public void run() {
-                if (tiempo >= duracionTicks || !player.isOnline()) {
-                    this.cancel();
-                    return;
-                }
-
-                Location footLocation = player.getLocation().clone().add(0, 0.1, 0);
-                player.getWorld().spawnParticle(Particle.CLOUD, footLocation, 5, 0.2, 0.1, 0.2, 0.02);
-
-                tiempo++;
-            }
-        }.runTaskTimer(plugin, 0, 1);
-    }
-
-    private void usarYunque(Player player, ItemStack yunque, double porcentaje) {
-        repararArmadura(player, porcentaje);
-
-        if (yunque.getAmount() > 1) {
-            yunque.setAmount(yunque.getAmount() - 1);
-        } else {
-            player.getInventory().removeItem(yunque);
-        }
-
-        player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_PLACE, 2.0f, 2.0f);
-    }
-
-    private void usarManzanaPanico(Player player, ItemStack manzana) {
-        EconomyItems.applyPanicAppleEffects(player);
-
-        if (manzana.getAmount() > 1) {
-            manzana.setAmount(manzana.getAmount() - 1);
-        } else {
-            player.getInventory().removeItem(manzana);
-        }
-
-        player.playSound(player.getLocation(), Sound.ENTITY_GENERIC_EAT, 1.0f, 1.0f);
-    }
-
-    private void repararArmadura(Player player, double porcentaje) {
-        ItemStack[] armadura = player.getInventory().getArmorContents();
-
-        for (ItemStack item : armadura) {
-            if (item == null || item.getType() == Material.AIR) continue;
-
-            if (item.getDurability() > 0) {
-                int maxDurabilidad = item.getType().getMaxDurability();
-                int durabilidadActual = item.getDurability();
-
-                int reparacion = (int) (maxDurabilidad * porcentaje);
-
-                int nuevaDurabilidad = Math.max(0, durabilidadActual - reparacion);
-
-                item.setDurability((short) nuevaDurabilidad);
-            }
-        }
-
-        player.getInventory().setArmorContents(armadura);
     }
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player)) return;
-
         Player player = (Player) event.getPlayer();
         UUID playerId = player.getUniqueId();
 
         if (mochilasAbiertas.containsKey(playerId)) {
-            String mochilaId = mochilasAbiertas.get(playerId);
-            ItemStack[] contents = event.getInventory().getContents();
+            String mochilaId = mochilasAbiertas.remove(playerId);
+            Inventory inv = event.getInventory();
+            ItemStack[] contents = inv.getContents();
 
-            mochilasGuardando.put(playerId, true);
+            processing.add(playerId);
 
             mochilasCache.put(mochilaId, contents);
 
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                try {
-                    guardarMochila(mochilaId, contents);
-                    plugin.getLogger().info("Mochila " + mochilaId + " guardada correctamente");
-                } catch (SQLException e) {
-                    plugin.getLogger().severe("Error al guardar mochila " + mochilaId + ": " + e.getMessage());
-                } finally {
-                    new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            mochilasGuardando.remove(playerId);
-                            mochilasAbiertas.remove(playerId);
-                        }
-                    }.runTaskLater(plugin, 5L);
-                }
-            });
+            ItemStack hand = player.getInventory().getItemInMainHand();
+            String itemName = "Mochila";
+            int level = 1;
 
-            player.playSound(player.getLocation(), Sound.ITEM_BUNDLE_REMOVE_ONE, 2.0f, 1.0f);
+            if (isMochila(hand)) {
+
+                player.setCooldown(hand.getType(), 10);
+
+                if (Objects.equals(getMochilaId(hand), mochilaId)) {
+                    if (hand.hasItemMeta()) {
+                        itemName = hand.getItemMeta().getDisplayName();
+                        level = getLevelByModel(hand.getItemMeta().getCustomModelData());
+                    }
+                }
+            }
+
+            final String fItemName = itemName;
+            final int fLevel = level;
+
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    boolean success = false;
+                    try {
+                        dbManager.saveBackpack(mochilaId, playerId, player.getName(), fItemName, fLevel, contents);
+                        success = true;
+                    } catch (SQLException e) {
+                        plugin.getLogger().severe("ERROR GUARDANDO MOCHILA: " + e.getMessage());
+                    } finally {
+                        boolean finalSuccess = success;
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                processing.remove(playerId);
+                                if (!finalSuccess && player.isOnline()) {
+                                    player.sendMessage(ChatColor.RED + "⚠ Error guardando. Items en memoria.");
+                                }
+                            }
+                        }.runTask(plugin);
+                    }
+                }
+            }.runTaskAsynchronously(plugin);
+
+            player.playSound(player.getLocation(), Sound.ITEM_BUNDLE_REMOVE_ONE, 1.0f, 1.0f);
+        }
+    }
+
+    // --- SEGURIDAD DE INVENTARIO ---
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
+        Player player = (Player) event.getWhoClicked();
+        String title = event.getView().getTitle();
+
+        if (title.startsWith(ChatColor.DARK_RED + "Mochilas de: ") ||
+                title.startsWith(ChatColor.RED + "BORRAR Mochilas de: ")) {
+
+            if (title.startsWith(ChatColor.DARK_RED + "Mochilas de: ")) {
+                handleAdminGuiClick(event, player, event.getCurrentItem());
+            } else {
+                handleDeleteGuiClick(event, player, event.getCurrentItem());
+            }
+            return;
+        }
+
+        ItemStack current = event.getCurrentItem();
+        ItemStack cursor = event.getCursor();
+
+        // --- SEGURIDAD: COLLECT TO CURSOR ---
+        if (event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
+            if (isMochila(cursor)) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+
+        // --- SEGURIDAD: ANIDAMIENTO ---
+        if (mochilasAbiertas.containsKey(player.getUniqueId())) {
+
+            if (isMochila(current)) {
+                event.setCancelled(true);
+                player.sendMessage(ChatColor.RED + "⚠ No puedes meter una mochila dentro de otra.");
+                return;
+            }
+
+            if (event.getClick() == ClickType.NUMBER_KEY) {
+                ItemStack hotbarItem = player.getInventory().getItem(event.getHotbarButton());
+                if (isMochila(hotbarItem)) {
+                    event.setCancelled(true);
+                    return;
+                }
+            }
+        }
+    }
+
+    private void handleAdminGuiClick(InventoryClickEvent event, Player player, ItemStack current) {
+        event.setCancelled(true);
+        if (current == null || !current.hasItemMeta()) return;
+
+        String idRaw = getMochilaIdFromLore(current);
+        if (idRaw == null) return;
+
+        if (event.isLeftClick()) {
+            ItemStack copy = getBackpackItemByModel(current.getItemMeta().getCustomModelData());
+            setMochilaId(copy, idRaw);
+            ItemMeta meta = copy.getItemMeta();
+            meta.setDisplayName(current.getItemMeta().getDisplayName());
+            copy.setItemMeta(meta);
+
+            player.getInventory().addItem(copy);
+            player.sendMessage(ChatColor.GREEN + "✔ Copia recuperada exitosamente.");
+            player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1f, 1f);
+            player.closeInventory();
+
+        } else if (event.isRightClick()) {
+            player.closeInventory();
+            ItemStack temp = EconomyItems.createPurpleMochila();
+            setMochilaId(temp, idRaw);
+
+            player.sendMessage(ChatColor.YELLOW + "🕵 Espiando contenido de la mochila...");
+            abrirMochila(player, temp);
+        }
+    }
+
+    private void handleDeleteGuiClick(InventoryClickEvent event, Player player, ItemStack current) {
+        event.setCancelled(true);
+        if (current == null || !current.hasItemMeta()) return;
+
+        String idRaw = getMochilaIdFromLore(current);
+        if (idRaw == null) return;
+
+        if (event.isLeftClick()) {
+            player.closeInventory();
+            pendingDeletion.put(player.getUniqueId(), idRaw);
+
+            player.sendMessage(ChatColor.RED + "" + ChatColor.BOLD + "⚠ CONFIRMACIÓN DE BORRADO ⚠");
+            player.sendMessage(ChatColor.RED + "Estás a punto de eliminar la mochila ID: " + ChatColor.YELLOW + idRaw);
+            player.sendMessage(ChatColor.GRAY + "Escribe " + ChatColor.GREEN + "si" + ChatColor.GRAY + " en el chat para confirmar.");
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 2f, 0.5f);
         }
     }
 
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) return;
+    public void onChatConfirm(AsyncPlayerChatEvent event) {
+        Player player = event.getPlayer();
+        if (pendingDeletion.containsKey(player.getUniqueId())) {
+            event.setCancelled(true);
+            String msg = event.getMessage().toLowerCase();
+            String idToDelete = pendingDeletion.remove(player.getUniqueId());
 
-        Player player = (Player) event.getWhoClicked();
-        String title = event.getView().getTitle();
+            if (msg.equals("si") || msg.equals("yes")) {
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        boolean deleted = dbManager.deleteBackpack(idToDelete);
+                        mochilasCache.remove(idToDelete);
 
-        if (title.contains("Mochila")) {
-            if (event.getCurrentItem() != null && isMochila(event.getCurrentItem())) {
-                event.setCancelled(true);
-            }
-            if (event.getCursor() != null && isMochila(event.getCursor())) {
-                event.setCancelled(true);
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                if (deleted) {
+                                    player.sendMessage(ChatColor.GREEN + "✔ Mochila eliminada correctamente.");
+                                    player.playSound(player.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 2f);
+                                } else {
+                                    player.sendMessage(ChatColor.RED + "❌ No se pudo borrar (¿Ya no existe?).");
+                                }
+                            }
+                        }.runTask(plugin);
+                    }
+                }.runTaskAsynchronously(plugin);
+            } else {
+                player.sendMessage(ChatColor.YELLOW + "✖ Operación cancelada.");
             }
         }
     }
@@ -399,177 +428,179 @@ public class EconomyItemsFunctions implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        UUID playerId = player.getUniqueId();
 
-        if (mochilasAbiertas.containsKey(playerId)) {
-            String mochilaId = mochilasAbiertas.get(playerId);
-            Inventory inv = player.getOpenInventory().getTopInventory();
+        if (mochilasAbiertas.containsKey(player.getUniqueId())) {
+            String id = mochilasAbiertas.remove(player.getUniqueId());
+            Inventory top = player.getOpenInventory().getTopInventory();
+            ItemStack[] content = top.getContents();
 
-            if (inv != null) {
-                ItemStack[] contents = inv.getContents();
-                mochilasCache.put(mochilaId, contents);
+            mochilasCache.put(id, content);
 
-                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            new BukkitRunnable() {
+                @Override
+                public void run() {
                     try {
-                        guardarMochila(mochilaId, contents);
+                        dbManager.saveBackpack(id, player.getUniqueId(), player.getName(), "Mochila (Quit)", 1, content);
                     } catch (SQLException e) {
+                        plugin.getLogger().severe("Error al guardar mochila al salir (Quit): " + e.getMessage());
                         e.printStackTrace();
                     }
-                });
-            }
+                }
+            }.runTaskAsynchronously(plugin);
+        }
 
-            mochilasAbiertas.remove(playerId);
+        processing.remove(player.getUniqueId());
+    }
+
+    // --- UTILIDADES ---
+
+    public boolean isMochila(ItemStack item) {
+        if (item == null || item.getType() == Material.AIR) return false;
+        if (!EconomyItems.isMaterialMochila(item.getType())) return false;
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null || !meta.hasCustomModelData()) return false;
+        int cmd = meta.getCustomModelData();
+        return cmd >= 2020 && cmd <= 2027;
+    }
+
+    private int getBackpackSize(int modelData) {
+        switch (modelData) {
+            case 2020: return 18;
+            case 2021: return 27;
+            case 2022: return 36;
+            case 2023: return 45;
+            case 2024: return 54;
+            default: return 27;
         }
     }
 
-    private void updateMochilaInInventory(ItemStack mochila, String id) {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            for (ItemStack item : player.getInventory().getContents()) {
-                if (item != null && item.isSimilar(mochila)) {
-                    setMochilaId(item, id);
-                }
-            }
-        }
+    private boolean isEnderBag(ItemStack item) { return checkModelData(item, 2030); }
+    private boolean isGancho(ItemStack item) { return checkModelData(item, 10) && item.getType() == Material.FISHING_ROD; }
+    private boolean isManzanaPanico(ItemStack item) { return checkModelData(item, 10) && item.getType() == Material.APPLE; }
+
+    private boolean checkModelData(ItemStack item, int id) {
+        if (item == null) return false;
+        ItemMeta meta = item.getItemMeta();
+        return meta != null && meta.hasCustomModelData() && meta.getCustomModelData() == id;
     }
 
-    // Métodos para manejar IDs de mochilas
-    private String getMochilaId(ItemStack mochila) {
-        if (mochila == null) return null;
+    private boolean checkAndUseYunque(Player player, ItemStack item) {
+        if (!item.getType().toString().contains("SPAWN_EGG")) return false;
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null || !meta.hasCustomModelData()) return false;
+        int cmd = meta.getCustomModelData();
+        if (cmd == 2040) { usarYunque(player, item, 0.25); return true; }
+        else if (cmd == 2050) { usarYunque(player, item, 1.0); return true; }
+        return false;
+    }
 
-        ItemMeta meta = mochila.getItemMeta();
-        if (meta == null) return null;
+    private void usarGancho(Player player, ItemStack gancho) {
+        if (cooldownGancho.contains(player.getUniqueId())) return;
+        cooldownGancho.add(player.getUniqueId());
+        player.setCooldown(Material.FISHING_ROD, 40);
+        new BukkitRunnable() { @Override public void run() { cooldownGancho.remove(player.getUniqueId()); } }.runTaskLater(plugin, 40);
 
-        List<String> lore = meta.getLore();
-        if (lore == null || lore.isEmpty()) return null;
+        if (gancho.getDurability() < gancho.getType().getMaxDurability()) {
+            gancho.setDurability((short) (gancho.getDurability() + 1));
+        } else {
+            player.getInventory().removeItem(gancho);
+            player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
+        }
+        Vector direction = player.getLocation().getDirection().normalize().multiply(1.6);
+        player.setVelocity(direction);
+        player.playSound(player.getLocation(), Sound.ENTITY_FISHING_BOBBER_RETRIEVE, 1.0f, 1.5f);
+    }
 
-        // Buscar línea con el ID (ahora más flexible)
-        for (String line : lore) {
-            if (line.toLowerCase().contains("id:")) {
-                String id = ChatColor.stripColor(line).split(":")[1].trim();
-                try {
-                    UUID.fromString(id);
-                    return id;
-                } catch (IllegalArgumentException e) {
-                    return null;
-                }
+    private void usarYunque(Player player, ItemStack yunque, double porcentaje) {
+        repararArmadura(player, porcentaje);
+        yunque.setAmount(yunque.getAmount() - 1);
+        player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_PLACE, 1.0f, 1.0f);
+    }
+
+    private void usarManzanaPanico(Player player, ItemStack manzana) {
+        EconomyItems.applyPanicAppleEffects(player);
+        manzana.setAmount(manzana.getAmount() - 1);
+        player.playSound(player.getLocation(), Sound.ENTITY_GENERIC_EAT, 1.0f, 1.0f);
+    }
+
+    private void repararArmadura(Player player, double porcentaje) {
+        ItemStack[] armadura = player.getInventory().getArmorContents();
+        for (ItemStack item : armadura) {
+            if (item != null && item.getType() != Material.AIR && item.getDurability() > 0) {
+                int repairAmount = (int) (item.getType().getMaxDurability() * porcentaje);
+                item.setDurability((short) Math.max(0, item.getDurability() - repairAmount));
             }
+        }
+        player.getInventory().setArmorContents(armadura);
+    }
+
+    private String getMochilaId(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return null;
+        PersistentDataContainer pdc = item.getItemMeta().getPersistentDataContainer();
+        return pdc.get(backpackKey, PersistentDataType.STRING);
+    }
+
+    private void setMochilaId(ItemStack item, String uuid) {
+        ItemMeta meta = item.getItemMeta();
+        meta.getPersistentDataContainer().set(backpackKey, PersistentDataType.STRING, uuid);
+        List<String> lore = meta.hasLore() ? meta.getLore() : new ArrayList<>();
+        lore.removeIf(l -> l.contains("ID:"));
+        lore.add(ChatColor.DARK_GRAY + "ID: " + uuid);
+        meta.setLore(lore);
+        if (meta instanceof BundleMeta) {
+            ((BundleMeta) meta).setItems(new ArrayList<>());
+        }
+        item.setItemMeta(meta);
+    }
+
+    private String getMochilaIdFromLore(ItemStack item) {
+        if (!item.hasItemMeta() || !item.getItemMeta().hasLore()) return null;
+        for (String line : item.getItemMeta().getLore()) {
+            if (line.contains("ID:")) return ChatColor.stripColor(line).replace("ID:", "").trim();
         }
         return null;
     }
 
-    private void setMochilaId(ItemStack mochila, String id) {
-        if (mochila == null || id == null) return;
-
-        ItemMeta meta = mochila.getItemMeta();
-        if (meta == null) return;
-
-        List<String> lore = meta.getLore();
-        if (lore == null) lore = new ArrayList<>();
-
-        boolean found = false;
-        for (int i = 0; i < lore.size(); i++) {
-            if (lore.get(i).toLowerCase().contains("id:")) {
-                lore.set(i, ChatColor.DARK_GRAY + "ID: " + ChatColor.GRAY + id);
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) {
-            lore.add(ChatColor.DARK_GRAY + "ID: " + ChatColor.GRAY + id);
-        }
-
-        meta.setLore(lore);
-        mochila.setItemMeta(meta);
-
-        updateMochilaInInventory(mochila, id);
+    public ItemStack getBackpackItemByModel(int model) {
+        if (model == 2020) return EconomyItems.createNormalMochila();
+        if (model == 2021) return EconomyItems.createGreenMochila();
+        if (model == 2022) return EconomyItems.createRedMochila();
+        if (model == 2023) return EconomyItems.createBlueMochila();
+        if (model == 2024) return EconomyItems.createPurpleMochila();
+        return EconomyItems.createNormalMochila();
     }
 
-    @EventHandler
-    public void onAnvilRename(PrepareAnvilEvent event) {
-        ItemStack result = event.getResult();
-        if (result == null || !isMochila(result)) return;
-
-        ItemStack mochila = event.getInventory().getItem(0);
-        if (mochila == null || !isMochila(mochila)) return;
-
-        // Obtener el color de la mochila
-        ChatColor color = getMochilaColor(mochila);
-
-        // Aplicar el color al nombre
-        ItemMeta meta = result.getItemMeta();
-        if (meta == null) return;
-
-        if (meta.hasDisplayName()) {
-            String nombre = meta.getDisplayName();
-            // Si el nombre no empieza con el código de color, lo añadimos
-            if (!nombre.startsWith(color.toString())) {
-                meta.setDisplayName(color + nombre.replaceAll("^§[0-9a-fk-or]", ""));
-                result.setItemMeta(meta);
-                event.setResult(result);
-            }
+    public ItemStack getBackpackItemByLevel(int level) {
+        switch(level) {
+            case 1: return getBackpackItemByModel(2020);
+            case 2: return getBackpackItemByModel(2021);
+            case 3: return getBackpackItemByModel(2022);
+            case 4: return getBackpackItemByModel(2023);
+            case 5: return getBackpackItemByModel(2024);
+            default: return getBackpackItemByModel(2020);
         }
     }
 
-
-    // Métodos de base de datos mejorados
-    private ItemStack[] cargarMochila(String mochilaId) throws SQLException {
-        try (PreparedStatement ps = connection.prepareStatement("SELECT items FROM mochilas WHERE id = ?")) {
-            ps.setString(1, mochilaId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                return ItemSerializer.deserialize(rs.getString("items"));
-            }
-        }
-        return new ItemStack[27];
+    private int getLevelByModel(int model) {
+        if (model == 2020) return 1;
+        if (model == 2021) return 2;
+        if (model == 2022) return 3;
+        if (model == 2023) return 4;
+        if (model == 2024) return 5;
+        return 1;
     }
 
-    private void guardarMochila(String mochilaId, ItemStack[] items) throws SQLException {
-        if (connection == null || connection.isClosed()) {
-            setupDatabase();
-        }
-
-        String serialized = ItemSerializer.serialize(items);
-        try (PreparedStatement ps = connection.prepareStatement(
-                "INSERT OR REPLACE INTO mochilas (id, items) VALUES (?, ?)")) {
-            ps.setString(1, mochilaId);
-            ps.setString(2, serialized);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            plugin.getLogger().warning("Error al guardar mochila " + mochilaId + ": " + e.getMessage());
-            throw e;
+    public ChatColor getMochilaColor(ItemStack mochila) {
+        int cmd = mochila.getItemMeta().getCustomModelData();
+        switch (cmd) {
+            case 2021: return ChatColor.BLUE;
+            case 2022: return ChatColor.GOLD;
+            case 2023: return ChatColor.RED;
+            case 2024: return ChatColor.DARK_PURPLE;
+            default: return ChatColor.GREEN;
         }
     }
 
-    public void onDisable() {
-        plugin.getLogger().info("Guardando mochilas...");
-
-        for (Map.Entry<UUID, String> entry : mochilasAbiertas.entrySet()) {
-            Player player = Bukkit.getPlayer(entry.getKey());
-            if (player != null) {
-                Inventory inv = player.getOpenInventory().getTopInventory();
-                if (inv != null) {
-                    mochilasCache.put(entry.getValue(), inv.getContents());
-                }
-            }
-        }
-
-        for (Map.Entry<String, ItemStack[]> entry : mochilasCache.entrySet()) {
-            try {
-                guardarMochila(entry.getKey(), entry.getValue());
-            } catch (SQLException e) {
-                plugin.getLogger().warning("Error al guardar mochila " + entry.getKey() + ": " + e.getMessage());
-            }
-        }
-
-        try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().warning("Error al cerrar conexión: " + e.getMessage());
-        }
-
-        plugin.getLogger().info("Mochilas guardadas correctamente");
-    }
+    public JavaPlugin getPlugin() { return plugin; }
+    public DatabaseManager getDbManager() { return dbManager; }
 }

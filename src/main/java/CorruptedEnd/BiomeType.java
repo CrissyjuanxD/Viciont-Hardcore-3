@@ -42,7 +42,7 @@ public enum BiomeType {
 
     public Material getSecondaryBlock() {
         switch (this) {
-            case SCULK_PLAINS: return Material.SCULK;
+            case SCULK_PLAINS: return Material.BROWN_GLAZED_TERRACOTTA;
             case CRIMSON_WASTES: return Material.CRIMSON_HYPHAE;
             case CELESTIAL_FOREST: return Material.BLUE_TERRACOTTA;
             case OBSIDIAN_PEAKS: return Material.SCULK;

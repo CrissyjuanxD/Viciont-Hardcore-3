@@ -2,10 +2,9 @@ package Events.MissionSystem;
 
 import Handlers.ToastHandler;
 import TitleListener.SuccessNotification;
+import com.viciontmedia.api.ViciontMediaAPI;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Material;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -15,7 +14,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import items.EconomyItems;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,56 +49,28 @@ public class Mission1 implements Mission, Listener {
     public List<ItemStack> getRewards() {
         List<ItemStack> rewards = new ArrayList<>();
 
-        // 10 Vithiums
         ItemStack vithiums = EconomyItems.createVithiumCoin();
         vithiums.setAmount(10);
         rewards.add(vithiums);
-
-        // 5 Manzanas doradas
         rewards.add(new ItemStack(Material.GOLDEN_APPLE, 5));
-
-        // 1 Totem
         rewards.add(new ItemStack(Material.TOTEM_OF_UNDYING, 1));
 
         return rewards;
     }
 
     @Override
-    public void initializePlayerData(String playerName) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-
-        // Inicializar progreso de armadura
-        String[] armorPieces = {"helmet", "chestplate", "leggings", "boots"};
-        for (String piece : armorPieces) {
-            data.set("players." + playerName + ".missions.1.armor." + piece, false);
-        }
-
-        try {
-            data.save(missionHandler.getMissionFile());
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al inicializar datos de Misión 1: " + e.getMessage());
-        }
-    }
+    public void initializePlayerData(String playerName) {}
 
     @Override
-    public void checkCompletion(String playerName) {
-        // Se verifica durante los eventos
-    }
+    public void checkCompletion(String playerName) {}
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) return;
-        if (!missionHandler.isMissionActive(1)) return;
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!missionHandler.isMissionActive(player, 1)) return;
+        MissionData data = missionHandler.getData(player, 1);
+        if (data.isCompleted()) return;
 
-        Player player = (Player) event.getWhoClicked();
-
-        // Verificar si ya completó la misión
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        if (data.getBoolean("players." + player.getName() + ".missions.1.completed", false)) {
-            return;
-        }
-
-        // Verificar después de un tick para asegurar que el inventario se actualice
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             checkArmorEquipped(player);
         }, 1L);
@@ -108,25 +78,19 @@ public class Mission1 implements Mission, Listener {
 
     @EventHandler
     public void onItemHeld(PlayerItemHeldEvent event) {
-        if (!missionHandler.isMissionActive(1)) return;
-
         Player player = event.getPlayer();
+        if (!missionHandler.isMissionActive(player, 1)) return;
+        MissionData data = missionHandler.getData(player, 1);
+        if (data.isCompleted()) return;
 
-        // Verificar si ya completó la misión
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        if (data.getBoolean("players." + player.getName() + ".missions.1.completed", false)) {
-            return;
-        }
-
-        // Verificar después de un tick
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             checkArmorEquipped(player);
         }, 1L);
     }
 
     private void checkArmorEquipped(Player player) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        String playerName = player.getName();
+        MissionData data = missionHandler.getData(player, 1);
+        if (data.isCompleted()) return;
 
         ItemStack helmet = player.getInventory().getHelmet();
         ItemStack chestplate = player.getInventory().getChestplate();
@@ -138,54 +102,53 @@ public class Mission1 implements Mission, Listener {
         boolean hasLeggings = leggings != null && leggings.getType() == Material.DIAMOND_LEGGINGS;
         boolean hasBoots = boots != null && boots.getType() == Material.DIAMOND_BOOTS;
 
-        // Actualizar progreso
         boolean updated = false;
 
-        if (hasHelmet && !data.getBoolean("players." + playerName + ".missions.1.armor.helmet", false)) {
-            data.set("players." + playerName + ".missions.1.armor.helmet", true);
+        if (hasHelmet && !data.getProgressBool("armor_helmet")) {
+            data.setProgressValue("armor_helmet", true);
             successNotification.showSuccess(player);
             updated = true;
         }
 
-        if (hasChestplate && !data.getBoolean("players." + playerName + ".missions.1.armor.chestplate", false)) {
-            data.set("players." + playerName + ".missions.1.armor.chestplate", true);
+        if (hasChestplate && !data.getProgressBool("armor_chestplate")) {
+            data.setProgressValue("armor_chestplate", true);
             successNotification.showSuccess(player);
             updated = true;
         }
 
-        if (hasLeggings && !data.getBoolean("players." + playerName + ".missions.1.armor.leggings", false)) {
-            data.set("players." + playerName + ".missions.1.armor.leggings", true);
+        if (hasLeggings && !data.getProgressBool("armor_leggings")) {
+            data.setProgressValue("armor_leggings", true);
             successNotification.showSuccess(player);
             updated = true;
         }
 
-        if (hasBoots && !data.getBoolean("players." + playerName + ".missions.1.armor.boots", false)) {
-            data.set("players." + playerName + ".missions.1.armor.boots", true);
+        if (hasBoots && !data.getProgressBool("armor_boots")) {
+            data.setProgressValue("armor_boots", true);
             successNotification.showSuccess(player);
             updated = true;
         }
 
         if (updated) {
-            try {
-                data.save(missionHandler.getMissionFile());
-            } catch (IOException e) {
-                plugin.getLogger().severe("Error al guardar progreso de Misión 1: " + e.getMessage());
-                return;
-            }
+            missionHandler.saveData(player, 1, data);
 
-            // Verificar si completó toda la armadura
-            if (hasHelmet && hasChestplate && hasLeggings && hasBoots) {
-                missionHandler.completeMission(playerName, 1);
-            } else {
-                // Mostrar progreso
-                int completed = 0;
-                if (data.getBoolean("players." + playerName + ".missions.1.armor.helmet", false)) completed++;
-                if (data.getBoolean("players." + playerName + ".missions.1.armor.chestplate", false)) completed++;
-                if (data.getBoolean("players." + playerName + ".missions.1.armor.leggings", false)) completed++;
-                if (data.getBoolean("players." + playerName + ".missions.1.armor.boots", false)) completed++;
+            int completed = 0;
+            if (data.getProgressBool("armor_helmet")) completed++;
+            if (data.getProgressBool("armor_chestplate")) completed++;
+            if (data.getProgressBool("armor_leggings")) completed++;
+            if (data.getProgressBool("armor_boots")) completed++;
 
-/*                player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Progreso de armadura: " + ChatColor.of("#FFB6C1") + completed + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "4");*/
-                toastHandler.sendToast(player, ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Prog. de Armadura: " + ChatColor.GREEN + completed + ChatColor.of("#87CEEB") + "/" + ChatColor.GRAY + "4", "Logro de Armoradura de Diamante", "minecraft:diamond_chestplate");
+            String progressColor = completed == 4 ? "&#8BF8B7" : "&#CB5D5E";
+            String totalColor = completed == 4 ? "&#8BF8B7" : "&#8BF8B7";
+
+            String missionText = "&lMISION: &r\"&#9CF2FD&lARMADURA BÁSICA&r\"\n\n" +
+                    "&#ed92dbProgreso de Armadura: " + progressColor + completed + "&7/" + totalColor + "4";
+
+            ViciontMediaAPI.sendText(player, "48006c", 8, "topright", missionText);
+
+            if (completed == 4) {
+                plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                    missionHandler.completeMission(player.getName(), 1);
+                }, 20L);
             }
         }
     }

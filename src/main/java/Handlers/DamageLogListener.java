@@ -1,11 +1,8 @@
-package Events;
+package Handlers;
 
-import Handlers.DeathStormHandler;
 import TitleListener.MuerteHandler;
-import net.kyori.adventure.text.Component;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
-import org.bukkit.GameMode;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -54,7 +51,6 @@ public class DamageLogListener implements Listener {
         return damageLogPlayers.containsKey(playerId);
     }
 
-    // Métodos para controlar la visibilidad del ActionBar
     public void pauseActionBarForPlayer(UUID playerId) {
         pausedActionBars.add(playerId);
     }
@@ -105,9 +101,7 @@ public class DamageLogListener implements Listener {
         if (event.getEntity() instanceof Player) {
             Player player = (Player) event.getEntity();
 
-            if (MuerteHandler.isDeathMessageActive()) {
-                return;
-            }
+            if (MuerteHandler.isDeathMessageActive()) return;
 
             if (event.getCause() == EntityDamageEvent.DamageCause.FALL ||
                     event.getCause() == EntityDamageEvent.DamageCause.VOID ||
@@ -127,7 +121,6 @@ public class DamageLogListener implements Listener {
         Player player = Bukkit.getPlayer(playerId);
         if (player == null) return;
 
-        // Cancelar tarea existente para este jugador
         BukkitTask existingTask = damageLogTasks.get(playerId);
         if (existingTask != null) {
             existingTask.cancel();
@@ -143,10 +136,7 @@ public class DamageLogListener implements Listener {
                     return;
                 }
 
-                // No mostrar si hay mensaje de muerte activo
-                if (MuerteHandler.isDeathMessageActive()) {
-                    return;
-                }
+                if (MuerteHandler.isDeathMessageActive()) return;
 
                 long startTime = damageLogPlayers.get(playerId);
                 int elapsedTime = (int) ((System.currentTimeMillis() - startTime) / 1000);
@@ -154,16 +144,24 @@ public class DamageLogListener implements Listener {
 
                 if (remainingTime > 0) {
                     if (!isActionBarPausedForPlayer(playerId)) {
-
                         String message = ChatColor.of("#D24346") + "" + ChatColor.BOLD + "۞ " + ChatColor.RESET + ChatColor.of("#9179D4") + "Damage Log: " + ChatColor.RESET + ChatColor.of("#CE2E69") + ChatColor.BOLD + ChatColor.UNDERLINE +
                                 String.format("%02d:%02d", remainingTime / 60, remainingTime % 60);
-                        currentPlayer.spigot().sendMessage(ChatMessageType.ACTION_BAR,
-                                TextComponent.fromLegacyText(message));
+
+                        // FIX: Añadimos el padre invisible
+                        TextComponent root = new TextComponent("\u200B");
+                        root.addExtra(new TextComponent(TextComponent.fromLegacyText(message)));
+
+                        currentPlayer.spigot().sendMessage(ChatMessageType.ACTION_BAR, root);
                     }
                 } else {
                     if (!isActionBarPausedForPlayer(playerId)) {
-                        currentPlayer.spigot().sendMessage(ChatMessageType.ACTION_BAR,
-                                TextComponent.fromLegacyText(ChatColor.of("#D24346") + "" + ChatColor.BOLD + "۞ " + ChatColor.RESET + ChatColor.of("#9179D4") + "Damage Log: " + ChatColor.RESET + ChatColor.of("#CE2E69") + ChatColor.BOLD + ChatColor.UNDERLINE + "00:00"));
+                        String message = ChatColor.of("#D24346") + "" + ChatColor.BOLD + "۞ " + ChatColor.RESET + ChatColor.of("#9179D4") + "Damage Log: " + ChatColor.RESET + ChatColor.of("#CE2E69") + ChatColor.BOLD + ChatColor.UNDERLINE + "00:00";
+
+                        // FIX: Añadimos el padre invisible
+                        TextComponent root = new TextComponent("\u200B");
+                        root.addExtra(new TextComponent(TextComponent.fromLegacyText(message)));
+
+                        currentPlayer.spigot().sendMessage(ChatMessageType.ACTION_BAR, root);
                     }
                     damageLogPlayers.remove(playerId);
                     damageLogTasks.remove(playerId);
@@ -183,14 +181,9 @@ public class DamageLogListener implements Listener {
             if (!ViciontHardcore3.shuttingDown) {
                 double damage = 16;
                 double newHealth = player.getHealth() - damage;
+                player.setHealth(Math.max(newHealth, 0));
 
-                if (newHealth > 0) {
-                    player.setHealth(newHealth);
-                } else {
-                    player.setHealth(0);
-                }
-
-                Bukkit.broadcastMessage(ChatColor.DARK_RED + "۞ " + player.getName() +
+                Bukkit.broadcastMessage(org.bukkit.ChatColor.DARK_RED + "۞ " + player.getName() +
                         " intentó desconectarse mientras estaba en 'Damage Log'. ¡Recibió daño como penalización!");
             }
 
@@ -211,7 +204,6 @@ public class DamageLogListener implements Listener {
 
         pausedActionBars.remove(playerId);
 
-        // Cancelar tarea específica
         BukkitTask task = damageLogTasks.remove(playerId);
         if (task != null) {
             task.cancel();

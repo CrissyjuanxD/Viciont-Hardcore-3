@@ -14,7 +14,6 @@ public class CorruptedEnd implements Listener {
     private CorruptedEndGenerator generator;
     private PortalManager portalManager;
     private BiomeEffectManager biomeEffectManager;
-    private LootManager lootManager;
     private StructureManager structureManager;
     private MobSpawnManager mobSpawnManager;
     private CorruptedEndCommands commands;
@@ -28,10 +27,9 @@ public class CorruptedEnd implements Listener {
         this.generator = new CorruptedEndGenerator(plugin);
         this.portalManager = new PortalManager(plugin, this);
         this.biomeEffectManager = new BiomeEffectManager(plugin);
-        this.lootManager = new LootManager(plugin);
         this.structureManager = new StructureManager(plugin);
         this.mobSpawnManager = new MobSpawnManager(plugin);
-        this.commands = new CorruptedEndCommands(plugin, portalManager, lootManager);
+        this.commands = new CorruptedEndCommands(plugin, portalManager);
     }
 
     public void initialize() {
@@ -106,7 +104,6 @@ public class CorruptedEnd implements Listener {
     public CorruptedEndGenerator getGenerator() { return generator; }
     public PortalManager getPortalManager() { return portalManager; }
     public BiomeEffectManager getBiomeEffectManager() { return biomeEffectManager; }
-    public LootManager getLootManager() { return lootManager; }
     public StructureManager getStructureManager() { return structureManager; }
     public MobSpawnManager getMobSpawnManager() { return mobSpawnManager; }
 }

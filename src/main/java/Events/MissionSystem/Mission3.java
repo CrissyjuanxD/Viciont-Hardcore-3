@@ -1,9 +1,8 @@
 package Events.MissionSystem;
 
 import TitleListener.SuccessNotification;
+import com.viciontmedia.api.ViciontMediaAPI;
 import org.bukkit.Material;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -12,9 +11,7 @@ import org.bukkit.event.raid.RaidFinishEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import items.EconomyItems;
-import net.md_5.bungee.api.ChatColor;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,89 +45,49 @@ public class Mission3 implements Mission, Listener {
     public List<ItemStack> getRewards() {
         List<ItemStack> rewards = new ArrayList<>();
 
-        // 10 Vithiums
         ItemStack vithiums = EconomyItems.createVithiumCoin();
         vithiums.setAmount(10);
         rewards.add(vithiums);
-
-        // 5 Manzanas doradas
         rewards.add(new ItemStack(Material.GOLDEN_APPLE, 5));
-
-        // 1 Notch Apple
         rewards.add(new ItemStack(Material.ENCHANTED_GOLDEN_APPLE, 1));
 
         return rewards;
     }
 
     @Override
-    public void initializePlayerData(String playerName) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-        data.set("players." + playerName + ".missions.3.raid_completed", false);
-        data.set("players." + playerName + ".missions.3.golden_apples_crafted", 0);
-
-        try {
-            data.save(missionHandler.getMissionFile());
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al inicializar datos de Misión 3: " + e.getMessage());
-        }
-    }
+    public void initializePlayerData(String playerName) {}
 
     @Override
-    public void checkCompletion(String playerName) {
-        // Se verifica durante los eventos
-    }
+    public void checkCompletion(String playerName) {}
 
     @EventHandler
     public void onRaidFinish(RaidFinishEvent event) {
-        if (!missionHandler.isMissionActive(3)) return;
+        if (event.getRaid().getStatus() != org.bukkit.Raid.RaidStatus.VICTORY) return;
 
-        // Verificar que la raid fue exitosa (no fue derrotada)
-        if (event.getRaid().getStatus() != org.bukkit.Raid.RaidStatus.VICTORY) {
-            return;
-        }
-
-        // Encontrar jugadores que participaron en la raid
         List<Player> participants = event.getWinners();
 
         for (Player player : participants) {
-            String playerName = player.getName();
+            if (!missionHandler.isMissionActive(player, 3)) continue;
 
-            // Verificar si ya completó la misión
-            FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-            if (data.getBoolean("players." + playerName + ".missions.3.completed", false)) {
-                continue;
-            }
+            MissionData data = missionHandler.getData(player, 3);
+            if (data.isCompleted() || data.getProgressBool("raid_completed")) continue;
 
-            // Marcar como completada
-            data.set("players." + playerName + ".missions.3.raid_completed", true);
+            data.setProgressValue("raid_completed", true);
+            missionHandler.saveData(player, 3, data);
 
-            try {
-                data.save(missionHandler.getMissionFile());
-                player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Has completado una Raid!");
-                successNotification.showSuccess(player);
-
-                // Verificar si también ha crafteado las manzanas de oro
-                checkMissionCompletion(playerName, data);
-            } catch (IOException e) {
-                plugin.getLogger().severe("Error al guardar progreso de Misión 3: " + e.getMessage());
-            }
+            successNotification.showSuccess(player);
+            sendMissionUI(player, data);
+            checkMissionCompletion(player, data);
         }
     }
 
     @EventHandler
     public void onCraftItem(CraftItemEvent event) {
-        if (!missionHandler.isMissionActive(3)) return;
-        if (!(event.getWhoClicked() instanceof Player)) return;
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!missionHandler.isMissionActive(player, 3)) return;
 
-        Player player = (Player) event.getWhoClicked();
-        String playerName = player.getName();
-
-        FileConfiguration data = YamlConfiguration.loadConfiguration(missionHandler.getMissionFile());
-
-        // Verificar si ya completó la misión ANTES de procesar el craft
-        if (data.getBoolean("players." + playerName + ".missions.3.completed", false)) {
-            return;
-        }
+        MissionData data = missionHandler.getData(player, 3);
+        if (data.isCompleted()) return;
 
         ItemStack recipeResult = event.getRecipe().getResult();
         if (recipeResult.getType() != Material.GOLDEN_APPLE) return;
@@ -144,9 +101,7 @@ public class Mission3 implements Mission, Listener {
                     maxCraftable = Math.min(maxCraftable, ingredient.getAmount());
                 }
             }
-            if (maxCraftable == Integer.MAX_VALUE) {
-                maxCraftable = 0;
-            }
+            if (maxCraftable == Integer.MAX_VALUE) maxCraftable = 0;
             craftedAmount = maxCraftable * recipeResult.getAmount();
         } else {
             craftedAmount = recipeResult.getAmount();
@@ -154,50 +109,50 @@ public class Mission3 implements Mission, Listener {
 
         if (craftedAmount <= 0) return;
 
-        // Obtener el valor ACTUAL antes de modificarlo
-        int currentCrafted = data.getInt("players." + playerName + ".missions.3.golden_apples_crafted", 0);
+        int currentCrafted = data.getProgressInt("golden_apples_crafted");
 
-        // Solo proceder si realmente estamos agregando algo nuevo
-        if (craftedAmount > 0) {
+        if (currentCrafted < 20) {
             int newTotal = currentCrafted + craftedAmount;
-            data.set("players." + playerName + ".missions.3.golden_apples_crafted", newTotal);
+            if (newTotal > 20) newTotal = 20;
 
-            try {
-                data.save(missionHandler.getMissionFile());
+            data.setProgressValue("golden_apples_crafted", newTotal);
+            missionHandler.saveData(player, 3, data);
 
-                if (newTotal >= 20) {
-                    successNotification.showSuccess(player);
-                } else {
-                    player.sendMessage(ChatColor.GOLD + "۞ " + ChatColor.of("#87CEEB") + "Manzanas de oro crafteadas: " +
-                            ChatColor.of("#FFB6C1") + newTotal + ChatColor.of("#87CEEB") + "/" + ChatColor.of("#98FB98") + "20");
-                }
+            if (newTotal >= 20) successNotification.showSuccess(player);
 
-                // Verificar si completó la misión (solo si craft >= 20)
-                checkMissionCompletion(playerName, data);
-            } catch (IOException e) {
-                plugin.getLogger().severe("Error al guardar progreso de Misión 3: " + e.getMessage());
-            }
+            sendMissionUI(player, data);
+            checkMissionCompletion(player, data);
         }
     }
 
-    private void checkMissionCompletion(String playerName, FileConfiguration data) {
-        // Verificar si ya completó la misión para evitar duplicados
-        if (data.getBoolean("players." + playerName + ".missions.3.completed", false)) {
-            return;
-        }
+    private void sendMissionUI(Player player, MissionData data) {
+        boolean raidCompleted = data.getProgressBool("raid_completed");
+        int apples = data.getProgressInt("golden_apples_crafted");
 
-        boolean raidCompleted = data.getBoolean("players." + playerName + ".missions.3.raid_completed", false);
-        int goldenApplesCrafted = data.getInt("players." + playerName + ".missions.3.golden_apples_crafted", 0);
+        String raidProg = raidCompleted ? "1" : "0";
+        String raidColor = raidCompleted ? "&#8BF8B7" : "&#CB5D5E";
+        String raidTotalColor = raidCompleted ? "&#8BF8B7" : "&#8BF8B7";
+
+        String appleColor = apples >= 20 ? "&#8BF8B7" : "&#CB5D5E";
+        String appleTotalColor = apples >= 20 ? "&#8BF8B7" : "&#8BF8B7";
+
+        String missionText = "&lMISION: &r\"&#9CF2FD&lPREPARACIÓN&r\"\n\n" +
+                "&#ed92dbRaid Superada: " + raidColor + raidProg + "&7/" + raidTotalColor + "1\n" +
+                "&#b45bdcManzanas Crafteadas: " + appleColor + apples + "&7/" + appleTotalColor + "20";
+
+        ViciontMediaAPI.sendText(player, "48006c", 8, "topright", missionText);
+    }
+
+    private void checkMissionCompletion(Player player, MissionData data) {
+        if (data.isCompleted()) return;
+
+        boolean raidCompleted = data.getProgressBool("raid_completed");
+        int goldenApplesCrafted = data.getProgressInt("golden_apples_crafted");
 
         if (raidCompleted && goldenApplesCrafted >= 20) {
-            // Marcar como completada ANTES de llamar a completeMission
-            data.set("players." + playerName + ".missions.3.completed", true);
-            try {
-                data.save(missionHandler.getMissionFile());
-                missionHandler.completeMission(playerName, 3);
-            } catch (IOException e) {
-                plugin.getLogger().severe("Error al marcar misión como completada: " + e.getMessage());
-            }
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                missionHandler.completeMission(player.getName(), 3);
+            }, 20L);
         }
     }
 }

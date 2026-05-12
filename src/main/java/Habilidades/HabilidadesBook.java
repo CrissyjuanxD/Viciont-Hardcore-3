@@ -2,6 +2,8 @@ package Habilidades;
 
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemRarity;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -12,7 +14,7 @@ import java.util.List;
 public class HabilidadesBook {
 
     public static ItemStack createHabilidadesBook() {
-        ItemStack book = new ItemStack(Material.BOOK);
+        ItemStack book = new ItemStack(Material.KNOWLEDGE_BOOK);
         ItemMeta meta = book.getItemMeta();
 
         meta.setDisplayName(ChatColor.of("#C77DFF") + "" + ChatColor.BOLD + "Libro de Habilidades");
@@ -28,6 +30,8 @@ public class HabilidadesBook {
 
         meta.setLore(lore);
         meta.setRarity(ItemRarity.EPIC);
+        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         meta.setCustomModelData(9999);
 
         book.setItemMeta(meta);

@@ -1,13 +1,22 @@
 package Bosses;
 
-import org.bukkit.*;
-import org.bukkit.boss.*;
+import org.bukkit.Bukkit;
+import net.md_5.bungee.api.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.Sound;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 public abstract class BaseBoss {
 
@@ -17,17 +26,21 @@ public abstract class BaseBoss {
 
     // ---- Sistema de Jugadores ----
     protected final Set<UUID> currentPlayers = new HashSet<>();
+    protected final Set<UUID> attackers = new HashSet<>();
 
     // ---- Sistema de Arena ----
     protected AreaZone areaZone;
+
+    // ---- Estado ----
+    private boolean hibernating = false; // Nuevo estado
+
     // ---- Debug ----
-    private boolean debugEnabled = false;
     private final Set<UUID> debugPlayers = new HashSet<>();
     private int debugTick = 0;
 
     // ---- BossBars ----
-    protected BossBar mainBar;       // barra normal (rosa)
-    protected BossBar staticBar;     // barra estática (blanca, solo números)
+    protected BossBar mainBar;
+    protected BossBar staticBar;
 
     private BukkitRunnable tickTask;
     private boolean initialized = false;
@@ -54,21 +67,84 @@ public abstract class BaseBoss {
         tickTask = new BukkitRunnable() {
             @Override
             public void run() {
-                if (entity.isDead() || !entity.isValid()) {
+                // 1. VALIDACIÓN DE ESTADO (CORREGIDO)
+                if (!entity.isValid() || entity.isDead()) {
                     cancel();
-                    onDeath();
                     cleanupBars();
-                    sendDeathMessage();
+
+                    if (entity.getHealth() <= 0 || entity.isDead()) {
+                        onDeath();
+                        sendDeathMessage();
+                    }
+                    else {
+                        onUnload();
+                    }
                     return;
                 }
 
-                updateBars();
+                // 2. Actualizar jugadores
                 updatePlayers();
+                updateBars();
+
+                // 3. Hibernación
+                if (currentPlayers.isEmpty()) {
+                    if (!hibernating) {
+                        enterHibernation();
+                    }
+                } else {
+                    if (hibernating) {
+                        exitHibernation();
+                    }
+
+                    if (entity.isInvulnerable()) {
+                        entity.setInvulnerable(false);
+                    }
+                }
+
+                // 4. Anti-Escape
+                if (!areaZone.isInside(entity.getLocation())) {
+                    entity.teleport(spawnLocation);
+                    entity.getWorld().playSound(entity.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 3f, 0.8f);
+                }
+
+                // 5. Tick
                 debugArenaTick();
                 onTick();
             }
         };
         tickTask.runTaskTimer(plugin, 1L, 1L);
+    }
+
+    // ===========================
+    //      HIBERNACIÓN
+    // ===========================
+    private void enterHibernation() {
+        hibernating = true;
+        entity.setAI(false);
+        entity.setInvulnerable(true);
+        entity.setSilent(true);
+
+        mainBar.removeAll();
+        staticBar.removeAll();
+    }
+
+    private void exitHibernation() {
+        hibernating = false;
+        entity.setAI(true);
+        entity.setInvulnerable(false);
+        entity.setSilent(false);
+
+        for (UUID uuid : currentPlayers) {
+            Player p = Bukkit.getPlayer(uuid);
+            if (p != null) {
+                mainBar.addPlayer(p);
+                staticBar.addPlayer(p);
+            }
+        }
+    }
+
+    public boolean isHibernating() {
+        return hibernating;
     }
 
     // ===========================
@@ -81,7 +157,7 @@ public abstract class BaseBoss {
     }
 
     private void updateBars() {
-        double max = entity.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH).getBaseValue();
+        double max = entity.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue();
         double hp = Math.max(0, entity.getHealth());
 
         mainBar.setProgress(hp / max);
@@ -113,8 +189,10 @@ public abstract class BaseBoss {
 
             if (inside && !already) {
                 currentPlayers.add(player.getUniqueId());
-                mainBar.addPlayer(player);
-                staticBar.addPlayer(player);
+                if (!hibernating) {
+                    mainBar.addPlayer(player);
+                    staticBar.addPlayer(player);
+                }
             }
             if (!inside && already) {
                 currentPlayers.remove(player.getUniqueId());
@@ -134,6 +212,12 @@ public abstract class BaseBoss {
         }
     }
 
+    public void addAttacker(Player p) {
+        if (p.getGameMode() == org.bukkit.GameMode.SURVIVAL || p.getGameMode() == org.bukkit.GameMode.ADVENTURE) {
+            attackers.add(p.getUniqueId());
+        }
+    }
+
     public void toggleDebug(Player player) {
         if (debugPlayers.contains(player.getUniqueId())) {
             debugPlayers.remove(player.getUniqueId());
@@ -150,8 +234,7 @@ public abstract class BaseBoss {
 
         debugTick++;
 
-        // cada 5 ticks dibujamos borde
-        if (debugTick % 5 == 0) {
+        if (debugTick % 10 == 0) {
             for (UUID id : debugPlayers) {
                 Player p = Bukkit.getPlayer(id);
                 if (p != null) {
@@ -160,7 +243,6 @@ public abstract class BaseBoss {
             }
         }
 
-        // ahora avisamos entrada/salida
         for (UUID id : debugPlayers) {
             Player p = Bukkit.getPlayer(id);
             if (p == null) continue;
@@ -189,37 +271,59 @@ public abstract class BaseBoss {
         if (currentPlayers.isEmpty()) return;
 
         List<String> names = currentPlayers.stream()
-                .map(id -> Bukkit.getPlayer(id) != null ? Bukkit.getPlayer(id).getName() : "")
+                .map(id -> Bukkit.getPlayer(id))
+                .filter(p -> p != null && (p.getGameMode() == org.bukkit.GameMode.SURVIVAL || p.getGameMode() == org.bukkit.GameMode.ADVENTURE))
+                .map(Player::getName)
                 .toList();
+
+        if (names.isEmpty()) return;
+
+        String prefix = ChatColor.of("#88F1BC") + "" + ChatColor.BOLD + "\u06de";
+        String colorText = ChatColor.of("#74A3D2").toString();
+        String colorName = ChatColor.of("#76C6E8") + "" + ChatColor.BOLD;
+        String bossName = ChatColor.BOLD + getBossTitle();
 
         String msg;
 
         if (names.size() == 1) {
-            msg = ChatColor.LIGHT_PURPLE + "El jugador " + names.get(0) + " ha invocado a " + getBossTitle();
+            msg = prefix + colorText + " El jugador " + colorName + names.get(0) +
+                    colorText + " ha invocado a la " + bossName;
         } else {
-            msg = ChatColor.LIGHT_PURPLE + "Los jugadores " + ChatColor.YELLOW +
-                    String.join(", ", names) +
-                    ChatColor.LIGHT_PURPLE + " han invocado a " + getBossTitle();
+            msg = prefix + colorText + " Los jugadores " + colorName + String.join(", ", names) +
+                    colorText + " han invocado a la " + bossName;
         }
 
         Bukkit.broadcastMessage(msg);
     }
 
+    // ===========================
+    //      MENSAJES GLOBALES
+    // ===========================
     private void sendDeathMessage() {
-        List<String> names = currentPlayers.stream()
-                .map(id -> Bukkit.getPlayer(id) != null ? Bukkit.getPlayer(id).getName() : "")
+        Set<UUID> involvedUUIDs = new HashSet<>(currentPlayers);
+        involvedUUIDs.addAll(attackers);
+
+        List<String> names = involvedUUIDs.stream()
+                .map(id -> Bukkit.getPlayer(id))
+                .filter(p -> p != null && (p.getGameMode() == org.bukkit.GameMode.SURVIVAL || p.getGameMode() == org.bukkit.GameMode.ADVENTURE))
+                .map(Player::getName)
                 .toList();
 
         if (names.isEmpty()) return;
 
+        String prefix = ChatColor.of("#F2E66A") + "" + ChatColor.BOLD + "\u06de";
+        String colorText = ChatColor.of("#F5A62E").toString();
+        String colorName = ChatColor.of("#F55D7A") + "" + ChatColor.BOLD;
+        String bossName = ChatColor.BOLD + getBossTitle();
+
         String msg;
 
         if (names.size() == 1) {
-            msg = ChatColor.GOLD + names.get(0) + " ha derrotado a " + getBossTitle();
+            msg = prefix + colorText + " El jugador " + colorName + names.get(0) +
+                    colorText + " ha derrotado a la " + bossName;
         } else {
-            msg = ChatColor.GOLD + "Los jugadores " + ChatColor.YELLOW +
-                    String.join(", ", names) +
-                    ChatColor.GOLD + " han derrotado a " + getBossTitle();
+            msg = prefix + colorText + " Los jugadores " + colorName + String.join(", ", names) +
+                    colorText + " han derrotado a la " + bossName;
         }
 
         Bukkit.broadcastMessage(msg);
@@ -228,14 +332,14 @@ public abstract class BaseBoss {
     // ===========================
     //         ABSTRACTOS
     // ===========================
-    protected abstract String getBossTitle();     // nombre del boss
+    protected abstract String getBossTitle();
     protected abstract int getArenaRadius();
     protected abstract int getArenaHeightUp();
     protected abstract int getArenaHeightDown();
-    protected abstract AreaZone.Shape getArenaShape(); // tipo arena (CUADRADA / CIRCULAR)
+    protected abstract AreaZone.Shape getArenaShape();
 
-    protected abstract void onStart();    // cuando inicia
-    protected abstract void onTick();     // cada tick
-    protected abstract void onDeath();    // cuando muere
-
+    protected abstract void onStart();
+    protected abstract void onTick();
+    protected abstract void onDeath();
+    protected abstract void onUnload();
 }

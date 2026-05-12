@@ -4,6 +4,7 @@ import Dificultades.CustomMobs.Bombita;
 import Dificultades.CustomMobs.CorruptedSpider;
 import Dificultades.CustomMobs.CorruptedZombies;
 import Dificultades.CustomMobs.Iceologer;
+import Handlers.DayHandler;
 import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -18,6 +19,7 @@ import java.util.*;
 
 public class DayTwoChanges implements Listener {
     private final JavaPlugin plugin;
+    private final DayHandler dayHandler;
     private final Random random = new Random();
     private boolean isApplied = false;
 
@@ -31,13 +33,14 @@ public class DayTwoChanges implements Listener {
     // Variable para controlar la tarea repetitiva
     private BukkitTask targetTask;
 
-    public DayTwoChanges(JavaPlugin plugin) {
+    public DayTwoChanges(JavaPlugin plugin, DayHandler dayHandler) {
         this.plugin = plugin;
+        this.dayHandler = dayHandler;
         // Creamos las instancias (que a su vez configuran sus sistemas estáticos)
         this.bombitaSpawner = new Bombita(plugin);
         this.iceologerSpawner = new Iceologer(plugin);
         this.corruptedZombies = new CorruptedZombies(plugin);
-        this.corruptedSpiders = new CorruptedSpider(plugin);
+        this.corruptedSpiders = new CorruptedSpider(plugin, dayHandler);
     }
 
     public void apply() {

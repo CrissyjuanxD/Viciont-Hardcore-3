@@ -1,445 +1,417 @@
 package Events.AchievementParty;
 
+import Events.MissionSystem.MissionData;
+import Handlers.DatabaseManager;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
+import org.bukkit.NamespacedKey;
+import org.bukkit.advancement.Advancement;
+import org.bukkit.advancement.AdvancementProgress;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AchievementPartyHandler implements Listener {
     private final JavaPlugin plugin;
+    private final DatabaseManager dbManager;
     private boolean eventActive = false;
-    private final File achievementsFile;
-    private final File configFile;
-    private final Map<String, Achievement> achievements = new HashMap<>();
+    private final Map<UUID, Map<String, MissionData>> playerCache = new ConcurrentHashMap<>();
 
-    public AchievementPartyHandler(JavaPlugin plugin) {
+    private final List<String> achievementIds = Arrays.asList(
+            "fly_with_trident", "collect_all_flowers", "second_chance",
+            "piglin_transformation", "touch_grass",
+            "payback", "alma_piedra", "sculk_shrieker", "nether_fall" // <--- Añadidos aquí
+    );
+
+    public AchievementPartyHandler(JavaPlugin plugin, DatabaseManager dbManager) {
         this.plugin = plugin;
-        this.achievementsFile = new File(plugin.getDataFolder(), "achievements_data.yml");
-        this.configFile = new File(plugin.getDataFolder(), "config.yml");
+        this.dbManager = dbManager;
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
-        // Registrar logros iniciales
-        registerAchievements();
-        ensureFilesExist();
+        // 1. Registrar los advancements en la memoria del servidor al iniciar
+        registerVirtualAdvancements();
 
-        loadPlayerData();
+        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::autoSaveAll, 6000L, 6000L);
     }
 
-    private void ensureFilesExist() {
-        try {
-            if (!achievementsFile.exists()) {
-                achievementsFile.createNewFile();
-                YamlConfiguration.loadConfiguration(achievementsFile).save(achievementsFile);
-            }
-            if (!configFile.exists()) {
-                configFile.createNewFile();
-                YamlConfiguration.loadConfiguration(configFile).save(configFile);
-            }
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error creando archivos de configuración: " + e.getMessage());
+    // =========================================================================
+    // SISTEMA DE INYECCIÓN DE ADVANCEMENTS SIN DATAPACK
+    // =========================================================================
+    private void registerVirtualAdvancements() {
+        // 1. Crear la RAÍZ (El fondo y la pestaña principal)
+        loadVirtualAdvancement("root", null, """
+        {
+          "display": {
+            "icon": { "item": "minecraft:nether_star", "nbt": "{CustomModelData:3000}" },
+            "title": {"text": "Fiesta de Logros", "color": "light_purple", "bold": true},
+            "description": {"text": "Completa todos los logros antes de que termine el evento."},
+            "background": "minecraft:textures/block/purple_concrete.png",
+            "show_toast": false,
+            "announce_to_chat": false,
+            "hidden": false
+          },
+          "criteria": { "trigger": { "trigger": "minecraft:impossible" } }
         }
+        """);
+
+        // 2. Crear los hijos (Conectados a la raíz)
+        loadVirtualAdvancement("fly_with_trident", "root", """
+        {
+          "display": {
+            "icon": { "item": "minecraft:trident" },
+            "title": {"text": "Yo sé que puedo volar", "color": "gold"},
+            "description": {"text": "Sube 300 bloques de altura en menos de 7 segundos.", "color": "white"},
+            "frame": "challenge",
+            "show_toast": true,
+            "announce_to_chat": false,
+            "hidden": false
+          },
+          "criteria": { "trigger": { "trigger": "minecraft:impossible" } }
+        }
+        """);
+
+        loadVirtualAdvancement("collect_all_flowers", "fly_with_trident", """
+        {
+          "display": {
+            "icon": { "item": "minecraft:poppy" },
+            "title": {"text": "Stardew Valley", "color": "gold"},
+            "description": {"text": "Consigue todas las flores del juego", "color": "white"},
+            "frame": "challenge",
+            "show_toast": true,
+            "announce_to_chat": false,
+            "hidden": false
+          },
+          "criteria": { "trigger": { "trigger": "minecraft:impossible" } }
+        }
+        """);
+
+        loadVirtualAdvancement("second_chance", "root", """
+        {
+          "display": {
+            "icon": { "item": "minecraft:totem_of_undying" },
+            "title": {"text": "Second Chance", "color": "gold"},
+            "description": {"text": "Activa un tótem de los especiales", "color": "white"},
+            "frame": "challenge",
+            "show_toast": true,
+            "announce_to_chat": false,
+            "hidden": false
+          },
+          "criteria": { "trigger": { "trigger": "minecraft:impossible" } }
+        }
+        """);
+
+        loadVirtualAdvancement("piglin_transformation", "root", """
+        {
+          "display": {
+            "icon": { "item": "minecraft:zombified_piglin_spawn_egg" },
+            "title": {"text": "Desarrollo Personal", "color": "gold"},
+            "description": {"text": "Haz que un Piglin se transforme en un Zombified Piglin", "color": "white"},
+            "frame": "challenge",
+            "show_toast": true,
+            "announce_to_chat": false,
+            "hidden": false
+          },
+          "criteria": { "trigger": { "trigger": "minecraft:impossible" } }
+        }
+        """);
+
+        loadVirtualAdvancement("touch_grass", "root", """
+        {
+          "display": {
+            "icon": { "item": "minecraft:diamond_block" },
+            "title": {"text": "Ve a tocar pasto", "color": "gold"},
+            "description": {"text": "Rompe Bloques de Cobre, Hierro, Oro, Esmeralda, Diamante y Netherite con Mining Fatigue III", "color": "white"},
+            "frame": "challenge",
+            "show_toast": true,
+            "announce_to_chat": false,
+            "hidden": false
+          },
+          "criteria": { "trigger": { "trigger": "minecraft:impossible" } }
+        }
+        """);
+
+        loadVirtualAdvancement("payback", "root", """
+        {
+          "display": {
+            "icon": { "item": "minecraft:golden_axe" },
+            "title": {"text": "Con su propia medicina", "color": "gold"},
+            "description": {"text": "Mata a un Piglin Brute con un hacha de oro y al menos una pieza de armadura de oro", "color": "white"},
+            "frame": "challenge",
+            "show_toast": true,
+            "announce_to_chat": false,
+            "hidden": false
+          },
+          "criteria": { "trigger": { "trigger": "minecraft:impossible" } }
+        }
+        """);
+
+        loadVirtualAdvancement("alma_piedra", "root", """
+        {
+          "display": {
+            "icon": { "item": "minecraft:snowball" },
+            "title": {"text": "Alma de Piedra", "color": "gold"},
+            "description": {"text": "Lánzale una bola de nieve a un Warden", "color": "white"},
+            "frame": "challenge",
+            "show_toast": true,
+            "announce_to_chat": false,
+            "hidden": false
+          },
+          "criteria": { "trigger": { "trigger": "minecraft:impossible" } }
+        }
+        """);
+
+        loadVirtualAdvancement("sculk_shrieker", "root", """
+        {
+          "display": {
+            "icon": { "item": "minecraft:sculk_shrieker" },
+            "title": {"text": "Jugando a ser músico", "color": "gold"},
+            "description": {"text": "Rompe 15 chilladores en el bioma de Deep Dark", "color": "white"},
+            "frame": "challenge",
+            "show_toast": true,
+            "announce_to_chat": false,
+            "hidden": false
+          },
+          "criteria": { "trigger": { "trigger": "minecraft:impossible" } }
+        }
+        """);
+
+        loadVirtualAdvancement("nether_fall", "root", """
+        {
+          "display": {
+            "icon": { "item": "minecraft:magma_block" },
+            "title": {"text": "Descenso al Inframundo", "color": "gold"},
+            "description": {"text": "Cae de Y=255 a Y=1 en el Nether en menos de 10 segundos sin usar totems", "color": "white"},
+            "frame": "challenge",
+            "show_toast": true,
+            "announce_to_chat": false,
+            "hidden": false
+          },
+          "criteria": { "trigger": { "trigger": "minecraft:impossible" } }
+        }
+        """);
     }
 
-    private void registerAchievements() {
-        // Registrar los logros iniciales
-        achievements.put("nether_fall", new Achievement9(plugin, this));
-        achievements.put("sculk_shrieker", new Achievement8(plugin, this));
-        achievements.put("alma_piedra", new Achievement7(plugin, this));
-        achievements.put("payback", new Achievement6(plugin, this));
-        achievements.put("touch_grass", new Achievement5(plugin, this));
-        achievements.put("piglin_transformation", new Achievement4(plugin, this));
-        achievements.put("second_chance", new Achievement3(plugin, this));
-        achievements.put("collect_all_flowers", new Achievement2(plugin, this));
-        achievements.put("fly_with_trident", new Achievement1(plugin, this));
-    }
+    @SuppressWarnings("deprecation")
+    private void loadVirtualAdvancement(String id, String parentId, String jsonBody) {
+        NamespacedKey key = new NamespacedKey(plugin, "logro_" + id);
 
-
-    public Map<String, Achievement> getAchievements() {
-        return achievements;
-    }
-
-    // Método para obtener el índice numérico del logro (para CustomModelData)
-    public int getAchievementIndex(Achievement achievement) {
-        int index = 0;
-        for (Map.Entry<String, Achievement> entry : achievements.entrySet()) {
-            if (entry.getValue().equals(achievement)) {
-                return index;
-            }
-            index++;
+        // Si tiene un padre, inyectamos la línea de parent antes de cargarlo
+        String finalJson = jsonBody;
+        if (parentId != null) {
+            String parentStr = "\"parent\": \"" + plugin.getName().toLowerCase() + ":logro_" + parentId + "\",";
+            finalJson = finalJson.replaceFirst("\\{", "{\n  " + parentStr);
         }
-        return -1;
-    }
-
-    // Método para obtener el ID de cadena del logro (la clave en el Map)
-    public String getAchievementKey(Achievement achievement) {
-        for (Map.Entry<String, Achievement> entry : achievements.entrySet()) {
-            if (entry.getValue().equals(achievement)) {
-                return entry.getKey();
-            }
-        }
-        return null;
-    }
-
-    public void startEvent(CommandSender sender) {
-        if (eventActive) {
-            sender.sendMessage("§cEl evento de logros ya está activo!");
-            return;
-        }
-        resetEvent(sender);
-
-        eventActive = true;
-        loadPlayerData();
-
-        // Inicializar tracking para todos los jugadores registrados
-        FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
-        Set<String> allPlayers = config.getConfigurationSection("HasJoinedBefore") != null ?
-                config.getConfigurationSection("HasJoinedBefore").getKeys(false) : new HashSet<>();
-
-        for (String uuid : allPlayers) {
-            String playerName = Bukkit.getOfflinePlayer(UUID.fromString(uuid)).getName();
-            initializePlayerTracking(playerName);
-        }
-
-        saveAchievementData();
-
-        Bukkit.broadcastMessage("§d§l¡Fiesta de Logros ha comenzado!");
-        Bukkit.broadcastMessage("§7Completa los logros para evitar la penalización al final.");
-    }
-
-    public void endEvent(CommandSender sender) {
-        if (!eventActive) {
-            sender.sendMessage("§cNo hay ningún evento de logros activo!");
-            return;
-        }
-
-        eventActive = false;
-        saveAchievementData();
-        FileConfiguration data = YamlConfiguration.loadConfiguration(achievementsFile);
-        FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
-
-        Set<String> allPlayers = config.getConfigurationSection("HasJoinedBefore") != null ?
-                config.getConfigurationSection("HasJoinedBefore").getKeys(false) : new HashSet<>();
-
-        int requiredAchievements = achievements.size();
-        List<String> penalizedPlayers = new ArrayList<>();
-        List<String> rewardedPlayers = new ArrayList<>();
-
-        for (String uuid : allPlayers) {
-            String playerName = Bukkit.getOfflinePlayer(UUID.fromString(uuid)).getName();
-            int completed = data.getInt("players." + playerName + ".completed", 0);
-
-            if (completed < requiredAchievements) {
-                penalizedPlayers.add(playerName);
-                data.set("players." + playerName + ".penalized", true);
-
-                // CAMBIO IMPORTANTE: Solo marcar apply_penalized como false si el jugador NO está en línea
-                Player onlinePlayer = Bukkit.getPlayer(UUID.fromString(uuid));
-                if (onlinePlayer != null) {
-                    // Si está en línea, aplicar penalización inmediatamente y marcar como aplicada
-                    applyPenalty(onlinePlayer);
-                    data.set("players." + playerName + ".apply_penalized", true);
-                } else {
-                    // Si NO está en línea, marcar para aplicar cuando se conecte
-                    data.set("players." + playerName + ".apply_penalized", false);
-                }
-            } else {
-                rewardedPlayers.add(playerName);
-                Player onlinePlayer = Bukkit.getPlayer(UUID.fromString(uuid));
-                if (onlinePlayer != null) {
-                    giveReward(onlinePlayer);
-                }
-            }
-        }
-
-        try {
-            data.save(achievementsFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al guardar datos de logros: " + e.getMessage());
-        }
-
-        broadcastResults(penalizedPlayers, rewardedPlayers);
-    }
-
-    public void applyPenalty(Player player) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(achievementsFile);
-        String penalizedPath = "players." + player.getName() + ".penalized";
-        String appliedPath = "players." + player.getName() + ".apply_penalized";
-
-        if (data.getBoolean(appliedPath, false)) {
-            return;
-        }
-
-        double currentMaxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue();
-
-        // Si el jugador tiene 4 corazones o menos (8 de vida o menos)
-        if (currentMaxHealth <= 8) {
-            // En lugar de penalizar, matar al jugador
-            player.setHealth(0);
-            player.sendMessage("§c¡No completaste todos los logros! Has sido ejecutado por no cumplir con el Evento de Logros.");
-            Bukkit.broadcastMessage("§c" + player.getName() + " ha sido ejecutado por no completar el Evento de Logros.");
-
-            // Marcar como penalizado y que ya se aplicó
-            data.set(penalizedPath, true);
-            data.set(appliedPath, true);
-        } else {
-            // Aplicar penalización normal (quitar 4 corazones)
-            player.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(Math.max(2, currentMaxHealth - 8));
-            player.sendMessage("§c¡No completaste todos los logros! Has perdido 4 corazones permanentes.");
-
-            // Marcar como penalizado y que ya se aplicó
-            data.set(penalizedPath, true);
-            data.set(appliedPath, true);
-        }
-
-        try {
-            data.save(achievementsFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al guardar penalización: " + e.getMessage());
-        }
-    }
-
-    @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
-        FileConfiguration data = YamlConfiguration.loadConfiguration(achievementsFile);
-        String penalizedPath = "players." + player.getName() + ".penalized";
-        String appliedPath = "players." + player.getName() + ".apply_penalized";
-
-        if (data.getBoolean(penalizedPath, false) && !data.getBoolean(appliedPath, false)) {
-            double currentMaxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue();
-
-            if (currentMaxHealth > 12) {
-                applyPenalty(player);
-            }
-            else if (currentMaxHealth > 8) {
-                applyPenalty(player);
-            }
-            else {
-                applyPenalty(player);
-            }
-        }
-    }
-
-    private void giveReward(Player player) {
-        ItemStack rewardChest = new ItemStack(Material.CHEST);
-        ItemMeta meta = rewardChest.getItemMeta();
-        meta.setDisplayName("§6Recompensa de Logros");
-        rewardChest.setItemMeta(meta);
-
-        player.getInventory().addItem(rewardChest);
-        player.sendMessage("§a¡Felicidades! Has completado todos los logros.");
-    }
-
-    private void broadcastResults(List<String> penalizedPlayers, List<String> rewardedPlayers) {
-        Bukkit.broadcastMessage("§d§l¡Fiesta de Logros ha terminado!");
-
-        if (!penalizedPlayers.isEmpty()) {
-            Bukkit.broadcastMessage("§cJugadores penalizados (" + penalizedPlayers.size() + "):");
-            for (String player : penalizedPlayers) {
-                Bukkit.broadcastMessage("§7- " + player);
-            }
-        }
-
-        if (!rewardedPlayers.isEmpty()) {
-            Bukkit.broadcastMessage("§aJugadores recompensados (" + rewardedPlayers.size() + "):");
-            for (String player : rewardedPlayers) {
-                Bukkit.broadcastMessage("§7- " + player);
-            }
-        }
-    }
-
-    public void resetEvent(CommandSender sender) {
-        if (eventActive) {
-            eventActive = false;
-            sender.sendMessage("§eEl evento estaba activo, ha sido desactivado antes de resetear.");
-        }
-
-        if (!achievementsFile.exists()) {
-            sender.sendMessage("§aNo hay datos de logros que resetear.");
-            return;
-        }
-
-        if (achievementsFile.delete()) {
-            sender.sendMessage("§aLos datos de Fiesta de Logros han sido reseteados.");
-        } else {
-            sender.sendMessage("§cNo se pudo resetear los datos de logros.");
-        }
-    }
-
-
-    public void initializePlayerTracking(String playerName) {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(achievementsFile);
-
-        if (!data.contains("players." + playerName)) {
-            data.set("players." + playerName + ".completed", 0);
-
-            // Inicializar el progreso para cada logro
-            for (String achievementId : achievements.keySet()) {
-                data.set("players." + playerName + ".achievements." + achievementId + ".completed", false);
-                achievements.get(achievementId).initializePlayerData(playerName);
-            }
-
-            try {
-                data.save(achievementsFile);
-            } catch (IOException e) {
-                plugin.getLogger().severe("Error al inicializar datos del jugador: " + e.getMessage());
-            }
-        }
-    }
-
-    private void loadPlayerData() {
-        if (!achievementsFile.exists()) {
-            return;
-        }
-
-        FileConfiguration data = YamlConfiguration.loadConfiguration(achievementsFile);
-
-        eventActive = data.getBoolean("eventActive", false);
-    }
-
-    public void saveAchievementData() {
-        FileConfiguration data = YamlConfiguration.loadConfiguration(achievementsFile);
-        data.set("eventActive", eventActive);
 
         try {
-            data.save(achievementsFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al guardar los datos de logros: " + e.getMessage());
-        }
-    }
-
-    public boolean completeAchievement(String playerName, String achievementId) {
-        if (!eventActive || !achievements.containsKey(achievementId)) return false;
-
-        FileConfiguration data = YamlConfiguration.loadConfiguration(achievementsFile);
-
-        if (!data.contains("players." + playerName)) {
-            initializePlayerTracking(playerName);
-        }
-
-        if (data.getBoolean("players." + playerName + ".achievements." + achievementId + ".completed", false)) {
-            return false;
-        }
-
-        data.set("players." + playerName + ".achievements." + achievementId + ".completed", true);
-
-        int completed = data.getInt("players." + playerName + ".completed", 0);
-        data.set("players." + playerName + ".completed", completed + 1);
-
-        try {
-            data.save(achievementsFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al guardar el progreso del logro: " + e.getMessage());
-            return false;
-        }
-
-        Player player = Bukkit.getPlayer(playerName);
-        if (player != null) {
-            String achievementName = achievements.get(achievementId).getName();
-            String achievementDesc = achievements.get(achievementId).getDescription();
-
-            String jsonMessage = String.format(
-                    "[\"\",{\"text\":\"\\n۞ \",\"bold\":true,\"color\":\"#1986DE\"}," +
-                            "{\"text\":\"%s\",\"bold\":true,\"color\":\"#E43185\"}," +
-                            "{\"text\":\" ha completado el logro \",\"color\":\"#1986DE\"}," +
-                            "{\"text\":\"[\",\"color\":\"white\"}," +
-                            "{\"text\":\"%s\",\"bold\":true,\"color\":\"#AA66E7\"," +
-                            "\"hoverEvent\":{\"action\":\"show_text\",\"value\":{\"text\":\"\",\"extra\":[{\"text\":\"%s\",\"color\":\"green\"}]}}}," +
-                            "{\"text\":\"]\\n\",\"color\":\"white\"}]",
-                    player.getName(),
-                    achievementName,
-                    achievementDesc.replace("\"", "\\\"") // Escapar comillas
-            );
-
-            for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-                try {
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                            "tellraw " + onlinePlayer.getName() + " " + jsonMessage);
-
-                    if (onlinePlayer.equals(player)) {
-                        onlinePlayer.playSound(player.getLocation(),
-                                Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
-                    } else {
-                        try {
-                            onlinePlayer.playSound(onlinePlayer.getLocation(), "custom.noti", SoundCategory.VOICE, 1f, 2.0f);
-                        } catch (Exception ex) {
-                            plugin.getLogger().warning("Error al reproducir sonido personalizado para " + onlinePlayer.getName() + ": " + ex.getMessage());
-                        }
-                    }
-                } catch (Exception e) {
-                    plugin.getLogger().warning("Error al notificar al jugador " + onlinePlayer.getName() + ": " + e.getMessage());
-                }
+            // Limpiar si ya existía (por si se hace /reload)
+            if (Bukkit.getAdvancement(key) != null) {
+                Bukkit.getUnsafe().removeAdvancement(key);
             }
-
-            player.sendMessage("§eProgreso: §a" + (completed + 1) + "§e/§a" +
-                    achievements.size() + " §elogros completados");
-        }
-
-        return true;
-    }
-
-    /**
-     * Remueve un logro completado de un jugador
-     * @param playerName Nombre del jugador
-     * @param achievementId ID del logro
-     * @return true si se removió correctamente, false si el logro no existe o no estaba completado
-     */
-    public boolean removeAchievement(String playerName, String achievementId) {
-        if (!achievements.containsKey(achievementId)) {
-            return false;
-        }
-
-        FileConfiguration data = YamlConfiguration.loadConfiguration(achievementsFile);
-
-        if (!data.getBoolean("players." + playerName + ".achievements." + achievementId + ".completed", false)) {
-            return false;
-        }
-
-        data.set("players." + playerName + ".achievements." + achievementId + ".completed", false);
-
-        int completed = data.getInt("players." + playerName + ".completed", 0);
-        data.set("players." + playerName + ".completed", Math.max(0, completed - 1));
-
-        try {
-            data.save(achievementsFile);
-            return true;
-        } catch (IOException e) {
-            plugin.getLogger().severe("Error al remover logro: " + e.getMessage());
-            return false;
+            Bukkit.getUnsafe().loadAdvancement(key, finalJson);
+        } catch (Exception e) {
+            plugin.getLogger().warning("No se pudo inyectar el logro: " + id + " - " + e.getMessage());
         }
     }
+    // =========================================================================
 
-    /**
-     * Obtiene la lista de IDs de logros disponibles
-     * @return Lista de IDs de logros
-     */
     public List<String> getAchievementIds() {
-        return new ArrayList<>(achievements.keySet());
+        return achievementIds;
     }
 
     public boolean isEventActive() {
         return eventActive;
     }
 
-    public File getAchievementsFile() {
-        return achievementsFile;
+    // --- Manejo de Datos (Caché y Base de Datos) ---
+    public MissionData getData(Player player, String achievementId) {
+        Map<String, MissionData> pData = playerCache.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>());
+        return pData.computeIfAbsent(achievementId, k -> new MissionData());
     }
 
-    public void registerNewAchievement(String id, Achievement achievement) {
-        achievements.put(id, achievement);
+    public void saveData(Player player, String achievementId, MissionData data) {
+        Map<String, MissionData> pData = playerCache.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>());
+        pData.put(achievementId, data);
+        data.setDirty(true);
+    }
+
+    private void autoSaveAll() {
+        for (Map.Entry<UUID, Map<String, MissionData>> entry : playerCache.entrySet()) {
+            UUID uuid = entry.getKey();
+            Player player = Bukkit.getPlayer(uuid);
+            String playerName = player != null ? player.getName() : Bukkit.getOfflinePlayer(uuid).getName();
+
+            for (Map.Entry<String, MissionData> achEntry : entry.getValue().entrySet()) {
+                if (achEntry.getValue().isDirty()) {
+                    dbManager.savePlayerAchievementSync(uuid, playerName, achEntry.getKey(), achEntry.getValue());
+                    achEntry.getValue().setDirty(false);
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            Map<String, MissionData> data = dbManager.loadPlayerAchievements(uuid);
+            playerCache.put(uuid, data);
+
+            if (!eventActive) {
+                checkPenaltyOnJoin(player, data);
+            }
+        });
+
+        // Desbloquear la pestaña para que sea visible
+        if (eventActive) {
+            grantAdvancement(player, "root");
+        }
+    }
+
+    private void checkPenaltyOnJoin(Player player, Map<String, MissionData> data) {
+        boolean penalized = data.getOrDefault("system", new MissionData()).getProgressBool("penalized");
+        boolean penaltyApplied = data.getOrDefault("system", new MissionData()).getProgressBool("apply_penalized");
+
+        if (penalized && !penaltyApplied) {
+            Bukkit.getScheduler().runTask(plugin, () -> applyPenalty(player));
+        }
+    }
+
+    // --- Lógica del Evento ---
+    public void startEvent(CommandSender sender) {
+        if (eventActive) {
+            sender.sendMessage("§c¡El evento de logros ya está activo!");
+            return;
+        }
+        eventActive = true;
+
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            grantAdvancement(p, "root"); // Desbloquea la pestaña L
+        }
+
+        Bukkit.broadcastMessage("§d§l¡Fiesta de Logros ha comenzado!");
+        Bukkit.broadcastMessage("§7Abre tu menú de Advancements (Letra L) en la pestaña 'Logros'.");
+    }
+
+    public void endEvent(CommandSender sender) {
+        if (!eventActive) {
+            sender.sendMessage("§cNo hay ningún evento activo!");
+            return;
+        }
+
+        eventActive = false;
+        Bukkit.broadcastMessage("§d§l¡Fiesta de Logros ha terminado!");
+
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            MissionData sysData = getData(p, "system");
+
+            long completados = achievementIds.stream().filter(id -> getData(p, id).isCompleted()).count();
+
+            if (completados < achievementIds.size()) {
+                sysData.setProgressValue("penalized", true);
+                saveData(p, "system", sysData);
+                applyPenalty(p);
+            } else {
+                p.sendMessage("§a¡Felicidades! Completaste todos los logros a tiempo.");
+            }
+        }
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, this::autoSaveAll);
+    }
+
+    public void resetEvent(CommandSender sender) {
+        eventActive = false;
+        playerCache.clear();
+
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            revokeAdvancement(p, "root");
+            for (String id : achievementIds) {
+                revokeAdvancement(p, id);
+            }
+        }
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            dbManager.resetAllAchievements();
+            sender.sendMessage("§aTodo el progreso de los logros ha sido borrado de la base de datos.");
+        });
+    }
+
+    public void applyPenalty(Player player) {
+        MissionData sysData = getData(player, "system");
+
+        if (sysData.getProgressBool("apply_penalized")) return;
+
+        double currentMaxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue();
+
+        if (currentMaxHealth <= 8) {
+            player.setHealth(0);
+            player.sendMessage("§c¡Has sido ejecutado por no completar la Fiesta de Logros!");
+            Bukkit.broadcastMessage("§c" + player.getName() + " ha sido ejecutado por no completar el Evento de Logros.");
+        } else {
+            player.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(Math.max(2, currentMaxHealth - 8));
+            player.sendMessage("§c¡No completaste todos los logros! Has perdido 4 corazones permanentes.");
+        }
+
+        sysData.setProgressValue("apply_penalized", true);
+        saveData(player, "system", sysData);
+    }
+
+    // --- Manejo de la Interfaz Nativa ---
+    public boolean completeAchievement(Player player, String achievementId) {
+        if (!eventActive) return false;
+
+        MissionData data = getData(player, achievementId);
+        if (data.isCompleted()) return false;
+
+        data.setCompleted(true);
+        saveData(player, achievementId, data);
+
+        grantAdvancement(player, achievementId);
+
+        return true;
+    }
+
+    public boolean removeAchievement(Player player, String achievementId) {
+        MissionData data = getData(player, achievementId);
+        if (!data.isCompleted()) return false;
+
+        data.setCompleted(false);
+        data.getProgress().clear();
+        saveData(player, achievementId, data);
+
+        revokeAdvancement(player, achievementId);
+
+        return true;
+    }
+
+    private void grantAdvancement(Player player, String id) {
+        NamespacedKey key = new NamespacedKey(plugin, "logro_" + id);
+        Advancement advancement = Bukkit.getAdvancement(key);
+
+        if (advancement != null) {
+            AdvancementProgress progress = player.getAdvancementProgress(advancement);
+            for (String criteria : progress.getRemainingCriteria()) {
+                progress.awardCriteria(criteria);
+            }
+        }
+    }
+
+    private void revokeAdvancement(Player player, String id) {
+        NamespacedKey key = new NamespacedKey(plugin, "logro_" + id);
+        Advancement advancement = Bukkit.getAdvancement(key);
+
+        if (advancement != null) {
+            AdvancementProgress progress = player.getAdvancementProgress(advancement);
+            for (String criteria : progress.getAwardedCriteria()) {
+                progress.revokeCriteria(criteria);
+            }
+        }
     }
 }
