@@ -2,11 +2,8 @@ package Events.ItemParty;
 
 import Commands.TiempoCommand;
 import TitleListener.RuletaAnimation;
+import com.crissyjuanxd.viciontguiplugin.api.ViciontGuiAPI;
 import items.ItemsPartyRecolect;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -34,7 +31,6 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scoreboard.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,7 +43,6 @@ public class ItemPartyHandler implements Listener {
     private final TiempoCommand tiempoCommand;
     private final RuletaAnimation ruletaAnimation;
     private final ItemsPartyRecolect partyItems;
-    private long lastScoreUpdate = 0L;
 
     private boolean eventoActivo = false;
     private String itemToCollect;
@@ -55,7 +50,6 @@ public class ItemPartyHandler implements Listener {
     private String collectionTarget;
     private String eventDuration;
     private int safePlayers;
-    private Scoreboard eventScoreboard;
 
     private final Map<String, Integer> playerItems = new LinkedHashMap<>();
     private final Map<String, Long> playerTimestamp = new HashMap<>();
@@ -69,6 +63,8 @@ public class ItemPartyHandler implements Listener {
 
     private final NamespacedKey KEY_ORIGIN;
     private final NamespacedKey KEY_COUNTED;
+
+    private final List<Integer> testTasks = new ArrayList<>();
 
     public ItemPartyHandler(JavaPlugin plugin, TiempoCommand tiempoCommand) {
         this.plugin = plugin;
@@ -103,29 +99,6 @@ public class ItemPartyHandler implements Listener {
 
     public void reloadConfig() { loadConfig(); }
 
-    private void syncTeamsToEventScoreboard() {
-        if (eventScoreboard == null) return;
-        Scoreboard mainBoard = Bukkit.getScoreboardManager().getMainScoreboard();
-
-        for (Team mainTeam : mainBoard.getTeams()) {
-            Team newTeam = eventScoreboard.getTeam(mainTeam.getName());
-            if (newTeam == null) {
-                newTeam = eventScoreboard.registerNewTeam(mainTeam.getName());
-            }
-            newTeam.setPrefix(mainTeam.getPrefix());
-            newTeam.setSuffix(mainTeam.getSuffix());
-            newTeam.setColor(mainTeam.getColor());
-            newTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, mainTeam.getOption(Team.Option.NAME_TAG_VISIBILITY));
-            newTeam.setOption(Team.Option.COLLISION_RULE, mainTeam.getOption(Team.Option.COLLISION_RULE));
-
-            for (String entry : mainTeam.getEntries()) {
-                if (!newTeam.hasEntry(entry)) {
-                    newTeam.addEntry(entry);
-                }
-            }
-        }
-    }
-
     public void iniciarEvento() {
         if (eventoActivo) { Bukkit.broadcastMessage("§c¡El evento ya está activo!"); return; }
         if (Bukkit.getOnlinePlayers().size() < 3) {
@@ -134,27 +107,13 @@ public class ItemPartyHandler implements Listener {
         }
         eventoActivo = true;
         playerItems.clear(); playerTimestamp.clear(); participants.clear();
-
-        if (eventScoreboard == null) {
-            eventScoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
-        }
-
-        syncTeamsToEventScoreboard();
-
-        Objective oldObj = eventScoreboard.getObjective("itemparty");
-        if (oldObj != null) oldObj.unregister();
-
-        // Título de Viciont
-        Objective obj = eventScoreboard.registerNewObjective("itemparty", "dummy",
-                Component.text("\u3201\uE084\u3201\u3201").color(TextColor.fromHexString("#ae52e3")).decorate(TextDecoration.BOLD));
-        obj.setDisplaySlot(DisplaySlot.SIDEBAR);
+        ItemPartyHudManager.clearCache();
 
         for (Player p : Bukkit.getOnlinePlayers()) {
             participants.add(p.getName());
             playerItems.put(p.getName(), 0);
             playerTimestamp.put(p.getName(), System.currentTimeMillis());
             p.playSound(p.getLocation(), Sound.MUSIC_DISC_OTHERSIDE, 100f, 1f);
-            p.setScoreboard(eventScoreboard);
         }
 
         String targetText = collectionMethod.equals("block")
@@ -183,7 +142,6 @@ public class ItemPartyHandler implements Listener {
             String id = p.getUniqueId() + "_itemparty_timer";
             if (!timerIdsByPlayer.containsKey(p.getUniqueId())) {
                 timerIdsByPlayer.put(p.getUniqueId(), id);
-                // Nombre bossbar Viciont
                 tiempoCommand.createPlayerBossBar(p, "§5§lItem§d§lParty§f:", seconds, eventDuration, "off", id);
             }
             if (!puntosBars.containsKey(p.getUniqueId())) {
@@ -199,38 +157,18 @@ public class ItemPartyHandler implements Listener {
     public void terminarEvento() {
         if (!eventoActivo) return;
         eventoActivo = false;
+        ItemPartyHudManager.clearCache();
 
-        // ======= LIMPIAR SCOREBOARD =======
         for (Player p : Bukkit.getOnlinePlayers()) {
-            Scoreboard board = p.getScoreboard();
-            if (board != null) {
-                Objective objective = board.getObjective("itemparty");
-                if (objective != null) objective.unregister();
-
-                for (Team t : new ArrayList<>(board.getTeams())) {
-                    if (t.getName().startsWith("itp_") || t.getName().equalsIgnoreCase("itp_title") || t.getName().startsWith("space_")) {
-                        t.unregister();
-                    }
-                }
-
-                for (String entry : new ArrayList<>(board.getEntries())) {
-                    board.resetScores(entry);
-                }
-
-                p.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
-            }
+            ViciontGuiAPI.removeOverlay(p, "hud_itemparty");
             p.stopSound(Sound.MUSIC_DISC_OTHERSIDE);
         }
 
-        eventScoreboard = null;
-
-        // ======= LIMPIAR BOSSBARS =======
         timerIdsByPlayer.values().forEach(tiempoCommand::removeBossBar);
         timerIdsByPlayer.clear();
         for (BossBar bar : puntosBars.values()) bar.removeAll();
         puntosBars.clear();
 
-        // ======= LÓGICA DE CASTIGOS (COMBINADA) =======
         List<Map.Entry<String, Integer>> sorted = ordenarPlayers();
         int total = sorted.size();
 
@@ -249,7 +187,6 @@ public class ItemPartyHandler implements Listener {
         for (int i = safeCount; i < total; i++) {
             if (i >= sorted.size()) break;
             String name = sorted.get(i).getKey();
-            if (name.equals("----")) continue;
 
             losersNames.add(name);
             Player p = Bukkit.getPlayer(name);
@@ -257,17 +194,13 @@ public class ItemPartyHandler implements Listener {
             playersConfig.set("punishments." + uuid, endTime);
 
             if (p != null && p.isOnline()) {
-                // Castigo de Quaso (Lentitud, Debilidad, Tamaño)
                 aplicarCastigo(p, tickDuration);
                 p.playSound(p.getLocation(), Sound.ENTITY_WITCH_CELEBRATE, 1f, 0.5f);
-
-                // Castigo de Viciont (Daño Letal)
                 p.damage(1000.0);
             }
         }
         savePlayersConfig();
 
-        // ======= MENSAJES FINALES =======
         Bukkit.broadcastMessage(" ");
         Bukkit.broadcastMessage("§d۞ §5§lEl evento §d§lFiesta de Items §5§lha terminado.");
 
@@ -281,14 +214,12 @@ public class ItemPartyHandler implements Listener {
             Bukkit.broadcastMessage("§a¡Increíble! Nadie ha perdido esta vez.");
         }
 
-        // ======= ANUNCIO TOP =======
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             Bukkit.broadcastMessage("§5§l━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             Bukkit.broadcastMessage("§d§l         TOP JUGADORES");
             Bukkit.broadcastMessage(" ");
             for (int i = 0; i < Math.min(5, sorted.size()); i++) {
                 Map.Entry<String, Integer> e = sorted.get(i);
-                if (e.getKey().equals("----")) continue;
                 String color = (i == 0) ? "§6§l" : (i == 1) ? "§f§l" : (i == 2) ? "§c§l" : "§b";
                 Bukkit.broadcastMessage(color + (i + 1) + ". " + e.getKey() + " §7- §f" + e.getValue() + " items");
             }
@@ -296,6 +227,63 @@ public class ItemPartyHandler implements Listener {
             Bukkit.broadcastMessage("§5§l━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             playerItems.clear(); playerTimestamp.clear(); participants.clear();
         }, 40L);
+    }
+
+    public void toggleTestMode() {
+        toggleTestMode(2, 20);
+    }
+
+    public void toggleTestMode(int updatesPerSecond, int maxPlayers) {
+        if (!testTasks.isEmpty()) {
+            testTasks.forEach(id -> Bukkit.getScheduler().cancelTask(id));
+            testTasks.clear();
+            eventoActivo = false;
+            playerItems.clear();
+            participants.clear();
+            ItemPartyHudManager.clearCache();
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                ViciontGuiAPI.removeOverlay(p, "hud_itemparty");
+            }
+            Bukkit.broadcastMessage("§c[ItemParty] Modo test desactivado.");
+        } else {
+            eventoActivo = true;
+            playerItems.clear();
+            participants.clear();
+            ItemPartyHudManager.clearCache();
+
+            for (int i = 1; i <= maxPlayers; i++) {
+                // El primer test siempre será KillerCreeper_55
+                String name = (i == 1) ? "KillerCreeper_55" : "Test" + i;
+                playerItems.put(name, 0);
+                playerTimestamp.put(name, System.currentTimeMillis());
+                participants.add(name);
+            }
+
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                participants.add(p.getName());
+                playerItems.put(p.getName(), 0);
+                playerTimestamp.put(p.getName(), System.currentTimeMillis());
+            }
+
+            Bukkit.broadcastMessage("§a[ItemParty] Modo test activado. Simulando " + maxPlayers + " jugadores a " + updatesPerSecond + " actualizaciones por seg.");
+            actualizarScoreboard();
+
+            long delay = Math.max(1L, 20L / Math.max(1, updatesPerSecond));
+
+            // Añade puntajes constantemente
+            testTasks.add(Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, () -> addRandomPoints(3), delay, delay));
+        }
+    }
+
+    private void addRandomPoints(int count) {
+        List<String> keys = new ArrayList<>(playerItems.keySet());
+        Collections.shuffle(keys);
+        for (int i = 0; i < Math.min(count, keys.size()); i++) {
+            String k = keys.get(i);
+            playerItems.put(k, playerItems.get(k) + new Random().nextInt(5) + 1);
+            playerTimestamp.put(k, System.currentTimeMillis());
+        }
+        actualizarScoreboard();
     }
 
     public boolean quitarCastigoManualmente(String playerName) {
@@ -357,17 +345,10 @@ public class ItemPartyHandler implements Listener {
             }
             if (!bar.getPlayers().contains(p)) bar.addPlayer(p);
 
-            Scoreboard mainBoard = Bukkit.getScoreboardManager().getMainScoreboard();
-            Team mainTeam = mainBoard.getEntryTeam(p.getName());
-            if (mainTeam != null && eventScoreboard != null) {
-                Team evTeam = eventScoreboard.getTeam(mainTeam.getName());
-                if (evTeam != null && !evTeam.hasEntry(p.getName())) {
-                    evTeam.addEntry(p.getName());
-                }
-            }
-
             int current = playerItems.getOrDefault(p.getName(), 0);
             bar.setTitle("§3§lPuntos§f: §b" + current);
+
+            actualizarScoreboard();
         }
 
         if (playersConfig.contains("punishments." + uuidStr)) {
@@ -390,107 +371,16 @@ public class ItemPartyHandler implements Listener {
         catch (IOException ex) { plugin.getLogger().warning("Error guardando itempartyplayers.yml"); }
     }
 
-    // ========================= SCOREBOARD OPTIMIZADA (Estética Viciont) =========================
     private void actualizarScoreboard() {
-        if (!eventoActivo || eventScoreboard == null) return;
-        long now = System.currentTimeMillis();
-        if (now - lastScoreUpdate < 500) return;
-        lastScoreUpdate = now;
-
+        if (!eventoActivo) return;
         List<Map.Entry<String, Integer>> sorted = ordenarPlayers();
-        int total = sorted.size();
-        int dangerPlayers = Math.abs(safePlayers);
-        int safeCount = Math.max(0, total - dangerPlayers);
+        int dangerCount = Math.abs(safePlayers);
 
-        while (sorted.size() < 8) sorted.add(Map.entry("----", 0));
-
-        Objective obj = eventScoreboard.getObjective("itemparty");
-        if (obj == null) return;
-
-        int score = 15;
-
-        // Título Estático Viciont
-        Team titleTeam = getOrCreateTeam(eventScoreboard, "itp_title");
-        String titleEntry = "§r§r§r";
-        if (!titleTeam.hasEntry(titleEntry)) titleTeam.addEntry(titleEntry);
-        titleTeam.prefix(Component.text("       \uE083")
-                .color(TextColor.fromHexString("#ae52e3"))
-                .decorate(TextDecoration.BOLD));
-        obj.getScore(titleEntry).setScore(score--);
-
-        // TOP SECTION (1 al 6)
-        for (int i = 0; i < 6; i++) {
-            Map.Entry<String, Integer> e = (i < safeCount && i < sorted.size()) ? sorted.get(i) : Map.entry("----", 0);
-            String nombre = e.getKey();
-            int valor = e.getValue();
-            if (nombre.length() > 10) nombre = nombre.substring(0, 10) + "..";
-
-            Team team = getOrCreateTeam(eventScoreboard, "itp_top_" + i);
-            String hiddenKey = "§" + i;
-            if (!team.hasEntry(hiddenKey)) team.addEntry(hiddenKey);
-
-            TextColor colorNum = TextColor.fromHexString("#ae52e3");
-            TextColor colorName = (i == 0) ? TextColor.fromHexString("#e5d480") : TextColor.fromHexString("#4aa5dc");
-
-            Component linea = nombre.equals("----")
-                    ? Component.text(" " + (i + 1) + ". ----", colorNum)
-                    : Component.text(" " + (i + 1) + ". ", colorNum)
-                    .append(Component.text(nombre + " ", colorName))
-                    .append(Component.text("→ ", NamedTextColor.GRAY))
-                    .append(Component.text(valor, NamedTextColor.WHITE));
-
-            team.prefix(linea);
-            obj.getScore(hiddenKey).setScore(score--);
-
-            // Espacio de separación (Relleno) Viciont Style
-            setSpace(obj, score--, 15 + i);
-        }
-
-        // DANGER SECTION (Zona Peligro)
-        for (int i = 0; i < dangerPlayers; i++) {
-            int index = safeCount + i;
-            if (index >= sorted.size()) break;
-
-            Map.Entry<String, Integer> e = sorted.get(index);
-            String nombre = e.getKey();
-            int valor = e.getValue();
-            if (nombre.length() > 9) nombre = nombre.substring(0, 9) + "..";
-
-            Team team = getOrCreateTeam(eventScoreboard, "itp_warn_" + i);
-            String hiddenKey = "§c" + " ".repeat(i + 1);
-            if (!team.hasEntry(hiddenKey)) team.addEntry(hiddenKey);
-
-            Component linea = Component.text(" ⚠. ", NamedTextColor.RED)
-                    .append(Component.text(nombre + " ", TextColor.fromHexString("#ee749e")))
-                    .append(Component.text("→ ", NamedTextColor.GRAY))
-                    .append(Component.text(valor, NamedTextColor.WHITE));
-
-            team.prefix(linea);
-            obj.getScore(hiddenKey).setScore(score--);
-
-            if (i == 0) setSpace(obj, score--, 25 + i);
-        }
-
-        // Asegurar que los jugadores nuevos ven la scoreboard
         for (Player p : Bukkit.getOnlinePlayers()) {
-            if (participants.contains(p.getName()) && p.getScoreboard() != eventScoreboard) {
-                p.setScoreboard(eventScoreboard);
+            if (participants.contains(p.getName())) {
+                ItemPartyHudManager.updateHud(plugin, p, sorted, dangerCount);
             }
         }
-    }
-
-    private void setSpace(Objective obj, int score, int uniqueId) {
-        Team t = getOrCreateTeam(eventScoreboard, "space_" + uniqueId);
-        String entry = "§" + (char)('a' + (uniqueId % 20)) + "§r";
-        if (!t.hasEntry(entry)) t.addEntry(entry);
-        t.prefix(Component.text(""));
-        obj.getScore(entry).setScore(score);
-    }
-
-    private Team getOrCreateTeam(Scoreboard board, String name) {
-        Team t = board.getTeam(name);
-        if (t == null) t = board.registerNewTeam(name);
-        return t;
     }
 
     private List<Map.Entry<String, Integer>> ordenarPlayers() {
@@ -503,7 +393,6 @@ public class ItemPartyHandler implements Listener {
                 .collect(Collectors.toList());
     }
 
-    // ===== Drops y recogida =====
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         if (!eventoActivo || !collectionMethod.equals("block")) return;
@@ -568,7 +457,7 @@ public class ItemPartyHandler implements Listener {
             puntosBar.setTitle("§3§lPuntos§f: §b" + current);
         }
 
-        Bukkit.getScheduler().runTaskLater(plugin, this::actualizarScoreboard, 1L);
+        actualizarScoreboard();
     }
 
     private void tagAsEventItem(ItemStack is) {
@@ -619,6 +508,7 @@ public class ItemPartyHandler implements Listener {
         String[] p = t.split(":");
         return Integer.parseInt(p[0])*3600 + Integer.parseInt(p[1])*60 + Integer.parseInt(p[2]);
     }
+
     public void resetPlayersFile() {
         playersConfig.set("punishments", null);
         playersConfig.set("players", null);

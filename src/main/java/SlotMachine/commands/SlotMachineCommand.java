@@ -1,5 +1,6 @@
 package SlotMachine.commands;
 
+import Managers.ItemManager;
 import SlotMachine.SlotMachineManager;
 import SlotMachine.utils.ItemCreator;
 import net.md_5.bungee.api.ChatColor;
@@ -26,12 +27,10 @@ public class SlotMachineCommand implements CommandExecutor, TabCompleter {
 
     private final ViciontHardcore3 plugin;
     private final SlotMachineManager manager;
-    private final ItemCreator itemCreator;
 
     public SlotMachineCommand(ViciontHardcore3 plugin, SlotMachineManager manager) {
         this.plugin = plugin;
         this.manager = manager;
-        this.itemCreator = new ItemCreator(plugin);
     }
 
     @Override

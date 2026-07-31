@@ -41,7 +41,7 @@ public class DaySevenChanges implements Listener {
         this.corruptedCreeper = new CorruptedCreeper(plugin);
         this.invertedGhast = new InvertedGhast(plugin);
         this.piglinGlobo = new PiglinGlobo(plugin);
-        this.corruptedZombies = new CorruptedZombies(plugin);
+        this.corruptedZombies = new CorruptedZombies(plugin, handler);
         this.corruptedSpider = new CorruptedSpider(plugin, handler);
         this.dayHandler = handler;
     }
@@ -55,7 +55,7 @@ public class DaySevenChanges implements Listener {
             ennablePhantomSpawning();
             isApplied = true;
 
-            new BukkitRunnable() {
+            /*new BukkitRunnable() {
                 @Override
                 public void run() {
                     if (!isApplied) {
@@ -76,7 +76,7 @@ public class DaySevenChanges implements Listener {
                         });
                     }
                 }
-            }.runTaskTimer(plugin, 0L, 80L);
+            }.runTaskTimer(plugin, 0L, 80L);*/
         }
     }
 
@@ -90,7 +90,7 @@ public class DaySevenChanges implements Listener {
         }
     }
 
-    @EventHandler
+    /*@EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (!isApplied) return;
 
@@ -122,9 +122,9 @@ public class DaySevenChanges implements Listener {
         handleCorruptedZombieConversion(event);
         handleCorruptedSpiderConversion(event);
 
-    }
+    }*/
 
-    private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
+/*    private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
         if (event.getEntityType() != EntityType.ZOMBIE) return;
 
         if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE)) {
@@ -135,9 +135,9 @@ public class DaySevenChanges implements Listener {
 
         Zombie zombie = (Zombie) event.getEntity();
         corruptedZombies.transformToCorruptedZombie(zombie);
-    }
+    }*/
 
-    private void handleCorruptedSpiderConversion(CreatureSpawnEvent event) {
+/*    private void handleCorruptedSpiderConversion(CreatureSpawnEvent event) {
         if (event.getEntityType() != EntityType.SPIDER) return;
 
         if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) return;
@@ -150,9 +150,9 @@ public class DaySevenChanges implements Listener {
 
         Spider spider = (Spider) event.getEntity();
         corruptedSpider.transformspawnCorruptedSpider(spider);
-    }
+    }*/
 
-    private void handleCorruptedSkeletonConversion(CreatureSpawnEvent event) {
+/*    private void handleCorruptedSkeletonConversion(CreatureSpawnEvent event) {
         if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL &&
                 event.getLocation().getWorld().getEnvironment() != World.Environment.NETHER &&
                 event.getLocation().getWorld().getEnvironment() != World.Environment.THE_END) {
@@ -183,9 +183,9 @@ public class DaySevenChanges implements Listener {
                 corruptedSkeleton.transformToCorruptedSkeleton(skeleton, null);
             }
         }
-    }
+    }*/
 
-    private void handleGhastTransformations(CreatureSpawnEvent event) {
+/*    private void handleGhastTransformations(CreatureSpawnEvent event) {
         if (event.getLocation().getWorld().getEnvironment() != World.Environment.NETHER) {
             return;
         }
@@ -218,9 +218,9 @@ public class DaySevenChanges implements Listener {
         // Verificar ambas keys de mobs custom
         return ghast.getPersistentDataContainer().has(invertedGhast.getInvertedGhastKey(), PersistentDataType.BYTE) ||
                 ghast.getPersistentDataContainer().has(piglinGlobo.getPiglinGloboKey(), PersistentDataType.BYTE);
-    }
+    }*/
 
-    @EventHandler
+/*    @EventHandler
     public void onEntitySpawn(EntitySpawnEvent event) {
         if (!isApplied) return;
 
@@ -251,7 +251,7 @@ public class DaySevenChanges implements Listener {
                 }
             }
         }
-    }
+    }*/
 
     @EventHandler
     public void onEntityDamage(EntityDamageByEntityEvent event) {
@@ -284,9 +284,7 @@ public class DaySevenChanges implements Listener {
         for (int i = 0; i < 9; i++) {
             player.getInventory().setItem(i, hotbar[i]);
         }
-
     }
-
 
     @EventHandler
     public void onProjectileLaunch(ProjectileLaunchEvent event) {

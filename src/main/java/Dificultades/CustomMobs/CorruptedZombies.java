@@ -1,6 +1,8 @@
 package Dificultades.CustomMobs;
 
 import Dificultades.Features.MobSoundManager;
+import net.md_5.bungee.api.ChatColor;
+import Handlers.DayHandler;
 import items.CorruptedMobItems;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
@@ -16,12 +18,14 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
+import vct.hardcore3.ViciontHardcore3;
 
 import java.util.*;
 
-public class CorruptedZombies implements Listener {
+public class CorruptedZombies implements Listener, Gui.GuiMobProvider {
 
     private final JavaPlugin plugin;
+    private final DayHandler dayHandler;
     private final NamespacedKey corruptedKey;
 
     private static final Set<UUID> activeZombies = new HashSet<>();
@@ -30,16 +34,13 @@ public class CorruptedZombies implements Listener {
 
     private final Random random = new Random();
 
-    public CorruptedZombies(JavaPlugin plugin) {
+    public CorruptedZombies(JavaPlugin plugin, DayHandler dayHandler) {
         this.plugin = plugin;
+        this.dayHandler = dayHandler;
         this.corruptedKey = new NamespacedKey(plugin, "corrupted_zombie");
-        MobSoundManager.register(
-                corruptedKey,
-                Sound.ENTITY_ZOMBIE_AMBIENT,
-                Sound.ENTITY_ZOMBIE_STEP,
-                0.6f,
-                1.0f
-        );
+        MobSoundManager.register(corruptedKey, Sound.ENTITY_ZOMBIE_AMBIENT, Sound.ENTITY_ZOMBIE_STEP, 0.6f, 1.0f);
+
+        ((ViciontHardcore3) plugin).getEntidadesGuiManager().registerMob(this);
     }
 
     public void apply() {
@@ -49,6 +50,8 @@ public class CorruptedZombies implements Listener {
 
             scanExistingZombies();
             startCentralTask();
+
+            ((ViciontHardcore3) plugin).getEntidadesGuiManager().unlockMob(getEntityId());
         }
     }
 
@@ -66,7 +69,67 @@ public class CorruptedZombies implements Listener {
             }
             activeZombies.clear();
             eventsRegistered = false;
+
+            ((ViciontHardcore3) plugin).getEntidadesGuiManager().lockMob(getEntityId());
         }
+    }
+
+    // ==========================================
+    // IMPLEMENTACIÓN DE GUIMOBPROVIDER
+    // ==========================================
+    @Override
+    public String getEntityId() { return "corrupted_zombie"; }
+
+    @Override
+    public String getEntityType() { return "minecraft:zombie"; }
+
+    @Override
+    public String getName() { return "Corrupted Zombie"; }
+
+    @Override
+    public String getColor() { return "#AA00AA"; }
+
+    @Override
+    public int getScale() { return 24; }
+
+    @Override
+    public List<String> getDynamicAttributes() {
+        int currentDay = dayHandler.getCurrentDay();
+
+        double health = 20.0;
+        double damage = 3.0;
+
+        // Ejemplo de escalado: si es día 9 o más, mostramos los stats bufados
+/*        if (currentDay >= 9) {
+            health += 10.0;
+            damage += 2.0;
+        }*/
+
+        String cRojo = ChatColor.of("#F51916").toString();
+        String cAzul = ChatColor.of("#54A1D1").toString();
+        String cNaranja = ChatColor.of("#F29329").toString();
+        String cVerde = ChatColor.of("#8AF58F").toString();
+        String cMoradoText = ChatColor.of("#BE7DE9").toString();
+        String cBlanco = ChatColor.WHITE.toString();
+
+        List<String> attributes = new ArrayList<>();
+        attributes.add(cRojo + "❤ " + cMoradoText + "Vida" + cBlanco + ": " + health);
+        attributes.add(cAzul + "🗡 " + cMoradoText + "Daño de Ataque" + cBlanco + ": " + damage);
+        attributes.add(cNaranja + "⚠ " + cMoradoText + "Rango DE vision" + cBlanco + ": 32.0");
+        attributes.add(cVerde + "⚡ " + cMoradoText + "Efectos" + cBlanco + ": Velocidad I - Resistencia al Fuego");
+        return attributes;
+    }
+
+    @Override
+    public List<String> getDescription() {
+        return Arrays.asList(
+                "Un cadáver reanimado por la energía corrupta.",
+                "Es increíblemente rápido y el fuego no le afecta.",
+                "",
+                "Tiene la capacidad de lanzar cargas de",
+                "viento a distancia. Si logran impactarte,",
+                "te infligirán Veneno y Debilidad temporal."
+        );
     }
 
     private void scanExistingZombies() {
@@ -135,7 +198,7 @@ public class CorruptedZombies implements Listener {
         zombie.setCustomName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Corrupted Zombie");
         zombie.setCustomNameVisible(false);
         zombie.getAttribute(Attribute.GENERIC_FOLLOW_RANGE).setBaseValue(32);
-        Objects.requireNonNull(zombie.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE)).setBaseValue(3.0);
+        zombie.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(3.0);
         zombie.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, PotionEffect.INFINITE_DURATION, 0));
         zombie.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, PotionEffect.INFINITE_DURATION, 0));
         zombie.setSilent(true);
@@ -169,7 +232,10 @@ public class CorruptedZombies implements Listener {
         direction.setY(direction.getY() - 0.3);
 
         snowball.setVelocity(direction);
-        snowball.setCustomName("Corrupted Zombie WindCharge");
+
+        // AQUÍ ESTÁ EL ARREGLO:
+        // En lugar de ponerle un nombre que el cliente pueda ver, le inyectamos tu etiqueta interna.
+        snowball.getPersistentDataContainer().set(corruptedKey, PersistentDataType.BYTE, (byte) 1);
 
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (snowball.isValid()) {
@@ -188,8 +254,10 @@ public class CorruptedZombies implements Listener {
 
     @EventHandler
     public void onSnowballHit(EntityDamageByEntityEvent event) {
+        // AQUÍ ESTÁ EL ARREGLO:
+        // Verificamos si el proyectil tiene tu etiqueta interna en lugar de comparar su nombre.
         if (event.getDamager() instanceof WindCharge snowball &&
-                "Corrupted Zombie WindCharge".equals(snowball.getCustomName())) {
+                snowball.getPersistentDataContainer().has(corruptedKey, PersistentDataType.BYTE)) {
 
             if (event.getEntity() instanceof Player player) {
                 event.setDamage(2);
@@ -227,4 +295,44 @@ public class CorruptedZombies implements Listener {
             }
         }
     }
+
+/*    EJEMPLO DE ENTIDADES EN LA GUI POR SI CAMBIA ATRIBUTOS DE DIA
+    @Override
+    public List<String> getDynamicAttributes() {
+        // Obtenemos el día en tiempo real desde la instancia principal
+        int currentDay = ((vct.hardcore3.ViciontHardcore3) plugin).getDayHandler().getCurrentDay();
+
+        // Atributos base
+        double health = 20.0;
+        double damage = 3.0;
+
+        // Multiplicadores según el día transcurrido
+        if (currentDay >= 9) {
+            health += 10.0; // Sube la vida en el día 9
+            damage += 2.0;  // Sube el daño en el día 9
+        }
+
+        List<String> attributes = new ArrayList<>();
+        attributes.add("❤ Vida: " + health);
+        attributes.add("🗡 Daño de Ataque: " + damage);
+        attributes.add("⚠ Rango: 32.0");
+
+        // Podemos añadir atributos únicos a este zombie si quisiéramos:
+        if (currentDay >= 9) {
+            attributes.add("⚡ Velocidad: +15%");
+        }
+
+        return attributes;
+    }
+
+    @Override
+    public List<String> getDescription() {
+        return Arrays.asList(
+                "Este mob tiene la capacidad de lanzar",
+                "wind charges.",
+                "",
+                "Al impactar con una entidad da",
+                "Veneno I y Debilidad I."
+        );
+    }*/
 }

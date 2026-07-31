@@ -13,11 +13,9 @@ import org.bukkit.potion.PotionEffectType;
 public class MuerteAnimation {
     private final JavaPlugin plugin;
 
-    // Retraso maestro de 1 segundo (20 ticks)
-    private static final long RETRASO_INICIAL = 20L;
     // Tiempos antiguos + el retraso inicial
-    private static final long SOUND_DELAY_TICKS = 160L + RETRASO_INICIAL;
-    private static final long ANIMATION_DURATION_TICKS = 122L + RETRASO_INICIAL;
+    private static final long SOUND_DELAY_TICKS = 160L;
+    private static final long ANIMATION_DURATION_TICKS = 122L;
 
     public MuerteAnimation(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -25,37 +23,24 @@ public class MuerteAnimation {
 
     public void playAnimation(Player deadPlayer, String jsonMessage) {
 
-        // --- 1. INSTANTÁNEO (TICK 0) ---
-        // El GIF sale al instante para todos
+        // --- 1. INSTANTÁNEO (TICK 0) PARA TODOS ---
         Bukkit.getOnlinePlayers().forEach(p -> {
-            ViciontMediaAPI.sendMedia(p, "Rueda_Muerte.gif", "minecraft:custom.emuerte", 1, 600, "50,40", 100, false, false);
+            // El GIF sale al instante
+            ViciontMediaAPI.sendMedia(p, "Rueda_Muerte_pre.gif", "minecraft:custom.emuerte", 1, 600, "50,40", 100, false, false);
+
+            // Sonido inmediato para TODOS (incluyendo al que murió)
+            p.playSound(p.getLocation(), "minecraft:entity.allay.death", 10.0f, 0.7f);
+            p.playSound(p.getLocation(), "minecraft:entity.blaze.death", 10.0f, 0.7f);
         });
 
-        // FEEDBACK INMEDIATO SOLO PARA EL JUGADOR QUE MURIÓ (Evita que sienta que es un bug)
-        deadPlayer.playSound(deadPlayer.getLocation(), "minecraft:entity.allay.death", 10.0f, 0.7f);
-        deadPlayer.playSound(deadPlayer.getLocation(), "minecraft:entity.blaze.death", 10.0f, 0.7f);
-
-        // --- 2. RETRASADO 1 SEGUNDO (TICK 20) ---
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            // Efectos iniciales y sonidos para el RESTO de los jugadores
-            Bukkit.getOnlinePlayers().forEach(p -> {
-
-                // Solo suena para los demás, porque el muerto ya lo escuchó al instante
-                if (!p.equals(deadPlayer)) {
-                    p.playSound(p.getLocation(), "minecraft:entity.allay.death", 10.0f, 0.7f);
-                    p.playSound(p.getLocation(), "minecraft:entity.blaze.death", 10.0f, 0.7f);
+        // Lentitud a los mobs inmediata
+        Bukkit.getWorlds().forEach(world -> {
+            for (Entity entity : world.getEntities()) {
+                if (entity instanceof LivingEntity && !(entity instanceof Player)) {
+                    ((LivingEntity) entity).addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 160, 1, true, false, false));
                 }
-            });
-
-            // Lentitud a los mobs
-            Bukkit.getWorlds().forEach(world -> {
-                for (Entity entity : world.getEntities()) {
-                    if (entity instanceof LivingEntity && !(entity instanceof Player)) {
-                        ((LivingEntity) entity).addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 160, 1, true, false, false));
-                    }
-                }
-            });
-        }, RETRASO_INICIAL);
+            }
+        });
 
         // Programar el mensaje Tellraw (Si se usa)
         if (jsonMessage != null && !jsonMessage.isEmpty()) {

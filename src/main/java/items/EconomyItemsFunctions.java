@@ -38,9 +38,11 @@ public class EconomyItemsFunctions implements Listener {
     private final DatabaseManager dbManager;
     private final NamespacedKey backpackKey;
 
-    // Mapas de control
-    private final Map<UUID, String> mochilasAbiertas = new ConcurrentHashMap<>();
-    private final Map<String, ItemStack[]> mochilasCache = new ConcurrentHashMap<>();
+    // --- MODIFICADO: Ahora son public static para que VithiumsManager las lea/edite en tiempo real ---
+    public static final Map<UUID, String> mochilasAbiertas = new ConcurrentHashMap<>();
+    public static final Map<String, ItemStack[]> mochilasCache = new ConcurrentHashMap<>();
+    // ------------------------------------------------------------------------------------------------
+
     private final Set<UUID> processing = ConcurrentHashMap.newKeySet();
     private final Set<UUID> cooldownGancho = ConcurrentHashMap.newKeySet();
     private final Map<UUID, String> pendingDeletion = new ConcurrentHashMap<>();
@@ -172,7 +174,13 @@ public class EconomyItemsFunctions implements Listener {
         }
 
         final String finalId = mochilaId;
-        final String guiTitle = getMochilaColor(mochila) + "" + ChatColor.BOLD + "Mochila";
+
+        final String guiTitle;
+        if (modelData == 2025) {
+            guiTitle = getMochilaColor(mochila) + "" + ChatColor.BOLD + "Monedero";
+        } else {
+            guiTitle = getMochilaColor(mochila) + "" + ChatColor.BOLD + "Mochila";
+        }
 
         Inventory mochilaInv = Bukkit.createInventory(null, size, guiTitle);
 
@@ -305,7 +313,6 @@ public class EconomyItemsFunctions implements Listener {
 
         if (title.startsWith(ChatColor.DARK_RED + "Mochilas de: ") ||
                 title.startsWith(ChatColor.RED + "BORRAR Mochilas de: ")) {
-
             if (title.startsWith(ChatColor.DARK_RED + "Mochilas de: ")) {
                 handleAdminGuiClick(event, player, event.getCurrentItem());
             } else {
@@ -317,7 +324,6 @@ public class EconomyItemsFunctions implements Listener {
         ItemStack current = event.getCurrentItem();
         ItemStack cursor = event.getCursor();
 
-        // --- SEGURIDAD: COLLECT TO CURSOR ---
         if (event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
             if (isMochila(cursor)) {
                 event.setCancelled(true);
@@ -325,12 +331,18 @@ public class EconomyItemsFunctions implements Listener {
             }
         }
 
-        // --- SEGURIDAD: ANIDAMIENTO ---
+        Inventory clickedInv = event.getClickedInventory();
+        Inventory topInv = event.getView().getTopInventory();
+
+        boolean isVithiumAction = (current != null && isVithiumItem(current)) || (cursor != null && isVithiumItem(cursor));
+
+        // Lógica de anidamiento de mochilas y validación de Monedero
         if (mochilasAbiertas.containsKey(player.getUniqueId())) {
+            boolean isMonedero = title.contains("Monedero");
 
             if (isMochila(current)) {
                 event.setCancelled(true);
-                player.sendMessage(ChatColor.RED + "⚠ No puedes meter una mochila dentro de otra.");
+                player.sendMessage(ChatColor.RED + "⚠ No puedes meter una mochila o monedero dentro de otra.");
                 return;
             }
 
@@ -338,6 +350,57 @@ public class EconomyItemsFunctions implements Listener {
                 ItemStack hotbarItem = player.getInventory().getItem(event.getHotbarButton());
                 if (isMochila(hotbarItem)) {
                     event.setCancelled(true);
+                    return;
+                }
+                if (clickedInv != null && clickedInv.equals(topInv)) {
+                    if (isMonedero && hotbarItem != null && hotbarItem.getType() != Material.AIR && !isVithiumItem(hotbarItem)) {
+                        event.setCancelled(true);
+                        player.sendMessage(ChatColor.RED + "⚠ El Monedero solo puede guardar Vithiums.");
+                        return;
+                    }
+                    if (!isMonedero && hotbarItem != null && isVithiumItem(hotbarItem)) {
+                        event.setCancelled(true);
+                        player.sendMessage(ChatColor.RED + "⚠ Los Vithiums solo se pueden guardar en un Monedero.");
+                        return;
+                    }
+                }
+            }
+
+            // Validar items entrando a Monedero vs Mochila Normal
+            if (clickedInv != null && clickedInv.equals(topInv)) {
+                if (isMonedero && cursor != null && cursor.getType() != Material.AIR && !isVithiumItem(cursor)) {
+                    event.setCancelled(true);
+                    player.sendMessage(ChatColor.RED + "⚠ El Monedero solo puede guardar Vithiums.");
+                    return;
+                }
+                if (!isMonedero && cursor != null && cursor.getType() != Material.AIR && isVithiumItem(cursor)) {
+                    event.setCancelled(true);
+                    player.sendMessage(ChatColor.RED + "⚠ Los Vithiums solo se pueden guardar en un Monedero.");
+                    return;
+                }
+            } else if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
+                if (isMonedero && current != null && !isVithiumItem(current)) {
+                    event.setCancelled(true);
+                    player.sendMessage(ChatColor.RED + "⚠ El Monedero solo puede guardar Vithiums.");
+                    return;
+                }
+                if (!isMonedero && current != null && isVithiumItem(current)) {
+                    event.setCancelled(true);
+                    player.sendMessage(ChatColor.RED + "⚠ Los Vithiums solo se pueden guardar en un Monedero.");
+                    return;
+                }
+            }
+        } else {
+            // Fuera de cualquier mochila/monedero: Bloquear Vithiums en contenedores genéricos
+            if (isVithiumAction && topInv != null && topInv.getType() != InventoryType.CRAFTING && topInv.getType() != InventoryType.PLAYER) {
+                if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY && current != null && isVithiumItem(current)) {
+                    event.setCancelled(true);
+                    player.sendMessage(ChatColor.RED + "⚠ No puedes guardar Vithiums aquí. Usa tu Monedero.");
+                    return;
+                }
+                if (clickedInv != null && clickedInv.equals(topInv) && cursor != null && isVithiumItem(cursor)) {
+                    event.setCancelled(true);
+                    player.sendMessage(ChatColor.RED + "⚠ No puedes guardar Vithiums aquí. Usa tu Monedero.");
                     return;
                 }
             }
@@ -454,6 +517,12 @@ public class EconomyItemsFunctions implements Listener {
 
     // --- UTILIDADES ---
 
+    public boolean isVithiumItem(ItemStack item) {
+        if (item == null || !item.hasItemMeta() || !item.getItemMeta().hasCustomModelData()) return false;
+        int cmd = item.getItemMeta().getCustomModelData();
+        return cmd == 2000 || cmd == 2010;
+    }
+
     public boolean isMochila(ItemStack item) {
         if (item == null || item.getType() == Material.AIR) return false;
         if (!EconomyItems.isMaterialMochila(item.getType())) return false;
@@ -468,6 +537,7 @@ public class EconomyItemsFunctions implements Listener {
             case 2020: return 18;
             case 2021: return 27;
             case 2022: return 36;
+            case 2025: return 36;
             case 2023: return 45;
             case 2024: return 54;
             default: return 27;
@@ -485,7 +555,7 @@ public class EconomyItemsFunctions implements Listener {
     }
 
     private boolean checkAndUseYunque(Player player, ItemStack item) {
-        if (!item.getType().toString().contains("SPAWN_EGG")) return false;
+        if (!item.getType().toString().contains("ECHO_SHARD")) return false;
         ItemMeta meta = item.getItemMeta();
         if (meta == null || !meta.hasCustomModelData()) return false;
         int cmd = meta.getCustomModelData();
@@ -567,6 +637,7 @@ public class EconomyItemsFunctions implements Listener {
         if (model == 2022) return EconomyItems.createRedMochila();
         if (model == 2023) return EconomyItems.createBlueMochila();
         if (model == 2024) return EconomyItems.createPurpleMochila();
+        if (model == 2025) return EconomyItems.createMonedero();
         return EconomyItems.createNormalMochila();
     }
 
@@ -587,6 +658,7 @@ public class EconomyItemsFunctions implements Listener {
         if (model == 2022) return 3;
         if (model == 2023) return 4;
         if (model == 2024) return 5;
+        if (model == 2025) return 3;
         return 1;
     }
 
@@ -597,7 +669,15 @@ public class EconomyItemsFunctions implements Listener {
             case 2022: return ChatColor.GOLD;
             case 2023: return ChatColor.RED;
             case 2024: return ChatColor.DARK_PURPLE;
+            case 2025: return ChatColor.of("#FFD1DC");
             default: return ChatColor.GREEN;
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onInventoryPickupItem(InventoryPickupItemEvent event) {
+        if (isVithiumItem(event.getItem().getItemStack())) {
+            event.setCancelled(true);
         }
     }
 

@@ -7,7 +7,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.NamespacedKey;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.ChatColor;
+import net.md_5.bungee.api.ChatColor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,70 +15,38 @@ import java.util.Random;
 
 public class EssenceFactory {
 
-    public static ItemStack createProtectionEssence() {
-        return createEssence("Esencia de Protección", 2);
-    }
+    public static ItemStack createProtectionEssence(int usos) { return createEssence("Esencia de Protección", 2, usos); }
+    public static ItemStack createUnbreakingEssence(int usos) { return createEssence("Esencia de Irrompibilidad", 3, usos); }
+    public static ItemStack createEfficiencyEssence(int usos) { return createEssence("Esencia de Eficiencia", 5, usos); }
+    public static ItemStack createFortuneEssence(int usos) { return createEssence("Esencia de Fortuna", 6, usos); }
+    public static ItemStack createSharpnessEssence(int usos) { return createEssence("Esencia de Filo", 7, usos); }
+    public static ItemStack createSmiteEssence(int usos) { return createEssence("Esencia de Castigo", 8, usos); }
+    public static ItemStack createBaneOfArthropodsEssence(int usos) { return createEssence("Esencia de Perdición de los Artrópodos", 9, usos); }
+    public static ItemStack createFeatherFallingEssence(int usos) { return createEssence("Esencia de Caída de Pluma", 10, usos); }
+    public static ItemStack createLootingEssence(int usos) { return createEssence("Esencia de Saqueo", 11, usos); }
+    public static ItemStack createDepthStriderEssence(int usos) { return createEssence("Esencia de Agilidad Acuática", 12, usos); }
+    public static ItemStack createPowerEssence(int usos) { return createEssence("Esencia de Poder", 14, usos); }
 
-    public static ItemStack createUnbreakingEssence() {
-        return createEssence("Esencia de Irrompibilidad", 3);
-    }
-
-    public static ItemStack createEfficiencyEssence() {
-        return createEssence("Esencia de Eficiencia", 5);
-    }
-
-    public static ItemStack createFortuneEssence() {
-        return createEssence("Esencia de Fortuna", 6);
-    }
-
-    public static ItemStack createSharpnessEssence() {
-        return createEssence("Esencia de Filo", 7);
-    }
-
-    public static ItemStack createSmiteEssence() {
-        return createEssence("Esencia de Castigo", 8);
-    }
-
-    public static ItemStack createBaneOfArthropodsEssence() {
-        return createEssence("Esencia de Perdición de los Artrópodos", 9);
-    }
-
-    public static ItemStack createFeatherFallingEssence() {
-        return createEssence("Esencia de Caída de Pluma", 10);
-    }
-
-    public static ItemStack createLootingEssence() {
-        return createEssence("Esencia de Saqueo", 11);
-    }
-
-    public static ItemStack createDepthStriderEssence() {
-        return createEssence("Esencia de Agilidad Acuática", 12);
-    }
-
-    public static ItemStack createPowerEssence() {
-        return createEssence("Esencia de Poder", 14);
-    }
-
-    private static ItemStack createEssence(String name, int customModelData) {
+    private static ItemStack createEssence(String name, int customModelData, int usosSolicitados) {
         ItemStack essence = new ItemStack(Material.IRON_NUGGET);
         ItemMeta meta = essence.getItemMeta();
-        name = ChatColor.BLUE + name;
-        meta.setDisplayName(name);
-        meta.setCustomModelData(customModelData);
-        int usos = new Random().nextInt(3) + 1;
 
-        // lore con usos restantes
+        String displayName = ChatColor.of("#bae1ff") + name;
+        meta.setDisplayName(displayName);
+        meta.setCustomModelData(customModelData);
+
+        int usos = (usosSolicitados > 0) ? usosSolicitados : new Random().nextInt(3) + 1;
+
         List<String> lore = new ArrayList<>();
         lore.add(" ");
-        lore.add(ChatColor.DARK_PURPLE + "Con esta Esencia podrás desbloquear");
-        lore.add(ChatColor.DARK_PURPLE + "su encantamiento correspondiente");
-        lore.add(ChatColor.DARK_PURPLE + "en la " + ChatColor.GOLD + "Mesa de Encantamientos Mejorada");
+        lore.add(ChatColor.of("#c8b6ff") + "Con esta Esencia podrás desbloquear");
+        lore.add(ChatColor.of("#c8b6ff") + "su encantamiento correspondiente en la");
+        lore.add(ChatColor.of("#ffdfba") + "Mesa de Encantamientos Mejorada");
         lore.add(" ");
-        lore.add(ChatColor.GRAY + "Usos restantes: " + usos);
+        lore.add(ChatColor.of("#ffb3ba") + "Usos restantes: " + ChatColor.WHITE + usos);
         meta.setLore(lore);
         meta.setRarity(ItemRarity.RARE);
 
-        //contador de usos entre el 1 y el 3
         PersistentDataContainer data = meta.getPersistentDataContainer();
         data.set(new NamespacedKey("vicionthardcore3", "uses"), PersistentDataType.INTEGER, usos);
 
@@ -89,14 +57,15 @@ public class EssenceFactory {
     public static ItemStack createVoidEssence() {
         ItemStack essence = new ItemStack(Material.IRON_NUGGET);
         ItemMeta meta = essence.getItemMeta();
-        meta.setDisplayName(ChatColor.BLUE + "Esencia Vacía");
+
+        meta.setDisplayName(ChatColor.of("#bdb2ff") + "Esencia Vacía");
         meta.setCustomModelData(20);
 
         List<String> lore = new ArrayList<>();
         lore.add(" ");
-        lore.add(ChatColor.DARK_PURPLE + "Esta esencia vacía que");
-        lore.add(ChatColor.DARK_PURPLE + "puede llegar a alcanzar");
-        lore.add(ChatColor.DARK_PURPLE + "poderes " + ChatColor.LIGHT_PURPLE + "inimaginables...");
+        lore.add(ChatColor.of("#c8b6ff") + "Esta esencia vacía");
+        lore.add(ChatColor.of("#c8b6ff") + "puede llegar a alcanzar");
+        lore.add(ChatColor.of("#c8b6ff") + "poderes " + ChatColor.of("#ffb3ba") + "inimaginables...");
         lore.add(" ");
         meta.setLore(lore);
         meta.setRarity(ItemRarity.RARE);

@@ -1,210 +1,155 @@
 package CorruptedEnd;
 
-import org.bukkit.*;
-import org.bukkit.block.data.BlockData;
+import org.bukkit.Material;
+import org.bukkit.block.Biome;
 import org.bukkit.generator.BlockPopulator;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.generator.LimitedRegion;
+import org.bukkit.generator.WorldInfo;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class CorruptedTreePopulator extends BlockPopulator {
-    private static Set<ChunkCoords> chunks = ConcurrentHashMap.newKeySet();
-    private static Set<ChunkCoords> unpopulatedChunks = ConcurrentHashMap.newKeySet();
-    private final JavaPlugin plugin;
-
-    public CorruptedTreePopulator(JavaPlugin plugin) {
-        this.plugin = plugin;
-    }
 
     @Override
-    public void populate(World world, Random random, Chunk chunk) {
-        int chunkX = chunk.getX();
-        int chunkZ = chunk.getZ();
-        ChunkCoords chunkCoordinates = new ChunkCoords(chunkX, chunkZ);
+    public void populate(@NotNull WorldInfo worldInfo, @NotNull Random random, int chunkX, int chunkZ, @NotNull LimitedRegion region) {
+        if (random.nextInt(100) < 35) return;
 
-        if (!chunks.contains(chunkCoordinates)) {
-            chunks.add(chunkCoordinates);
-            unpopulatedChunks.add(chunkCoordinates);
+        int localX = random.nextInt(16);
+        int localZ = random.nextInt(16);
+        int globalX = (chunkX * 16) + localX;
+        int globalZ = (chunkZ * 16) + localZ;
+
+        int y = 250;
+        while (y > 60 && region.getType(globalX, y, globalZ) == Material.AIR) {
+            y--;
         }
 
-        // Verificar si todos los chunks vecinos están cargados
-        for (ChunkCoords unpopulatedChunk : unpopulatedChunks.toArray(new ChunkCoords[0])) {
-            if (areAllNeighborsLoaded(unpopulatedChunk)) {
-                actuallyPopulate(world, random, world.getChunkAt(unpopulatedChunk.x, unpopulatedChunk.z));
-                unpopulatedChunks.remove(unpopulatedChunk);
+        if (y > 60 && y < 210) {
+            Material ground = region.getType(globalX, y, globalZ);
+            BiomeType biome = determineBiome(region, globalX, y, globalZ, ground);
+
+            if (biome != null) {
+                generateNaturalTree(region, globalX, y + 1, globalZ, biome, random);
             }
         }
     }
 
-    private boolean areAllNeighborsLoaded(ChunkCoords coords) {
-        return chunks.contains(coords.offset(-1, -1)) &&
-                chunks.contains(coords.offset(-1, 0)) &&
-                chunks.contains(coords.offset(-1, 1)) &&
-                chunks.contains(coords.offset(0, -1)) &&
-                chunks.contains(coords.offset(0, 1)) &&
-                chunks.contains(coords.offset(1, -1)) &&
-                chunks.contains(coords.offset(1, 0)) &&
-                chunks.contains(coords.offset(1, 1));
+    // Lee el bioma REAL en la coordenada en lugar de adivinar por el bloque del suelo
+    private BiomeType determineBiome(LimitedRegion region, int x, int y, int z, Material ground) {
+        Biome vanillaBiome = region.getBiome(x, y, z);
+        if (vanillaBiome != null && vanillaBiome.getKey() != null) {
+            String key = vanillaBiome.getKey().getKey();
+            try {
+                return BiomeType.valueOf(key.toUpperCase());
+            } catch (IllegalArgumentException ignored) {}
+        }
+
+        // Redundancia en caso de error
+        if (ground == Material.OBSIDIAN || ground == Material.BLACK_GLAZED_TERRACOTTA) return BiomeType.OBSIDIAN_PEAKS;
+        if (ground == Material.CRIMSON_HYPHAE) return BiomeType.CRIMSON_WASTES;
+        if (ground == Material.SNOW_BLOCK || ground == Material.POWDER_SNOW) return BiomeType.CELESTIAL_FOREST;
+        if (ground == Material.SCULK) return BiomeType.SCULK_PLAINS;
+        return null;
     }
 
-    private void actuallyPopulate(World world, Random random, Chunk chunk) {
+    private void generateNaturalTree(LimitedRegion region, int x, int y, int z, BiomeType biome, Random random) {
+        boolean isRare = random.nextInt(100) < 5; // 5% árbol universal
 
-        int intentos = 5;
+        Material trunkBlock = isRare ? Material.DEAD_HORN_CORAL_BLOCK : getTrunkMaterial(biome);
+        Material leafBlock = isRare ? Material.SCULK : getLeafMaterial(biome);
+        Material altLeafBlock = isRare ? Material.BROWN_GLAZED_TERRACOTTA : null;
 
-        for (int i = 0; i < intentos; i++) {
+        boolean isCelestial = (!isRare && biome == BiomeType.CELESTIAL_FOREST);
 
-            if (random.nextInt(100) < 40) continue;
+        int height = isCelestial ? (8 + random.nextInt(5)) : (14 + random.nextInt(10));
 
-            int x = random.nextInt(16);
-            int z = random.nextInt(16);
-
-            // Optimización: Empezar a buscar desde una altura razonable en lugar del techo del mundo
-            int y = 250;
-
-            // Buscar suelo sólido
-            while (y > 0 && chunk.getBlock(x, y, z).getType() == Material.AIR) {
-                --y;
-            }
-
-            // Rango de altura (Ajustado a 210 como pediste antes)
-            if (y > 0 && y < 255 && y >= 90 && y < 210) {
-
-                Location treeLocation = chunk.getBlock(x, y + 1, z).getLocation();
-                BiomeType biomeType = determineBiomeType(treeLocation);
-
-                // Si el bioma es válido (tiene suelo correcto), generamos
-                if (biomeType != null) {
-                    generateOriginalTree(world, treeLocation, biomeType, random);
-                }
+        for (int dy = 0; dy <= height; dy++) {
+            safeSetBlock(region, x, y + dy, z, trunkBlock);
+            if (dy < height / 4) {
+                if (random.nextBoolean()) safeSetBlock(region, x + 1, y + dy, z, trunkBlock);
+                if (random.nextBoolean()) safeSetBlock(region, x - 1, y + dy, z, trunkBlock);
+                if (random.nextBoolean()) safeSetBlock(region, x, y + dy, z + 1, trunkBlock);
+                if (random.nextBoolean()) safeSetBlock(region, x, y + dy, z - 1, trunkBlock);
             }
         }
-    }
 
-    private BiomeType determineBiomeType(Location location) {
-        // Determinar el bioma basado en el bloque base
-        Material groundBlock = location.clone().subtract(0, 1, 0).getBlock().getType();
+        int branches = isCelestial ? (3 + random.nextInt(3)) : (4 + random.nextInt(4));
+        int fruitsPlaced = 0;
 
-        if (groundBlock == Material.SCULK || groundBlock == Material.BLUE_TERRACOTTA) {
-            // Verificar si hay blue terracotta cerca para confirmar Celestial Forest
-            boolean hasBlueTerracotta = false;
-            for (int dx = -2; dx <= 2; dx++) {
-                for (int dz = -2; dz <= 2; dz++) {
-                    if (location.clone().add(dx, -1, dz).getBlock().getType() == Material.BLUE_TERRACOTTA) {
-                        hasBlueTerracotta = true;
-                        break;
+        for (int i = 0; i < branches; i++) {
+            int branchStartY = y + (height / 2) + random.nextInt(height / 2);
+            double angle = random.nextDouble() * Math.PI * 2;
+            int length = 4 + random.nextInt(5);
+
+            int bx = x;
+            int by = branchStartY;
+            int bz = z;
+
+            for (int l = 0; l < length; l++) {
+                bx += (int) Math.round(Math.cos(angle) * 1.2);
+                by += random.nextInt(2);
+                bz += (int) Math.round(Math.sin(angle) * 1.2);
+
+                safeSetBlock(region, bx, by, bz, trunkBlock);
+
+                if (l == length - 1 || random.nextInt(3) == 0) {
+                    generateLeafCluster(region, bx, by, bz, leafBlock, altLeafBlock, random);
+
+                    // AHORA HAY UN POCO MÁS DE FRUTOS COLGANTES COMO PEDISTE (Max 15)
+                    if (isCelestial && fruitsPlaced < 20 && random.nextInt(2) == 0) {
+                        if (region.isInRegion(bx, by - 2, bz) && region.getType(bx, by - 2, bz) == Material.AIR) {
+                            region.setType(bx, by - 2, bz, Material.GRAY_GLAZED_TERRACOTTA);
+                            fruitsPlaced++;
+                        }
                     }
                 }
             }
-            return hasBlueTerracotta ? BiomeType.CELESTIAL_FOREST : BiomeType.SCULK_PLAINS;
-        } else if (groundBlock == Material.OBSIDIAN) {
-            return BiomeType.OBSIDIAN_PEAKS;
-        } else if (groundBlock == Material.CRIMSON_HYPHAE) {
-            return BiomeType.CRIMSON_WASTES;
         }
-
-        return BiomeType.SCULK_PLAINS;
+        generateLeafCluster(region, x, y + height, z, leafBlock, altLeafBlock, random);
     }
 
-    private void generateOriginalTree(World world, Location location, BiomeType biomeType, Random random) {
-        // Usar la generación original como base para todos los biomas
-        world.generateTree(location, TreeType.CHORUS_PLANT, new BlockChangeDelegate() {
-            @Override
-            public boolean setBlockData(int i, int i1, int i2, @NotNull BlockData blockData) {
-                Material replacement;
-                if (blockData.getMaterial() == Material.CHORUS_FLOWER) {
-                    replacement = getLeafMaterial(biomeType);
-                } else if (blockData.getMaterial() == Material.CHORUS_PLANT) {
-                    replacement = getTrunkMaterial(biomeType);
-                } else {
-                    return true;
-                }
-                world.getBlockAt(i, i1, i2).setType(replacement);
+    private void generateLeafCluster(LimitedRegion region, int cx, int cy, int cz, Material leaf, Material altLeaf, Random random) {
+        int radius = 2 + random.nextInt(2);
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dy = -radius; dy <= radius; dy++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (dx * dx + dy * dy + dz * dz <= radius * radius) {
+                        if (random.nextInt(100) < 85) {
+                            Material toPlace = (altLeaf != null && random.nextInt(5) == 0) ? altLeaf : leaf;
+                            int worldX = cx + dx;
+                            int worldY = cy + dy;
+                            int worldZ = cz + dz;
 
-                // Añadir iluminación para Obsidian Peaks
-                if (biomeType == BiomeType.OBSIDIAN_PEAKS && replacement == Material.GRAY_GLAZED_TERRACOTTA) {
-                    Location lightLoc = new Location(world, i, i1 + 1, i2);
-                    if (lightLoc.getBlock().getType() == Material.AIR) {
-                        lightLoc.getBlock().setType(Material.LIGHT);
-                        lightLoc.getBlock().setBlockData(
-                                Bukkit.createBlockData(Material.LIGHT, "[level=8]")
-                        );
+                            if (region.isInRegion(worldX, worldY, worldZ) && region.getType(worldX, worldY, worldZ) == Material.AIR) {
+                                region.setType(worldX, worldY, worldZ, toPlace);
+                            }
+                        }
                     }
                 }
-
-                return true;
             }
+        }
+    }
 
-            @Override
-            public @NotNull BlockData getBlockData(int i, int i1, int i2) {
-                return world.getBlockAt(i, i1, i2).getBlockData();
-            }
-
-            @Override
-            public int getHeight() {
-                return 255;
-            }
-
-            @Override
-            public boolean isEmpty(int i, int i1, int i2) {
-                return world.getBlockAt(i, i1, i2).getType() == Material.AIR;
-            }
-        });
-
+    private void safeSetBlock(LimitedRegion region, int x, int y, int z, Material material) {
+        if (region.isInRegion(x, y, z)) region.setType(x, y, z, material);
     }
 
     private Material getTrunkMaterial(BiomeType biomeType) {
         switch (biomeType) {
-            case CELESTIAL_FOREST:
-                return Material.PRISMARINE_WALL;
-            case OBSIDIAN_PEAKS:
-                return Material.NETHER_BRICK_WALL;
-            case CRIMSON_WASTES:
-                return Material.RED_NETHER_BRICK_WALL;
-            default: // SCULK_PLAINS
-                return Material.BLACKSTONE_WALL;
+            case CELESTIAL_FOREST: return Material.PRISMARINE_BRICKS;
+            case OBSIDIAN_PEAKS: return Material.OBSIDIAN;
+            case CRIMSON_WASTES: return Material.RED_NETHER_BRICKS;
+            default: return Material.POLISHED_BLACKSTONE_BRICKS;
         }
     }
 
     private Material getLeafMaterial(BiomeType biomeType) {
         switch (biomeType) {
-            case CELESTIAL_FOREST:
-                return Material.VERDANT_FROGLIGHT;
-            case OBSIDIAN_PEAKS:
-                return Material.GRAY_GLAZED_TERRACOTTA;
-            case CRIMSON_WASTES:
-                return Material.SHROOMLIGHT;
-            default: // SCULK_PLAINS
-                return Material.SEA_LANTERN;
-        }
-    }
-
-    private static class ChunkCoords {
-        public final int x;
-        public final int z;
-
-        public ChunkCoords(int x, int z) {
-            this.x = x;
-            this.z = z;
-        }
-
-        public ChunkCoords offset(int dx, int dz) {
-            return new ChunkCoords(x + dx, z + dz);
-        }
-
-        @Override
-        public int hashCode() {
-            return (x + z) * (x + z + 1) / 2 + x;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
-            if (obj == null || getClass() != obj.getClass()) return false;
-            ChunkCoords other = (ChunkCoords) obj;
-            return x == other.x && z == other.z;
+            case CELESTIAL_FOREST: return Material.VERDANT_FROGLIGHT;
+            case OBSIDIAN_PEAKS: return Material.WARPED_WART_BLOCK;
+            case CRIMSON_WASTES: return Material.SHROOMLIGHT;
+            default: return Material.SEA_LANTERN;
         }
     }
 }

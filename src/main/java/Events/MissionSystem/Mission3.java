@@ -2,38 +2,55 @@ package Events.MissionSystem;
 
 import TitleListener.SuccessNotification;
 import com.viciontmedia.api.ViciontMediaAPI;
+import items.EconomyItems;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Bee;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.CraftItemEvent;
-import org.bukkit.event.raid.RaidFinishEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
-import items.EconomyItems;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class Mission3 implements Mission, Listener {
     private final JavaPlugin plugin;
     private final MissionHandler missionHandler;
     private final SuccessNotification successNotification;
+    private final NamespacedKey bossKey;
+
+    // Almacenamiento temporal para contar los golpes por cada abeja: UUID de la abeja -> (UUID del jugador -> cantidad de golpes)
+    private final Map<UUID, Map<UUID, Integer>> beeHits = new HashMap<>();
 
     public Mission3(JavaPlugin plugin, MissionHandler missionHandler) {
         this.plugin = plugin;
         this.missionHandler = missionHandler;
         this.successNotification = new SuccessNotification(plugin);
+
+        // Esta es la llave exacta que tu QueenBeeHandler le pone al Boss original
+        this.bossKey = new NamespacedKey(plugin, "is_queen_bee");
     }
 
     @Override
     public String getName() {
-        return "Preparación";
+        return "Cazador de Abejas";
     }
 
     @Override
     public String getDescription() {
-        return "Completa una Raid de Pillagers y craftea 20 manzanas de oro";
+        return "Elimina a una Abeja Reina.\nUsa /bosstp para ir a su Dungeon.\nInteractua con el panal del altar.";
     }
 
     @Override
@@ -44,13 +61,22 @@ public class Mission3 implements Mission, Listener {
     @Override
     public List<ItemStack> getRewards() {
         List<ItemStack> rewards = new ArrayList<>();
-
-        ItemStack vithiums = EconomyItems.createVithiumCoin();
-        vithiums.setAmount(10);
-        rewards.add(vithiums);
-        rewards.add(new ItemStack(Material.GOLDEN_APPLE, 5));
-        rewards.add(new ItemStack(Material.ENCHANTED_GOLDEN_APPLE, 1));
-
+        ItemStack coins = EconomyItems.createVithiumCoin();
+        coins.setAmount(14);
+        ItemStack goldenApples = new ItemStack(Material.GOLD_BLOCK, 15);
+        ItemStack unBook = new ItemStack(Material.ENCHANTED_BOOK);
+        EnchantmentStorageMeta meta = (EnchantmentStorageMeta) unBook.getItemMeta();
+        if (meta != null) {
+            meta.addStoredEnchant(Enchantment.UNBREAKING, 4, true);
+            unBook.setItemMeta(meta);
+        }
+        ItemStack xpFill = new ItemStack(Material.HONEY_BOTTLE, 1);
+        for (int i = 0; i < 27; i++) {
+            if (i == 10 || i == 11 || i == 12) rewards.add(unBook);
+            else if (i == 14) rewards.add(coins);
+            else if (i == 16) rewards.add(goldenApples);
+            else rewards.add(xpFill.clone());
+        }
         return rewards;
     }
 
@@ -61,98 +87,76 @@ public class Mission3 implements Mission, Listener {
     public void checkCompletion(String playerName) {}
 
     @EventHandler
-    public void onRaidFinish(RaidFinishEvent event) {
-        if (event.getRaid().getStatus() != org.bukkit.Raid.RaidStatus.VICTORY) return;
+    public void onEntityDamage(EntityDamageByEntityEvent event) {
+        Entity entity = event.getEntity();
+        if (!(entity instanceof Bee)) return;
 
-        List<Player> participants = event.getWinners();
+        if (!entity.getPersistentDataContainer().has(bossKey, PersistentDataType.BYTE)) return;
 
-        for (Player player : participants) {
-            if (!missionHandler.isMissionActive(player, 3)) continue;
+        Player damager = null;
 
-            MissionData data = missionHandler.getData(player, 3);
-            if (data.isCompleted() || data.getProgressBool("raid_completed")) continue;
-
-            data.setProgressValue("raid_completed", true);
-            missionHandler.saveData(player, 3, data);
-
-            successNotification.showSuccess(player);
-            sendMissionUI(player, data);
-            checkMissionCompletion(player, data);
+        if (event.getDamager() instanceof Player) {
+            damager = (Player) event.getDamager();
+        } else if (event.getDamager() instanceof Projectile projectile) {
+            if (projectile.getShooter() instanceof Player shooter) {
+                damager = shooter;
+            }
         }
+
+        if (damager == null) return;
+        if (!missionHandler.isMissionActive(damager, 3)) return;
+        if (missionHandler.isMissionCompleted(damager, 3)) return;
+
+        UUID beeUUID = entity.getUniqueId();
+        beeHits.putIfAbsent(beeUUID, new HashMap<>());
+        Map<UUID, Integer> playerHits = beeHits.get(beeUUID);
+
+        // Sumar 1 golpe al registro del jugador
+        playerHits.put(damager.getUniqueId(), playerHits.getOrDefault(damager.getUniqueId(), 0) + 1);
     }
 
     @EventHandler
-    public void onCraftItem(CraftItemEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (!missionHandler.isMissionActive(player, 3)) return;
+    public void onEntityDeath(EntityDeathEvent event) {
+        Entity entity = event.getEntity();
+        if (!(entity instanceof Bee)) return;
 
-        MissionData data = missionHandler.getData(player, 3);
-        if (data.isCompleted()) return;
+        if (!entity.getPersistentDataContainer().has(bossKey, PersistentDataType.BYTE)) return;
 
-        ItemStack recipeResult = event.getRecipe().getResult();
-        if (recipeResult.getType() != Material.GOLDEN_APPLE) return;
+        UUID beeUUID = entity.getUniqueId();
+        if (!beeHits.containsKey(beeUUID)) return;
 
-        int craftedAmount = 0;
+        Map<UUID, Integer> playerHits = beeHits.get(beeUUID);
 
-        if (event.isShiftClick()) {
-            int maxCraftable = Integer.MAX_VALUE;
-            for (ItemStack ingredient : event.getInventory().getMatrix()) {
-                if (ingredient != null && ingredient.getType() != Material.AIR) {
-                    maxCraftable = Math.min(maxCraftable, ingredient.getAmount());
+        for (Map.Entry<UUID, Integer> entry : playerHits.entrySet()) {
+            if (entry.getValue() >= 3) {
+                Player player = plugin.getServer().getPlayer(entry.getKey());
+
+                if (player != null && player.isOnline()) {
+                    // Verificar que esté en el mismo mundo y a un radio de 50 bloques (usamos distanceSquared por optimización matemática: 50x50 = 2500)
+                    if (player.getWorld().equals(entity.getWorld()) && player.getLocation().distanceSquared(entity.getLocation()) <= 2500) {
+
+                        if (missionHandler.isMissionActive(player, 3) && !missionHandler.isMissionCompleted(player, 3)) {
+                            successNotification.showSuccess(player);
+
+                            // Mensaje de victoria (Completada)
+                            String compText = "13%&#9cee8b&lMisión &r&#9cee8b#&l3 &l&+Completada&- &f&+ 0%&r\\uE002&-\n\n" +
+                                    "[left] 10%&#9bb8fdHas completado la misión&f:\n" +
+                                    "[left] \"&+&#cead36&lCazador de Abejas&r&-\"\n\n" +
+                                    "[left] &#ffcc99۞ &#ad80dbHas &#ffcc99derrotado &#ad80dba la \n" +
+                                    "[left] &#ad80db&lCorrupted Queen Bee";
+
+                            ViciontMediaAPI.sendText(player, 1, "derecha", "#005726", 12, "topright", false, compText);
+
+                            // Completar misión con ligero retraso para dar tiempo a que se registre correctamente
+                            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                                missionHandler.completeMission(player.getName(), 3);
+                            }, 10L);
+                        }
+                    }
                 }
             }
-            if (maxCraftable == Integer.MAX_VALUE) maxCraftable = 0;
-            craftedAmount = maxCraftable * recipeResult.getAmount();
-        } else {
-            craftedAmount = recipeResult.getAmount();
         }
 
-        if (craftedAmount <= 0) return;
-
-        int currentCrafted = data.getProgressInt("golden_apples_crafted");
-
-        if (currentCrafted < 20) {
-            int newTotal = currentCrafted + craftedAmount;
-            if (newTotal > 20) newTotal = 20;
-
-            data.setProgressValue("golden_apples_crafted", newTotal);
-            missionHandler.saveData(player, 3, data);
-
-            if (newTotal >= 20) successNotification.showSuccess(player);
-
-            sendMissionUI(player, data);
-            checkMissionCompletion(player, data);
-        }
-    }
-
-    private void sendMissionUI(Player player, MissionData data) {
-        boolean raidCompleted = data.getProgressBool("raid_completed");
-        int apples = data.getProgressInt("golden_apples_crafted");
-
-        String raidProg = raidCompleted ? "1" : "0";
-        String raidColor = raidCompleted ? "&#8BF8B7" : "&#CB5D5E";
-        String raidTotalColor = raidCompleted ? "&#8BF8B7" : "&#8BF8B7";
-
-        String appleColor = apples >= 20 ? "&#8BF8B7" : "&#CB5D5E";
-        String appleTotalColor = apples >= 20 ? "&#8BF8B7" : "&#8BF8B7";
-
-        String missionText = "&lMISION: &r\"&#9CF2FD&lPREPARACIÓN&r\"\n\n" +
-                "&#ed92dbRaid Superada: " + raidColor + raidProg + "&7/" + raidTotalColor + "1\n" +
-                "&#b45bdcManzanas Crafteadas: " + appleColor + apples + "&7/" + appleTotalColor + "20";
-
-        ViciontMediaAPI.sendText(player, "48006c", 8, "topright", missionText);
-    }
-
-    private void checkMissionCompletion(Player player, MissionData data) {
-        if (data.isCompleted()) return;
-
-        boolean raidCompleted = data.getProgressBool("raid_completed");
-        int goldenApplesCrafted = data.getProgressInt("golden_apples_crafted");
-
-        if (raidCompleted && goldenApplesCrafted >= 20) {
-            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                missionHandler.completeMission(player.getName(), 3);
-            }, 20L);
-        }
+        beeHits.remove(beeUUID);
     }
 }

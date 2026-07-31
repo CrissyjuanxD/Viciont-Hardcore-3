@@ -27,7 +27,7 @@ public class ViciontReloadCommand implements CommandExecutor {
         plugin.reloadConfig();
         databaseManager.reload();
 
-        sender.sendMessage(ChatColor.GREEN + "§l[QuasoPlugin] §aConfiguración y Base de Datos recargadas correctamente.");
+        sender.sendMessage(ChatColor.GREEN + "§l[Viciont_Hardcore3_Plugin] §aConfiguración y Base de Datos recargadas correctamente.");
         return true;
     }
 }

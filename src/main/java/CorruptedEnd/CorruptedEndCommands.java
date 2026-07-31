@@ -27,55 +27,43 @@ public class CorruptedEndCommands implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        switch (command.getName().toLowerCase()) {
-            case "spawnportalce":
-                return handleSpawnPortal(sender, args);
-        }
-        return false;
-    }
-
-    private boolean handleSpawnPortal(CommandSender sender, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "Este comando solo puede ser usado por jugadores.");
+            sender.sendMessage(ChatColor.RED + "Solo jugadores.");
             return true;
         }
 
         Player player = (Player) sender;
         if (!player.hasPermission("corruptedend.spawnportal")) {
-            player.sendMessage(ChatColor.RED + "No tienes permisos para usar este comando.");
+            player.sendMessage(ChatColor.RED + "Sin permisos.");
             return true;
         }
 
         Location portalLocation;
 
         if (args.length >= 3) {
-            // Coordenadas específicas
             try {
                 int x = Integer.parseInt(args[0]);
                 int y = Integer.parseInt(args[1]);
                 int z = Integer.parseInt(args[2]);
                 portalLocation = new Location(player.getWorld(), x, y, z);
             } catch (NumberFormatException e) {
-                player.sendMessage(ChatColor.RED + "Coordenadas inválidas. Uso: /spawnportalce <x> <y> <z> o /spawnportalce random");
+                player.sendMessage(ChatColor.RED + "Coordenadas inválidas.");
                 return true;
             }
         } else if (args.length == 1 && args[0].equalsIgnoreCase("random")) {
-            // Ubicación aleatoria
             World world = player.getWorld();
             Random random = new Random();
-            int x = random.nextInt(5000) - 4000; // -1000 a 1000
-            int y = random.nextInt(100) + 100;   // 100 a 200
-            int z = random.nextInt(5000) - 4000; // -1000 a 1000
+            int x = random.nextInt(5000) - 4000;
+            int y = random.nextInt(100) + 100;
+            int z = random.nextInt(5000) - 4000;
             portalLocation = new Location(world, x, y, z);
         } else if (args.length == 0) {
-            // Ubicación del jugador
             portalLocation = player.getLocation().clone().add(0, 1, 0);
         } else {
             player.sendMessage(ChatColor.RED + "Uso: /spawnportalce [<x> <y> <z> | random]");
             return true;
         }
 
-        // Verificar que no sea en el Corrupted End
         if (portalLocation.getWorld().getName().equals(CorruptedEnd.WORLD_NAME)) {
             player.sendMessage(ChatColor.RED + "No puedes crear un portal dentro del Corrupted End.");
             return true;
@@ -86,10 +74,8 @@ public class CorruptedEndCommands implements CommandExecutor {
         player.sendMessage(ChatColor.GREEN + "Portal del Corrupted End creado en " +
                 portalLocation.getBlockX() + ", " + portalLocation.getBlockY() + ", " + portalLocation.getBlockZ());
 
-        // Teleportar al jugador al portal si está lejos
         if (player.getLocation().distance(portalLocation) > 50) {
             player.teleport(portalLocation);
-            player.sendMessage(ChatColor.YELLOW + "Has sido teleportado al nuevo portal.");
         }
 
         return true;

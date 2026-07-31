@@ -56,7 +56,7 @@ public class DayFourteenChanges implements Listener {
             registerEndRecipes();
             registerEnderiteToolsUpgrades();
 
-            new BukkitRunnable() {
+            /*new BukkitRunnable() {
                 @Override
                 public void run() {
                     if (!isApplied) {
@@ -77,7 +77,7 @@ public class DayFourteenChanges implements Listener {
                         });
                     }
                 }
-            }.runTaskTimer(plugin, 0L, 80L);
+            }.runTaskTimer(plugin, 0L, 80L);*/
         }
     }
 
@@ -101,7 +101,7 @@ public class DayFourteenChanges implements Listener {
     }
 
     //SPAWNS
-    @EventHandler
+   /* @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (!isApplied) return;
 
@@ -136,7 +136,7 @@ public class DayFourteenChanges implements Listener {
         guardianShulkerDescartado.spawnGuardianShulker(loc);
         shulker.remove();
 
-    }
+    }*/
 
     //CRAFTEOS
 

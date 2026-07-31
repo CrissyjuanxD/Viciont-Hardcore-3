@@ -1,5 +1,6 @@
 package Events.MissionSystem;
 
+import Gui.MisionesGuiManager;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -15,11 +16,11 @@ import java.util.List;
 
 public class MissionCommands implements CommandExecutor, TabCompleter {
     private final MissionHandler missionHandler;
-    private final MissionGUI missionGUI;
+    private final MisionesGuiManager misionesGuiManager;
 
-    public MissionCommands(MissionHandler missionHandler, MissionGUI missionGUI) {
+    public MissionCommands(MissionHandler missionHandler, MisionesGuiManager misionesGuiManager) {
         this.missionHandler = missionHandler;
-        this.missionGUI = missionGUI;
+        this.misionesGuiManager = misionesGuiManager;
     }
 
     @Override
@@ -29,7 +30,7 @@ public class MissionCommands implements CommandExecutor, TabCompleter {
                 sender.sendMessage(ChatColor.RED + "Este comando solo puede ser usado por jugadores.");
                 return true;
             }
-            missionGUI.openMissionGUI(player);
+            misionesGuiManager.openMisiones(player);
             return true;
         }
 

@@ -6,7 +6,7 @@
 
     <groupId>vct.hardcore3</groupId>
     <artifactId>VCTHardcore3</artifactId>
-    <version>1.6.3</version>
+    <version>1.6.4</version>
 
     <properties>
         <maven.compiler.source>20</maven.compiler.source>
@@ -84,9 +84,16 @@
         <dependency>
             <groupId>com.viciontmedia</groupId>
             <artifactId>ViciontMediaPlugin</artifactId>
-            <version>1.1.0</version>
+            <version>1.2.0</version>
             <scope>system</scope>
             <systemPath>${project.basedir}/libs/ViciontMediaPlugin.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>com.crissyjuanxd.viciontguiplugin</groupId>
+            <artifactId>ViciontGuiPlugin</artifactId>
+            <version>1.0.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/ViciontGuiPlugin.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>com.viciontcinematics</groupId>

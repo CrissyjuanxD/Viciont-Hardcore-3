@@ -1,6 +1,8 @@
 package Events.MissionSystem;
 
 import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.chat.ComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.block.Chest;
 import org.bukkit.entity.Entity;
@@ -8,11 +10,13 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
+// ✔️ NUEVO EVENTO CORRECTO PARA ARMOR STANDS
+import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -21,26 +25,35 @@ import java.util.List;
 public class MissionRewardHandler implements Listener {
     private final JavaPlugin plugin;
     private final MissionHandler missionHandler;
+    private final NamespacedKey missionKey;
 
     public MissionRewardHandler(JavaPlugin plugin, MissionHandler missionHandler) {
         this.plugin = plugin;
         this.missionHandler = missionHandler;
+        this.missionKey = new NamespacedKey(plugin, "mission_number");
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
+    // ✔️ CAMBIAMOS A PlayerInteractAtEntityEvent
     @EventHandler
-    public void onEntityInteract(PlayerInteractEntityEvent event) {
+    public void onEntityInteract(PlayerInteractAtEntityEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) return;
 
         Entity entity = event.getRightClicked();
-        if (entity.getType() != EntityType.FOX) return;
+        if (entity.getType() != EntityType.ARMOR_STAND) return;
+
         if (!entity.getScoreboardTags().contains("reward_statue") &&
                 !entity.getName().contains("Estatua de Recompensas")) return;
+
+        // ✔️ CANCELAMOS EL EVENTO AQUÍ: Esto evita que la estatua te quite la ficha de la mano
+        event.setCancelled(true);
 
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
 
-        if (!isMissionToken(item)) {
+        FichaMision fichaClase = new FichaMision(plugin);
+
+        if (!fichaClase.isMissionToken(item)) {
             player.sendMessage(ChatColor.RED + "✖ " + ChatColor.GRAY + "Solo puedes interactuar usando una " +
                     ChatColor.GOLD + ChatColor.BOLD + "Ficha de Misión" + ChatColor.GRAY +
                     ", las cuales se consiguen completando misiones, para recibir tu recompensa.");
@@ -48,10 +61,8 @@ public class MissionRewardHandler implements Listener {
             return;
         }
 
-        int missionNumber = getMissionNumberFromToken(item);
+        int missionNumber = fichaClase.getMissionNumber(item);
         if (missionNumber == -1) return;
-
-        event.setCancelled(true);
 
         MissionData data = missionHandler.getData(player, missionNumber);
 
@@ -78,18 +89,19 @@ public class MissionRewardHandler implements Listener {
     }
 
     private boolean isMissionToken(ItemStack item) {
-        if (item == null || item.getType() != Material.POPPED_CHORUS_FRUIT) return false;
+        if (item == null || item.getType() != Material.ECHO_SHARD) return false;
+        if (!item.hasItemMeta()) return false;
         ItemMeta meta = item.getItemMeta();
-        if (meta == null || !meta.hasCustomModelData()) return false;
-        int cmd = meta.getCustomModelData();
-        return cmd >= 3001 && cmd <= 3027;
+
+        if (!meta.hasCustomModelData() || meta.getCustomModelData() != 2015) return false;
+
+        return meta.getPersistentDataContainer().has(missionKey, PersistentDataType.INTEGER);
     }
 
     private int getMissionNumberFromToken(ItemStack item) {
         if (!isMissionToken(item)) return -1;
-
         ItemMeta meta = item.getItemMeta();
-        return meta.getCustomModelData() - 3000; // 3001 -> 1, 3002 -> 2, etc.
+        return meta.getPersistentDataContainer().getOrDefault(missionKey, PersistentDataType.INTEGER, -1);
     }
 
     private void startRewardAnimation(Player player, Location blockLocation, int missionNumber) {
@@ -155,11 +167,11 @@ public class MissionRewardHandler implements Listener {
                 Particle.DustOptions currentColor = colors[colorIndex];
 
                 if (ticks % 40 == 0 && ticks > 0) {
-                    world.playSound(center, Sound.BLOCK_NOTE_BLOCK_CHIME, SoundCategory.VOICE,1.0f, 1.0f + (colorIndex * 0.2f));
+                    world.playSound(center, Sound.BLOCK_NOTE_BLOCK_CHIME, SoundCategory.VOICE, 1.0f, 1.0f + (colorIndex * 0.2f));
                 }
 
                 if (ticks - lastSoundTick >= 20) {
-                    world.playSound(center, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.VOICE,0.3f, 1.5f);
+                    world.playSound(center, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.VOICE, 0.3f, 1.5f);
                     lastSoundTick = ticks;
                 }
 
@@ -287,5 +299,28 @@ public class MissionRewardHandler implements Listener {
 
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, SoundCategory.VOICE, 1.0f, 1.0f);
         player.sendMessage(ChatColor.of("#98FB98") + "¡Has reclamado la recompensa de la Misión #" + missionNumber + "!");
+
+        String jsonMessage = String.format(
+                "[\"\",{\"text\":\"\\n۞ \",\"bold\":true,\"color\":\"#ffaa00\"}," +
+                        "{\"text\":\"%s\",\"bold\":true,\"color\":\"#87ceeb\"}," +
+                        "{\"text\":\" ha completado la misión \",\"color\":\"#7eaee4\"}," +
+                        "{\"text\":\"[\",\"color\":\"white\"}," +
+                        "{\"text\":\"%s\",\"bold\":true,\"color\":\"#dda0dd\"}," +
+                        "{\"text\":\"]\\n\",\"color\":\"white\"}]",
+                player.getName(),
+                mission.getName()
+        );
+
+        BaseComponent[] componentesMensaje = ComponentSerializer.parse(jsonMessage);
+
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            try {
+                onlinePlayer.spigot().sendMessage(componentesMensaje);
+                onlinePlayer.playSound(onlinePlayer.getLocation(), Sound.BLOCK_NOTE_BLOCK_IRON_XYLOPHONE, SoundCategory.MASTER, 1f, 2.0f);
+
+            } catch (Exception e) {
+                plugin.getLogger().warning("Error al notificar al jugador: " + e.getMessage());
+            }
+        }
     }
 }

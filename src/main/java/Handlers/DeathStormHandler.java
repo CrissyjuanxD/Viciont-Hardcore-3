@@ -202,7 +202,11 @@ public class DeathStormHandler implements Listener {
         return isDeathStormActive;
     }
 
-    @EventHandler
+    public int getRemainingStormSeconds() {
+        return remainingStormSeconds;
+    }
+
+/*    @EventHandler
     public void onMonsterSpawnForDeathStorm(CreatureSpawnEvent event) {
         if (!isDeathStormActive) return;
 
@@ -223,7 +227,7 @@ public class DeathStormHandler implements Listener {
                 }
             });
         }
-    }
+    }*/
 
     private void startStorm() {
         World world = Bukkit.getWorlds().get(0);

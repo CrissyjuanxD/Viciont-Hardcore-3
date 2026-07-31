@@ -1,6 +1,7 @@
 package CorruptedEnd;
 
 import org.bukkit.Bukkit;
+import org.bukkit.GameRule;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
 import org.bukkit.event.Listener;
@@ -8,6 +9,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class CorruptedEnd implements Listener {
     private final JavaPlugin plugin;
+    // Nombre normal del mundo para que Bukkit lo maneje sin errores
     public static final String WORLD_NAME = "corrupted_end";
     public World corruptedWorld;
 
@@ -38,33 +40,37 @@ public class CorruptedEnd implements Listener {
         registerCommands();
         startTasks();
 
-        // Cargar schematics después de crear el mundo
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (corruptedWorld != null) {
                 structureManager.loadSchematics();
             }
-        }, 20L);
+        }, 40L);
     }
 
     public void createCorruptedWorld() {
         corruptedWorld = Bukkit.getWorld(WORLD_NAME);
         if (corruptedWorld != null) return;
 
+        // Creamos el mundo 100% desde el plugin usando nuestro generador
         WorldCreator creator = new WorldCreator(WORLD_NAME);
-        creator.environment(World.Environment.THE_END);
-        creator.generator(generator);
+        creator.environment(World.Environment.NORMAL); // Necesario para que funcionen los colores del cielo
+        creator.generator(generator); // Nuestro generador de islas matemáticas
 
         try {
             corruptedWorld = creator.createWorld();
             if (corruptedWorld != null) {
                 corruptedWorld.setSpawnLocation(0, 120, 0);
 
-                // Crear portal de retorno solo la primera vez
+                // Forzamos el atardecer permanente y sin clima desde el Plugin
+                corruptedWorld.setTime(7000);
+                corruptedWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+                corruptedWorld.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+
                 Bukkit.getScheduler().runTaskLater(plugin, () -> {
                     portalManager.createReturnPortal();
                 }, 10L);
 
-                plugin.getLogger().info("Mundo Corrupted End creado exitosamente!");
+                plugin.getLogger().info("Mundo Corrupted End generado exitosamente por el Plugin!");
             }
         } catch (Exception e) {
             plugin.getLogger().severe("Error al crear el mundo Corrupted End: " + e.getMessage());
@@ -83,14 +89,12 @@ public class CorruptedEnd implements Listener {
     }
 
     private void startTasks() {
-        // Task para partículas
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (corruptedWorld != null && !corruptedWorld.getPlayers().isEmpty()) {
                 spawnParticles();
             }
         }, 0L, 20L);
 
-        // Task para spawneo de mobs
         mobSpawnManager.startSpawning();
     }
 
@@ -98,7 +102,6 @@ public class CorruptedEnd implements Listener {
         structureManager.spawnParticles();
     }
 
-    // Getters
     public JavaPlugin getPlugin() { return plugin; }
     public World getCorruptedWorld() { return corruptedWorld; }
     public CorruptedEndGenerator getGenerator() { return generator; }

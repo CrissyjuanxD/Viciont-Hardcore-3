@@ -137,7 +137,12 @@ public class MissionHandler implements Listener {
                 }
             }
 
-            playerCache.put(uuid, data);
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                Player p = Bukkit.getPlayer(uuid);
+                if (p != null && p.isOnline()) {
+                    playerCache.put(uuid, data);
+                }
+            });
 
             // ✔️ LÓGICA DE PENALIZACIÓN CON LA BASE DE DATOS
             if (dbManager.hasPendingPenalty(uuid)) {
@@ -169,11 +174,7 @@ public class MissionHandler implements Listener {
                 if (missionEntry.getValue().isDirty()) {
                     dirtyMissions.put(missionEntry.getKey(), missionEntry.getValue());
                     missionEntry.getValue().setDirty(false);
-
-                    String name = "System";
-                    if (missionEntry.getKey() != 0 && missions.containsKey(missionEntry.getKey())) {
-                        name = ChatColor.stripColor(missions.get(missionEntry.getKey()).getName());
-                    }
+                    String name = missions.containsKey(missionEntry.getKey()) ? ChatColor.stripColor(missions.get(missionEntry.getKey()).getName()) : "Unknown";
                     missionNames.put(missionEntry.getKey(), name);
                 }
             }
@@ -185,17 +186,27 @@ public class MissionHandler implements Listener {
     }
 
     public MissionData getData(Player player, int missionId) {
-        Map<Integer, MissionData> pData = playerCache.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>());
+        // Evitar crear un perfil falso si la caché aún no carga o el jugador está saliendo
+        if (!playerCache.containsKey(player.getUniqueId())) {
+            MissionData dummy = new MissionData();
+            dummy.setActive(false);
+            return dummy;
+        }
+
+        Map<Integer, MissionData> pData = playerCache.get(player.getUniqueId());
         MissionData data = pData.computeIfAbsent(missionId, k -> new MissionData());
 
-        if (missionId != 0) {
-            data.setActive(globalActiveMissions.contains(missionId));
-        }
+        data.setActive(globalActiveMissions.contains(missionId));
         return data;
     }
 
     public void saveData(Player player, int missionId, MissionData data) {
-        Map<Integer, MissionData> pData = playerCache.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>());
+        // Evitar guardar si el jugador no tiene caché (evita corrupciones al reiniciar)
+        if (!playerCache.containsKey(player.getUniqueId())) {
+            return;
+        }
+
+        Map<Integer, MissionData> pData = playerCache.get(player.getUniqueId());
         pData.put(missionId, data);
         data.setDirty(true);
     }
@@ -204,7 +215,7 @@ public class MissionHandler implements Listener {
         for (Map.Entry<UUID, Map<Integer, MissionData>> entry : playerCache.entrySet()) {
             UUID uuid = entry.getKey();
             Player player = Bukkit.getPlayer(uuid);
-            String playerName = player != null ? player.getName() : Bukkit.getOfflinePlayer(uuid).getName();
+            String playerName = player != null ? player.getName() : "Unknown";
 
             Map<Integer, MissionData> dirtyMissions = new HashMap<>();
             Map<Integer, String> missionNames = new HashMap<>();
@@ -212,12 +223,9 @@ public class MissionHandler implements Listener {
             for (Map.Entry<Integer, MissionData> missionEntry : entry.getValue().entrySet()) {
                 if (missionEntry.getValue().isDirty()) {
                     dirtyMissions.put(missionEntry.getKey(), missionEntry.getValue());
-                    missionEntry.getValue().setDirty(false);
+                    missionEntry.getValue().setDirty(false); // Reseteamos la marca de sucio
 
-                    String name = "System";
-                    if (missionEntry.getKey() != 0 && missions.containsKey(missionEntry.getKey())) {
-                        name = ChatColor.stripColor(missions.get(missionEntry.getKey()).getName());
-                    }
+                    String name = missions.containsKey(missionEntry.getKey()) ? ChatColor.stripColor(missions.get(missionEntry.getKey()).getName()) : "Unknown";
                     missionNames.put(missionEntry.getKey(), name);
                 }
             }
@@ -463,52 +471,35 @@ public class MissionHandler implements Listener {
 
         giveMissionToken(player, missionNumber);
 
-        String missionName = missions.get(missionNumber).getName();
-
-        String jsonMessage = String.format(
-                "[\"\",{\"text\":\"\\n۞ \",\"bold\":true,\"color\":\"#ffaa00\"}," +
-                        "{\"text\":\"%s\",\"bold\":true,\"color\":\"#87ceeb\"}," +
-                        "{\"text\":\" ha completado la misión \",\"color\":\"#7eaee4\"}," +
-                        "{\"text\":\"[\",\"color\":\"white\"}," +
-                        "{\"text\":\"%s\",\"bold\":true,\"color\":\"#dda0dd\"}," +
-                        "{\"text\":\"]\\n\",\"color\":\"white\"}]",
-                player.getName(),
-                missionName
-        );
+        String missionName = missions.containsKey(missionNumber) ? missions.get(missionNumber).getName() : "Misión Desconocida";
 
         String consoleMessage = player.getName() + " ha completado la misión [" + missionName + "]";
         plugin.getLogger().info(consoleMessage);
-        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-            try {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                        "tellraw " + onlinePlayer.getName() + " " + jsonMessage);
 
-                if (onlinePlayer.equals(player)) {
-                    onlinePlayer.playSound(player.getLocation(),
-                            Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
-                } else {
-                    try {
-                        onlinePlayer.playSound(onlinePlayer.getLocation(), Sound.BLOCK_NOTE_BLOCK_IRON_XYLOPHONE, SoundCategory.MASTER, 1f, 2.0f);
-                    } catch (Exception ex) {
-                        plugin.getLogger().warning("Error al reproducir sonido personalizado: " + ex.getMessage());
-                    }
-                }
-            } catch (Exception e) {
-                plugin.getLogger().warning("Error al notificar al jugador: " + e.getMessage());
-            }
+        try {
+            player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 2.0f, 1.2f);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Error al reproducir sonido local al jugador: " + e.getMessage());
         }
 
-        long completedCount = playerCache.get(player.getUniqueId()).values().stream()
+/*        long completedCount = playerCache.get(player.getUniqueId()).values().stream()
                 .filter(MissionData::isCompleted).count();
 
         player.sendMessage(ChatColor.GREEN + "Progreso Total: " + ChatColor.GOLD + completedCount +
-                ChatColor.GREEN + " misiones completadas.");
+                ChatColor.GREEN + " misiones completadas.");*/
 
         return true;
     }
 
     public void giveMissionToken(Player player, int missionNumber) {
-        ItemStack token = createMissionToken(missionNumber);
+        String missionName = "Misión Desconocida";
+        if (missions.containsKey(missionNumber)) {
+            missionName = missions.get(missionNumber).getName();
+        }
+
+        FichaMision fichaClase = new FichaMision(plugin);
+        ItemStack token = fichaClase.createToken(missionNumber, missionName);
+
         HashMap<Integer, ItemStack> leftover = player.getInventory().addItem(token);
 
         if (!leftover.isEmpty()) {
@@ -517,34 +508,6 @@ public class MissionHandler implements Listener {
             }
             player.sendMessage(ChatColor.of("#FFA07A") + "¡Inventario lleno! Token dropeado al suelo.");
         }
-    }
-
-    public ItemStack createMissionToken(int missionNumber) {
-        ItemStack token = new ItemStack(Material.POPPED_CHORUS_FRUIT);
-        ItemMeta meta = token.getItemMeta();
-
-        meta.setDisplayName(ChatColor.GOLD + "Ficha de Misión #" + missionNumber);
-        meta.setCustomModelData(3000 + missionNumber);
-        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
-        meta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ENCHANTS);
-
-        String missionName = "Misión Desconocida";
-        if (missions.containsKey(missionNumber)) {
-            missionName = missions.get(missionNumber).getName();
-        }
-
-        List<String> lore = new ArrayList<>();
-        lore.add("");
-        lore.add(ChatColor.GRAY + "Misión Completada:");
-        lore.add(ChatColor.of("#FFCC99") + "Misión: " + ChatColor.WHITE + missionName);
-        lore.add("");
-        lore.add(ChatColor.GRAY + "Entrégalo en el spawn.");
-        lore.add(ChatColor.GRAY + "> Click Derecho a la:");
-        lore.add(ChatColor.of("#FFB347") + "Estatua de Recompensas");
-
-        meta.setLore(lore);
-        token.setItemMeta(meta);
-        return token;
     }
 
     public void addMissionToPlayer(CommandSender sender, String playerName, int missionNumber) {

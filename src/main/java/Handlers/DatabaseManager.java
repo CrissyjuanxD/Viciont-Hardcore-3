@@ -64,6 +64,11 @@ public class DatabaseManager {
                     "first_join DATETIME DEFAULT CURRENT_TIMESTAMP, " +
                     "team_name VARCHAR(20) DEFAULT 'ZMiembro');");
 
+            try {
+                stmt.executeUpdate("ALTER TABLE players ADD COLUMN vithiums INT DEFAULT 0;");
+            } catch (SQLException ignored) {
+            }
+
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS global_missions (" +
                     "mission_id INT PRIMARY KEY, " +
                     "is_active BOOLEAN DEFAULT 1, " +
@@ -107,6 +112,19 @@ public class DatabaseManager {
                     "player_name VARCHAR(16), " +
                     "inventory_contents LONGTEXT, " +
                     "saved_at DATETIME DEFAULT CURRENT_TIMESTAMP);");
+
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS gui_cambios (" +
+                    "id VARCHAR(64) PRIMARY KEY, " +
+                    "tipo VARCHAR(32), " +
+                    "numero INT, " +
+                    "color_code VARCHAR(16), " +
+                    "raw_message TEXT, " +
+                    "json_message TEXT);");
+
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS player_cambios_leidos (" +
+                    "uuid VARCHAR(36), " +
+                    "cambio_id VARCHAR(64), " +
+                    "PRIMARY KEY (uuid, cambio_id));");
 
             plugin.getLogger().info("Conectado a MySQL y tablas verificadas.");
 
@@ -500,6 +518,132 @@ public class DatabaseManager {
             plugin.getLogger().severe("Error obteniendo todos los jugadores: " + e.getMessage());
         }
         return players;
+    }
+
+    // --- VITHIUMS ---
+
+    public int getVithiums(UUID uuid) {
+        String sql = "SELECT vithiums FROM players WHERE uuid = ?";
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, uuid.toString());
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("vithiums");
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Error obteniendo vithiums de la BD: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    public void setVithiums(UUID uuid, int amount) {
+        String sql = "UPDATE players SET vithiums = ? WHERE uuid = ?";
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, amount);
+            stmt.setString(2, uuid.toString());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Error estableciendo vithiums en la BD: " + e.getMessage());
+        }
+    }
+
+    public List<Map.Entry<String, Integer>> getTopVithiumsExcluding(Set<String> excludedNames, int limit) {
+        List<Map.Entry<String, Integer>> top = new ArrayList<>();
+        String sql = "SELECT name, vithiums FROM players ORDER BY vithiums DESC LIMIT 50";
+        /*String sql = "SELECT name, vithiums FROM players WHERE vithiums > 0 ORDER BY vithiums DESC LIMIT 50";*/
+
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                String name = rs.getString("name");
+                if (name != null && !excludedNames.contains(name)) {
+                    top.add(new AbstractMap.SimpleEntry<>(name, rs.getInt("vithiums")));
+                    if (top.size() >= limit) break; // Si ya llenamos el límite (ej. 15), cortamos.
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Error obteniendo Top Vithiums: " + e.getMessage());
+        }
+        return top;
+    }
+
+    public void addVithiums(UUID uuid, int amount) {
+        setVithiums(uuid, getVithiums(uuid) + amount);
+    }
+
+    public void removeVithiums(UUID uuid, int amount) {
+        setVithiums(uuid, Math.max(0, getVithiums(uuid) - amount));
+    }
+
+    // SISTEMA DE GUI DE CAMBIOS
+    public void saveGuiCambio(Gui.CambiosDataManager.CambioEntry entry) {
+        String sql = "INSERT INTO gui_cambios (id, tipo, numero, color_code, raw_message, json_message) VALUES (?, ?, ?, ?, ?, ?) " +
+                "ON DUPLICATE KEY UPDATE raw_message=?, json_message=?";
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, entry.id);
+            stmt.setString(2, entry.tipo);
+            stmt.setInt(3, entry.numero);
+            stmt.setString(4, entry.colorCode);
+            stmt.setString(5, entry.rawMessage);
+            stmt.setString(6, entry.jsonMessage);
+            // Updates
+            stmt.setString(7, entry.rawMessage);
+            stmt.setString(8, entry.jsonMessage);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Error guardando Cambio " + entry.id + ": " + e.getMessage());
+        }
+    }
+
+    public boolean deleteGuiCambio(String id) {
+        String sql = "DELETE FROM gui_cambios WHERE id = ?";
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, id);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    public List<Gui.CambiosDataManager.CambioEntry> loadAllGuiCambios() {
+        List<Gui.CambiosDataManager.CambioEntry> list = new ArrayList<>();
+        String sql = "SELECT * FROM gui_cambios ORDER BY numero ASC";
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                list.add(new Gui.CambiosDataManager.CambioEntry(
+                        rs.getString("id"), rs.getString("tipo"), rs.getInt("numero"),
+                        rs.getString("color_code"), rs.getString("raw_message"), rs.getString("json_message")
+                ));
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Error cargando el historial de Cambios.");
+        }
+        return list;
+    }
+
+    public Set<String> loadCambiosLeidos(UUID uuid) {
+        Set<String> leidos = new HashSet<>();
+        String sql = "SELECT cambio_id FROM player_cambios_leidos WHERE uuid = ?";
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, uuid.toString());
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                leidos.add(rs.getString("cambio_id"));
+            }
+        } catch (SQLException e) {}
+        return leidos;
+    }
+
+    public void setCambioLeido(UUID uuid, String cambioId, boolean leido) {
+        String sql = leido
+                ? "INSERT IGNORE INTO player_cambios_leidos (uuid, cambio_id) VALUES (?, ?)"
+                : "DELETE FROM player_cambios_leidos WHERE uuid = ? AND cambio_id = ?";
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, uuid.toString());
+            stmt.setString(2, cambioId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {}
     }
 
     public void reload() {

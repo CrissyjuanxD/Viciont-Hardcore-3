@@ -22,7 +22,7 @@ public class CorruptureEffect implements CustomEffect, Listener {
     }
 
     @Override
-    public void applyEffect(Player player, int durationSeconds) {
+    public void applyEffect(Player player, int durationSeconds, int amplifier) {
         removeEffect(player);
 
         BukkitRunnable task = new BukkitRunnable() {
@@ -78,7 +78,13 @@ public class CorruptureEffect implements CustomEffect, Listener {
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
-        if (playersWithEffect.contains(player.getUniqueId())) {
+
+        if (playersWithEffect.contains(player.getUniqueId()) && player.getGameMode() != org.bukkit.GameMode.CREATIVE) {
+
+            if (event.getBlock().getType().name().contains("SPAWNER")) {
+                return;
+            }
+
             event.setCancelled(true);
             playCorruptionSounds(player);
         }
@@ -87,7 +93,7 @@ public class CorruptureEffect implements CustomEffect, Listener {
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
-        if (playersWithEffect.contains(player.getUniqueId())) {
+        if (playersWithEffect.contains(player.getUniqueId()) && player.getGameMode() != org.bukkit.GameMode.CREATIVE) {
             event.setCancelled(true);
             playCorruptionSounds(player);
         }

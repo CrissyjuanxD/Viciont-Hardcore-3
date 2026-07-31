@@ -1,5 +1,6 @@
 package Structures;
 
+import Gui.CambiosDataManager;
 import TitleListener.RuletaAnimation; // Asegúrate de importar tu clase de animación
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -12,10 +13,12 @@ import java.util.Arrays;
 
 public class CorruptedVillage extends BaseStructure {
     private final RuletaAnimation ruletaAnimation; // Inyectamos la animación
+    private final CambiosDataManager cambiosData;
 
-    public CorruptedVillage(JavaPlugin plugin, RuletaAnimation ruletaAnimation) {
+    public CorruptedVillage(JavaPlugin plugin, RuletaAnimation ruletaAnimation, CambiosDataManager cambiosData) {
         super(plugin, Arrays.asList("CorruptedVillageFV1.schem", "CorruptedVillageFV2.schem", "CorruptedVillageFV3.schem", "CorruptedVillageFV4.schem"));
         this.ruletaAnimation = ruletaAnimation;
+        this.cambiosData = cambiosData;
     }
 
     @Override
@@ -44,9 +47,10 @@ public class CorruptedVillage extends BaseStructure {
                                 potentialLocation.getBlockX(), potentialLocation.getBlockY(), potentialLocation.getBlockZ()
                         );
 
-                        // Llamada nativa directa a la animación
+                        cambiosData.addCambio("estructura", "", jsonMessage);
+
                         for (Player player : Bukkit.getOnlinePlayers()) {
-                            ruletaAnimation.playAnimation(player, "morado", "off", "center", jsonMessage);
+                            ruletaAnimation.playAnimation(player, "morado", "off", "center", jsonMessage, true);
                         }
                     }
                 });

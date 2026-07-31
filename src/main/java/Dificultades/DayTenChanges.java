@@ -49,7 +49,7 @@ public class DayTenChanges implements Listener {
         this.toxicSpider = new ToxicSpider(plugin);
         this.fastRavager = new FastRavager(plugin);
         this.corruptedSpider = new CorruptedSpider(plugin,dayHandler);
-        this.corruptedZombies = new CorruptedZombies(plugin);
+        this.corruptedZombies = new CorruptedZombies(plugin, dayHandler);
         this.corruptedSoul = new CorruptedSoul(plugin);
         this.lifeTotem = new LifeTotem(plugin);
         this.infernalTotem = new InfernalTotem(plugin);
@@ -87,21 +87,21 @@ public class DayTenChanges implements Listener {
 
     // SPAWN DE MOBS "INFERNAL CREEPER", "WHITE ENDERMAN", "ULTRA CORRUPTED SPIDER" Y "CORRUPTED ZOMBIE"
 
-    @EventHandler
+/*    @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (!isApplied) return;
 
-/*        if (shouldConvertCorruptedZombieSpawn(event)) {
+*//*        if (shouldConvertCorruptedZombieSpawn(event)) {
             Zombie zombie = (Zombie) event.getEntity();
             convertToCorruptedZombie(zombie);
             return;
-        }*/
+        }*//*
 
-/*        if (shouldConvertWhiteEndermanSpawn(event)) {
+*//*        if (shouldConvertWhiteEndermanSpawn(event)) {
             Enderman enderman = (Enderman) event.getEntity();
             convertToWhiteEnderman(enderman);
             return;
-        }*/
+        }*//*
 
         handleIceologerConversion(event);
         handleSpiderConversion(event);
@@ -109,9 +109,9 @@ public class DayTenChanges implements Listener {
         handleInfernalandNormalCreeperConversion(event);
         handleFastRavagerConversion(event);
         handleEndermantoCreeperConversion(event);
-    }
+    }*/
 
-    private void handleIceologerConversion(CreatureSpawnEvent event) {
+/*    private void handleIceologerConversion(CreatureSpawnEvent event) {
         EntityType type = event.getEntityType();
 
         if (type == EntityType.PILLAGER) {
@@ -125,9 +125,9 @@ public class DayTenChanges implements Listener {
                 event.getEntity().remove();
             }
         }
-    }
+    }*/
 
-    private void handleSpiderConversion(CreatureSpawnEvent event) {
+    /*private void handleSpiderConversion(CreatureSpawnEvent event) {
         if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) {
             return;
         }
@@ -148,9 +148,9 @@ public class DayTenChanges implements Listener {
         } else {
             corruptedSpider.transformspawnCorruptedSpider(spider);
         }
-    }
+    }*/
 
-    private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
+    /*private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
         if (event.getEntityType() != EntityType.ZOMBIE) return;
 
         if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE)) {
@@ -159,9 +159,9 @@ public class DayTenChanges implements Listener {
 
         Zombie zombie = (Zombie) event.getEntity();
         corruptedZombies.transformToCorruptedZombie(zombie);
-    }
+    }*/
 
-    private void handleEndermantoCreeperConversion(CreatureSpawnEvent event) {
+   /* private void handleEndermantoCreeperConversion(CreatureSpawnEvent event) {
         if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL &&
                 event.getLocation().getWorld().getEnvironment() != World.Environment.NETHER) {
             return;
@@ -211,7 +211,7 @@ public class DayTenChanges implements Listener {
             event.setCancelled(true);
             infernalCreeper.spawnInfernalCreeper(event.getLocation());
         }
-    }
+    }*/
 
 
 /*    private boolean shouldConvertWhiteEndermanSpawn(CreatureSpawnEvent event) {
@@ -231,7 +231,7 @@ public class DayTenChanges implements Listener {
         whiteEnderman.transformToWhiteEnderman(enderman);
     }*/
 
-    private void handleFastRavagerConversion(CreatureSpawnEvent event) {
+    /*private void handleFastRavagerConversion(CreatureSpawnEvent event) {
         if (event.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL) {
             return;
         }
@@ -250,7 +250,7 @@ public class DayTenChanges implements Listener {
             event.setCancelled(true);
             fastRavager.spawnFastRavager(event.getLocation());
         }
-    }
+    }*/
 
     //LOGROS (SE MANEJA EN OTRA CLASE) ACHIEVEMENTPARTYHANDLER
 
@@ -262,7 +262,7 @@ public class DayTenChanges implements Listener {
     }
 
     //La Arañas de cuevas al spawnear tendrán Velocidad II, Fuerza II, Resistencia II
-    @EventHandler
+/*    @EventHandler
     public void onCaveSpiderSpawn(CreatureSpawnEvent event) {
         if (!isApplied || event.getEntityType() != EntityType.CAVE_SPIDER || event.isCancelled()) return;
 
@@ -270,9 +270,9 @@ public class DayTenChanges implements Listener {
         caveSpider.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, PotionEffect.INFINITE_DURATION, 1));
         caveSpider.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, PotionEffect.INFINITE_DURATION, 1));
         caveSpider.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, PotionEffect.INFINITE_DURATION, 1));
-    }
+    }*/
 
-    @EventHandler
+   /* @EventHandler
     public void onZombifiedPiglinSpawn(CreatureSpawnEvent event) {
         if (!isApplied || event.getEntityType() != EntityType.ZOMBIFIED_PIGLIN) return;
 
@@ -289,7 +289,7 @@ public class DayTenChanges implements Listener {
             Player target = nearbyPlayers.get(0);
             piglin.setTarget(target);
         }
-    }
+    }*/
 
     //CRAFTEOS
 

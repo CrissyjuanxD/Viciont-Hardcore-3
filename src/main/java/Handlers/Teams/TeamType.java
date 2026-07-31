@@ -1,6 +1,10 @@
 package Handlers.Teams;
 
 import net.md_5.bungee.api.ChatColor;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Entity;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 
 public enum TeamType {
 
@@ -71,5 +75,16 @@ public enum TeamType {
             if (type.getId().equalsIgnoreCase(id)) return type;
         }
         return null;
+    }
+
+    public static void hideEntity(Entity entity) {
+        if (entity == null || !entity.isValid()) return;
+        Scoreboard board = Bukkit.getScoreboardManager().getMainScoreboard();
+        Team hideTeam = board.getTeam("hide_tags");
+        if (hideTeam == null) {
+            hideTeam = board.registerNewTeam("hide_tags");
+            hideTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
+        }
+        hideTeam.addEntity(entity);
     }
 }

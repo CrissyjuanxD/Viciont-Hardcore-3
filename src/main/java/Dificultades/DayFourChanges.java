@@ -60,7 +60,7 @@ public class DayFourChanges implements Listener {
         this.guardianCorruptedSkeleton = new GuardianCorruptedSkeleton(plugin);
         this.corruptedInfernalSpider = new CorruptedInfernalSpider(plugin);
         /*this.queenBeeHandler = new QueenBeeHandler(plugin);*/
-        this.corruptedZombies = new CorruptedZombies(plugin);
+        this.corruptedZombies = new CorruptedZombies(plugin, handler);
         this.corruptedSpider = new CorruptedSpider(plugin,handler);
         this.corruptedBee = new CorruptedBee(plugin);
         this.bombita = new Bombita(plugin);
@@ -311,6 +311,26 @@ public class DayFourChanges implements Listener {
         ItemStack[] matrix = inventory.getMatrix();
         ItemStack result = event.getRecipe().getResult();
 
+        if (event.getRecipe() instanceof ShapedRecipe shaped && shaped.getKey().getKey().equals("nether_emblem")) {
+            int[] essenceSlots = {0, 2, 6, 8};
+            boolean isValid = true;
+
+            for (int slot : essenceSlots) {
+                if (slot < matrix.length) {
+                    ItemStack item = matrix[slot];
+                    if (!isAnyEssence(item)) {
+                        isValid = false;
+                        break;
+                    }
+                }
+            }
+
+            if (!isValid) {
+                inventory.setResult(null); // Cancelar si pusieron pepitas de hierro normales
+                return;
+            }
+        }
+
         // ===== CASO 1: Crear la Upgrade original =====
         if (result.getType() == Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE &&
                 event.getRecipe() instanceof ShapedRecipe shaped &&
@@ -405,6 +425,15 @@ public class DayFourChanges implements Listener {
         return uuid != null && uuid.equals(player.getUniqueId().toString());
     }
 
+    private boolean isAnyEssence(ItemStack item) {
+        if (item == null || item.getType() != Material.IRON_NUGGET || !item.hasItemMeta()) {
+            return false;
+        }
+        PersistentDataContainer data = item.getItemMeta().getPersistentDataContainer();
+        NamespacedKey usesKey = new NamespacedKey("vicionthardcore3", "uses");
+
+        return data.has(usesKey, PersistentDataType.INTEGER);
+    }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
@@ -562,7 +591,7 @@ public class DayFourChanges implements Listener {
         ShapedRecipe netherEmblemRecipe = new ShapedRecipe(new NamespacedKey(plugin, "nether_emblem"), EmblemItems.createNetherEmblem());
         netherEmblemRecipe.shape("EIE", "OAO", "EIE");
 
-        netherEmblemRecipe.setIngredient('E', new RecipeChoice.ExactChoice(EssenceFactory.createProtectionEssence())); // Cualquier esencia
+        netherEmblemRecipe.setIngredient('E', Material.IRON_NUGGET);
         netherEmblemRecipe.setIngredient('O', Material.GOLD_BLOCK);
         netherEmblemRecipe.setIngredient('I', new RecipeChoice.ExactChoice(EmblemItems.createFragmentoInfernal()));
         netherEmblemRecipe.setIngredient('A', new RecipeChoice.ExactChoice(EmblemItems.createAgujonReal())); // Aguijón de Abeja Reina
@@ -645,7 +674,7 @@ public class DayFourChanges implements Listener {
     }
 
     //MOBS
-    @EventHandler
+/*    @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (!isApplied) return;
 
@@ -659,9 +688,9 @@ public class DayFourChanges implements Listener {
         handlePiglinToSpiderConversion(event);
         handleCorruptedZombieConversion(event);
         handleCorruptedSpiderConversion(event);
-    }
+    }*/
 
-    private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
+   /* private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
         if (event.getEntityType() != EntityType.ZOMBIE) return;
 
         if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE)) {
@@ -722,7 +751,7 @@ public class DayFourChanges implements Listener {
         loc.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, loc, 20, 0.5, 0.5, 0.5);
 
         guardianCorruptedSkeleton.transformToCorruptedSkeleton(skeleton);
-    }
+    }*/
 
     @EventHandler
     public void onWitherSkeletonDeath(EntityDeathEvent event) {
@@ -737,7 +766,5 @@ public class DayFourChanges implements Listener {
             }
         }
     }
-
-    //Permitir que los creepers puedan spawnear de dia
 
 }

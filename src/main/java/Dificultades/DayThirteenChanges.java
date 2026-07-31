@@ -57,7 +57,7 @@ public class DayThirteenChanges implements Listener {
         this.espectralSilverfish = new EspectralSilverfish(plugin);
 
         this.bombita = new Bombita(plugin);
-        this.corruptedZombies = new CorruptedZombies(plugin);
+        this.corruptedZombies = new CorruptedZombies(plugin, handler);
         this.toxicSpider = new ToxicSpider(plugin);
         this.corruptedSkeleton = new CorruptedSkeleton(plugin, handler);
 
@@ -100,14 +100,14 @@ public class DayThirteenChanges implements Listener {
 
     //SPAWNS
 
-    @EventHandler
+/*    @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (!isApplied) return;
         handleRandomMobConversion(event);
         handleSpectralEyeConversion(event);
-    }
+    }*/
 
-    private boolean isSpecialMob(Entity entity) {
+/*    private boolean isSpecialMob(Entity entity) {
         return entity.getPersistentDataContainer().has(espectralGhast.getEnderGhastKey(), PersistentDataType.BYTE) ||
                 entity.getPersistentDataContainer().has(espectralCreeper.getEnderCreeperKey(), PersistentDataType.BYTE) ||
                 entity.getPersistentDataContainer().has(espectralSilverfish.getEnderSilverFishKey(), PersistentDataType.BYTE) ||
@@ -181,24 +181,18 @@ public class DayThirteenChanges implements Listener {
             return;
         }
 
-/*        if (event.getEntity().getPersistentDataContainer()
+        if (event.getEntity().getPersistentDataContainer()
                 .has(spectralEye.getSpectralEyeKey(), PersistentDataType.BYTE)) {
             return;
-        }*/
+        }
 
         boolean isSpectralEye = random.nextInt(25) == 0;
-
-/*        Phantom phantom = (Phantom) event.getEntity();
-        Location loc = phantom.getLocation();
-
-        spectralEye.spawnSpectralEye(loc);
-        phantom.remove();*/
 
         if (isSpectralEye) {
             event.setCancelled(true);
             spectralEye.spawnSpectralEye(event.getLocation());
         }
-    }
+    }*/
 
     //CRAFTEOS
 

@@ -3,11 +3,8 @@ package CorruptedEnd;
 import org.bukkit.Material;
 
 public enum BiomeType {
-    // Biomas originales
     SCULK_PLAINS(0, "Sculk Plains"),
     CRIMSON_WASTES(1, "Crimson Wastes"),
-
-    // Nuevos biomas
     CELESTIAL_FOREST(2, "Celestial Forest"),
     OBSIDIAN_PEAKS(3, "Obsidian Peaks");
 
@@ -29,12 +26,11 @@ public enum BiomeType {
         return SCULK_PLAINS;
     }
 
-    // Materiales base para cada bioma
     public Material getPrimaryBlock() {
         switch (this) {
             case SCULK_PLAINS: return Material.SCULK;
             case CRIMSON_WASTES: return Material.CRIMSON_HYPHAE;
-            case CELESTIAL_FOREST: return Material.SCULK;
+            case CELESTIAL_FOREST: return Material.POWDER_SNOW;
             case OBSIDIAN_PEAKS: return Material.OBSIDIAN;
             default: return Material.SCULK;
         }
@@ -54,13 +50,12 @@ public enum BiomeType {
         switch (this) {
             case SCULK_PLAINS: return Material.SCULK_CATALYST;
             case CRIMSON_WASTES: return Material.SCULK_VEIN;
-            case CELESTIAL_FOREST: return Material.SCULK;
+            case CELESTIAL_FOREST: return Material.POWDER_SNOW;
             case OBSIDIAN_PEAKS: return Material.HONEYCOMB_BLOCK;
             default: return Material.SCULK_CATALYST;
         }
     }
 
-    // Materiales de decoración
     public Material[] getDecorationBlocks() {
         switch (this) {
             case SCULK_PLAINS:

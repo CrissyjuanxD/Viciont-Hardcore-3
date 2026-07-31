@@ -3,16 +3,14 @@ package Events.MissionSystem;
 import TitleListener.SuccessNotification;
 import com.viciontmedia.api.ViciontMediaAPI;
 import org.bukkit.Material;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.PlayerItemHeldEvent;
+import org.bukkit.event.inventory.CraftItemEvent;
+import org.bukkit.event.raid.RaidFinishEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import items.EconomyItems;
-import net.md_5.bungee.api.ChatColor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,12 +28,12 @@ public class Mission2 implements Mission, Listener {
 
     @Override
     public String getName() {
-        return "Protección Avanzada";
+        return "El Héroe Dorado";
     }
 
     @Override
     public String getDescription() {
-        return "Equípate armadura de diamante con Protección IV en cada pieza";
+        return "Completa una Raid y craftea 40 manzanas de oro";
     }
 
     @Override
@@ -50,8 +48,8 @@ public class Mission2 implements Mission, Listener {
         ItemStack vithiums = EconomyItems.createVithiumCoin();
         vithiums.setAmount(10);
         rewards.add(vithiums);
-        rewards.add(new ItemStack(Material.ENCHANTED_GOLDEN_APPLE, 1));
         rewards.add(new ItemStack(Material.GOLDEN_APPLE, 5));
+        rewards.add(new ItemStack(Material.ENCHANTED_GOLDEN_APPLE, 1));
 
         return rewards;
     }
@@ -63,96 +61,102 @@ public class Mission2 implements Mission, Listener {
     public void checkCompletion(String playerName) {}
 
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (!missionHandler.isMissionActive(player, 2)) return;
-        MissionData data = missionHandler.getData(player, 2);
-        if (data.isCompleted()) return;
+    public void onRaidFinish(RaidFinishEvent event) {
+        if (event.getRaid().getStatus() != org.bukkit.Raid.RaidStatus.VICTORY) return;
 
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-            checkProtectionArmor(player);
-        }, 1L);
+        List<Player> participants = event.getWinners();
+
+        for (Player player : participants) {
+            if (!missionHandler.isMissionActive(player, 2)) continue;
+
+            MissionData data = missionHandler.getData(player, 2);
+            if (data.isCompleted() || data.getProgressBool("raid_completed")) continue;
+
+            data.setProgressValue("raid_completed", true);
+            missionHandler.saveData(player, 2, data);
+
+            successNotification.showSuccess(player);
+
+            // Evaluamos si con esto ya completó toda la misión
+            checkAndSendFeedback(player, data, "raid");
+        }
     }
 
     @EventHandler
-    public void onItemHeld(PlayerItemHeldEvent event) {
-        Player player = event.getPlayer();
+    public void onCraftItem(CraftItemEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
         if (!missionHandler.isMissionActive(player, 2)) return;
+
         MissionData data = missionHandler.getData(player, 2);
         if (data.isCompleted()) return;
 
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-            checkProtectionArmor(player);
-        }, 1L);
-    }
+        ItemStack recipeResult = event.getRecipe().getResult();
+        if (recipeResult.getType() != Material.GOLDEN_APPLE) return;
 
-    private void checkProtectionArmor(Player player) {
-        MissionData data = missionHandler.getData(player, 2);
-        if (data.isCompleted()) return;
+        int craftedAmount = 0;
 
-        ItemStack helmet = player.getInventory().getHelmet();
-        ItemStack chestplate = player.getInventory().getChestplate();
-        ItemStack leggings = player.getInventory().getLeggings();
-        ItemStack boots = player.getInventory().getBoots();
-
-        boolean hasHelmet = hasProtectionIV(helmet, Material.DIAMOND_HELMET);
-        boolean hasChestplate = hasProtectionIV(chestplate, Material.DIAMOND_CHESTPLATE);
-        boolean hasLeggings = hasProtectionIV(leggings, Material.DIAMOND_LEGGINGS);
-        boolean hasBoots = hasProtectionIV(boots, Material.DIAMOND_BOOTS);
-
-        boolean updated = false;
-
-        if (hasHelmet && !data.getProgressBool("protection_helmet")) {
-            data.setProgressValue("protection_helmet", true);
-            successNotification.showSuccess(player);
-            updated = true;
+        if (event.isShiftClick()) {
+            int maxCraftable = Integer.MAX_VALUE;
+            for (ItemStack ingredient : event.getInventory().getMatrix()) {
+                if (ingredient != null && ingredient.getType() != Material.AIR) {
+                    maxCraftable = Math.min(maxCraftable, ingredient.getAmount());
+                }
+            }
+            if (maxCraftable == Integer.MAX_VALUE) maxCraftable = 0;
+            craftedAmount = maxCraftable * recipeResult.getAmount();
+        } else {
+            craftedAmount = recipeResult.getAmount();
         }
 
-        if (hasChestplate && !data.getProgressBool("protection_chestplate")) {
-            data.setProgressValue("protection_chestplate", true);
-            successNotification.showSuccess(player);
-            updated = true;
-        }
+        if (craftedAmount <= 0) return;
 
-        if (hasLeggings && !data.getProgressBool("protection_leggings")) {
-            data.setProgressValue("protection_leggings", true);
-            successNotification.showSuccess(player);
-            updated = true;
-        }
+        int currentCrafted = data.getProgressInt("golden_apples_crafted");
 
-        if (hasBoots && !data.getProgressBool("protection_boots")) {
-            data.setProgressValue("protection_boots", true);
-            successNotification.showSuccess(player);
-            updated = true;
-        }
+        if (currentCrafted < 40) {
+            int newTotal = currentCrafted + craftedAmount;
+            if (newTotal > 40) newTotal = 40;
 
-        if (updated) {
+            data.setProgressValue("golden_apples_crafted", newTotal);
             missionHandler.saveData(player, 2, data);
 
-            int completed = 0;
-            if (data.getProgressBool("protection_helmet")) completed++;
-            if (data.getProgressBool("protection_chestplate")) completed++;
-            if (data.getProgressBool("protection_leggings")) completed++;
-            if (data.getProgressBool("protection_boots")) completed++;
+            if (newTotal >= 40) successNotification.showSuccess(player);
 
-            String progressColor = completed == 4 ? "&#8BF8B7" : "&#CB5D5E";
-            String totalColor = completed == 4 ? "&#8BF8B7" : "&#8BF8B7";
-
-            String missionText = "&lMISION: &r\"&#9CF2FD&lPROTECCIÓN AVANZADA&r\"\n\n" +
-                    "&#ed92dbProgreso de Armadura: " + progressColor + completed + "&7/" + totalColor + "4";
-
-            ViciontMediaAPI.sendText(player, "48006c", 8, "topright", missionText);
-
-            if (completed == 4) {
-                plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                    missionHandler.completeMission(player.getName(), 2);
-                }, 20L);
-            }
+            // Evaluamos progreso y enviamos texto
+            checkAndSendFeedback(player, data, "apple");
         }
     }
 
-    private boolean hasProtectionIV(ItemStack armor, Material expectedType) {
-        if (armor == null || armor.getType() != expectedType) return false;
-        return armor.getEnchantmentLevel(Enchantment.PROTECTION) >= 4;
+    private void checkAndSendFeedback(Player player, MissionData data, String triggerType) {
+        boolean raidCompleted = data.getProgressBool("raid_completed");
+        int apples = data.getProgressInt("golden_apples_crafted");
+
+        if (raidCompleted && apples >= 40) {
+            // FORMATO: MISIÓN COMPLETADA (Verde)
+            String compText = "13%&#9cee8b&lMisión &r&#9cee8b#&l2 &l&+Completada&- 0%&r&+\\uE001 0%&f&-\n\n" +
+                    "[left] 10%&#9bb8fdHas completado la misión&f:\n" +
+                    "[left] \"&+&#ffd270&lEl Héroe Dorado&r&-\"\n\n" +
+                    "[left] 8%&#ad80dbProgreso de Raid&f: &#80d5dbCompletada\n" +
+                    "[left] &#db80d8Progreso de Manzanas&f: &#80db9740&f/&#80db9740";
+
+            ViciontMediaAPI.sendText(player, 1, "derecha", "#005726", 12, "topright", false, compText);
+
+            // Completamos la misión con retraso para que guarde bien
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                missionHandler.completeMission(player.getName(), 2);
+            }, 20L);
+
+        } else {
+            // FORMATO: PROGRESO (Morado)
+            if (triggerType.equals("raid")) {
+                String raidProgText = "13%&#e453df&lMisión &r&#e453df#&l2 &r\"&#ffd270&lEl Héroe Dorado&r\" 0%&f&+\\uE001&-\n\n" +
+                        "[left] 8%&#ad80dbProgreso de Raid&f: &#80d5dbCompletada";
+                ViciontMediaAPI.sendText(player, 1, "derecha", "#2b0047", 12, "topright", false, raidProgText);
+            }
+            else if (triggerType.equals("apple")) {
+                String appleProgText = "13%&#e453df&lMisión &r&#e453df#&l2 &r\"&#ffd270&lEl Héroe Dorado&r\" 0%&f&+\\uE001&-\n\n" +
+                        "[left] 8%&#db80d8Progreso de Manzanas&f: &#80db97" + apples + "&f/&#80db9740";
+                ViciontMediaAPI.sendText(player, 1, "derecha", "#2b0047", 12, "topright", false, appleProgText);
+            }
+        }
     }
 }

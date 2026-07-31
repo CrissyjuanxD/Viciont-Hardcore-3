@@ -1,7 +1,6 @@
 package Commands;
 
-import Dificultades.CustomMobs.*;
-import Handlers.DayHandler;
+import Managers.MobManager;
 import org.bukkit.Bukkit;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Material;
@@ -21,11 +20,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GiveSpawnerCommand implements CommandExecutor, TabCompleter {
+
     private final JavaPlugin plugin;
     private final NamespacedKey spawnerKey;
+    private final MobManager mobManager;
 
-    public GiveSpawnerCommand(JavaPlugin plugin) {
+    public GiveSpawnerCommand(JavaPlugin plugin, MobManager mobManager) {
         this.plugin = plugin;
+        this.mobManager = mobManager;
         this.spawnerKey = new NamespacedKey(plugin, "custom_spawner");
         plugin.getCommand("givespawner").setExecutor(this);
         plugin.getCommand("givespawner").setTabCompleter(this);
@@ -60,37 +62,31 @@ public class GiveSpawnerCommand implements CommandExecutor, TabCompleter {
 
             if (args.length > 2) {
                 target = Bukkit.getPlayer(args[2]);
-                if (target == null) {
-                    sender.sendMessage(ChatColor.RED + "El jugador '" + args[2] + "' no está en línea.");
-                    return true;
-                }
             }
         } else {
             mobType = args[0].toLowerCase();
 
+            // Validamos dinámicamente si el mob existe en tu MobManager
+            if (!mobManager.getRegisteredMobs().contains(mobType)) {
+                sender.sendMessage(ChatColor.RED + "Mob custom no reconocido: " + mobType);
+                return true;
+            }
+
             if (args.length > 1) {
                 target = Bukkit.getPlayer(args[1]);
-                if (target == null) {
-                    sender.sendMessage(ChatColor.RED + "El jugador '" + args[1] + "' no está en línea.");
-                    return true;
-                }
             }
         }
 
         if (target == null && sender instanceof Player) {
             target = (Player) sender;
         } else if (target == null) {
-            sender.sendMessage(ChatColor.RED + "Debes especificar un jugador si ejecutas el comando desde la consola.");
+            sender.sendMessage(ChatColor.RED + "El jugador no está en línea o debes especificar uno desde la consola.");
             return true;
         }
 
         ItemStack spawner = createCustomSpawner(mobType);
         if (spawner == null) {
-            if (isVanilla) {
-                sender.sendMessage(ChatColor.RED + "Mob vanilla no reconocido.");
-            } else {
-                sender.sendMessage(ChatColor.RED + "Mob custom no reconocido. Usa /givespawner para ver la lista de mobs disponibles.");
-            }
+            sender.sendMessage(ChatColor.RED + "Hubo un error al generar el spawner.");
             return true;
         }
 
@@ -106,12 +102,11 @@ public class GiveSpawnerCommand implements CommandExecutor, TabCompleter {
     private ItemStack createCustomSpawner(String mobType) {
         ItemStack spawner = new ItemStack(Material.SPAWNER);
         ItemMeta meta = spawner.getItemMeta();
-
         if (meta == null) return null;
 
         String displayName;
         String description;
-        int customModelData;
+        int customModelData = 1000; // Por defecto
 
         if (mobType.startsWith("vanilla_")) {
             String vanillaType = mobType.substring(8);
@@ -124,196 +119,10 @@ public class GiveSpawnerCommand implements CommandExecutor, TabCompleter {
                 return null;
             }
         } else {
-            // Inicializar con valores por defecto
-            displayName = ChatColor.GRAY + "" + ChatColor.BOLD + "Spawner Custom";
-            description = "Genera un mob personalizado";
-            customModelData = 1000;
-
-            switch (mobType) {
-                case "bombita":
-                    displayName = ChatColor.RED + "" + ChatColor.BOLD + "Spawner de Bombita";
-                    description = "Genera Bombitas explosivas";
-                    customModelData = 1001;
-                    break;
-                case "iceologer":
-                    displayName = ChatColor.AQUA + "" + ChatColor.BOLD + "Spawner de Iceologer";
-                    description = "Genera Iceologers con ataques de hielo";
-                    customModelData = 1002;
-                    break;
-                case "corruptedzombie":
-                    displayName = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Spawner de Corrupted Zombie";
-                    description = "Genera Zombies Corruptos";
-                    customModelData = 1003;
-                    break;
-                case "corruptedspider":
-                    displayName = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Spawner de Corrupted Spider";
-                    description = "Genera Arañas Corruptas";
-                    customModelData = 1004;
-                    break;
-                case "queenbee":
-                    displayName = ChatColor.GOLD + "" + ChatColor.BOLD + "Spawner de Queen Bee";
-                    description = "Genera la poderosa Abeja Reina";
-                    customModelData = 1005;
-                    break;
-                case "hellishbee":
-                    displayName = ChatColor.DARK_RED + "" + ChatColor.BOLD + "Spawner de Hellish Bee";
-                    description = "Genera Abejas Infernales";
-                    customModelData = 1006;
-                    break;
-                case "infestedbee":
-                    displayName = ChatColor.of("#00a8a8") + "" + ChatColor.BOLD + "Spawner de Infested Bee";
-                    description = "Genera Abejas Infestadas";
-                    customModelData = 1007;
-                    break;
-                case "guardianblaze":
-                    displayName = ChatColor.GOLD + "" + ChatColor.BOLD + "Spawner de Guardian Blaze";
-                    description = "Genera Guardian Blazes";
-                    customModelData = 1008;
-                    break;
-                case "guardiancorruptedskeleton":
-                    displayName = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Spawner de Guardian Corrupted Skeleton";
-                    description = "Genera Esqueletos Guardianes Corruptos";
-                    customModelData = 1009;
-                    break;
-                case "corruptedskeleton":
-                    displayName = ChatColor.GRAY + "" + ChatColor.BOLD + "Spawner de Corrupted Skeleton";
-                    description = "Genera Esqueletos Corruptos de colores";
-                    customModelData = 1010;
-                    break;
-                case "corruptedinfernalspider":
-                    displayName = ChatColor.RED + "" + ChatColor.BOLD + "Spawner de Corrupted Infernal Spider";
-                    description = "Genera Arañas Infernales Corruptas";
-                    customModelData = 1011;
-                    break;
-                case "corruptedcreeper":
-                    displayName = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Spawner de Corrupted Creeper";
-                    description = "Genera Creepers Corruptos";
-                    customModelData = 1012;
-                    break;
-                case "corruptedmagma":
-                    displayName = ChatColor.DARK_RED + "" + ChatColor.BOLD + "Spawner de Corrupted Magma Cube";
-                    description = "Genera Cubos de Magma Corruptos";
-                    customModelData = 1013;
-                    break;
-                case "piglinglobo":
-                    displayName = ChatColor.YELLOW + "" + ChatColor.BOLD + "Spawner de Piglin Globo";
-                    description = "Genera Piglins Globo";
-                    customModelData = 1014;
-                    break;
-                case "buffbreeze":
-                    displayName = ChatColor.AQUA + "" + ChatColor.BOLD + "Spawner de Buff Breeze";
-                    description = "Genera Breezes Mejorados";
-                    customModelData = 1015;
-                    break;
-                case "invertedghast":
-                    displayName = ChatColor.DARK_GRAY + "" + ChatColor.BOLD + "Spawner de Inverted Ghast";
-                    description = "Genera Ghasts Invertidos";
-                    customModelData = 1016;
-                    break;
-                case "netheritevexguardian":
-                    displayName = ChatColor.of("#B87333") + "" + ChatColor.BOLD + "Spawner de Netherite Vex Guardian";
-                    description = "Genera Vex Guardianes de Netherite";
-                    customModelData = 1017;
-                    break;
-                case "ultrawitherboss":
-                    displayName = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Spawner de Ultra Wither Boss";
-                    description = "Genera el Ultra Wither Boss";
-                    customModelData = 1018;
-                    break;
-                case "whiteenderman":
-                    displayName = ChatColor.WHITE + "" + ChatColor.BOLD + "Spawner de White Enderman";
-                    description = "Genera Endermans Blancos";
-                    customModelData = 1019;
-                    break;
-                case "infernalcreeper":
-                    displayName = ChatColor.RED + "" + ChatColor.BOLD + "Spawner de Infernal Creeper";
-                    description = "Genera Creepers Infernales";
-                    customModelData = 1020;
-                    break;
-                case "toxicspider":
-                    displayName = ChatColor.GREEN + "" + ChatColor.BOLD + "Spawner de Toxic Spider";
-                    description = "Genera Arañas Tóxicas";
-                    customModelData = 1021;
-                    break;
-                case "fastravager":
-                    displayName = ChatColor.GOLD + "" + ChatColor.BOLD + "Spawner de Fast Ravager";
-                    description = "Genera Ravagers Rápidos";
-                    customModelData = 1022;
-                    break;
-                case "bruteimperial":
-                    displayName = ChatColor.YELLOW + "" + ChatColor.BOLD + "Spawner de Brute Imperial";
-                    description = "Genera Brutes Imperiales";
-                    customModelData = 1023;
-                    break;
-                case "batboom":
-                    displayName = ChatColor.RED + "" + ChatColor.BOLD + "Spawner de Bat Boom";
-                    description = "Genera Murciélagos Explosivos";
-                    customModelData = 1024;
-                    break;
-                case "spectraleeye":
-                    displayName = ChatColor.GREEN + "" + ChatColor.BOLD + "Spawner de Spectral Eye";
-                    description = "Genera Ojos Espectrales";
-                    customModelData = 1025;
-                    break;
-                case "enderghast":
-                    displayName = ChatColor.LIGHT_PURPLE + "" + ChatColor.BOLD + "Spawner de Ender Ghast";
-                    description = "Genera Ghasts del End";
-                    customModelData = 1026;
-                    break;
-                case "endercreeper":
-                    displayName = ChatColor.LIGHT_PURPLE + "" + ChatColor.BOLD + "Spawner de Ender Creeper";
-                    description = "Genera Creepers del End";
-                    customModelData = 1027;
-                    break;
-                case "endersilverfish":
-                    displayName = ChatColor.LIGHT_PURPLE + "" + ChatColor.BOLD + "Spawner de Ender Silverfish";
-                    description = "Genera Silverfish del End";
-                    customModelData = 1028;
-                    break;
-                case "guardianshulker":
-                    displayName = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Spawner de Guardian Shulker";
-                    description = "Genera Shulkers Guardianes";
-                    customModelData = 1029;
-                    break;
-                case "darkphantom":
-                    displayName = ChatColor.DARK_GRAY + "" + ChatColor.BOLD + "Spawner de Dark Phantom";
-                    description = "Genera Phantoms Oscuros";
-                    customModelData = 1030;
-                    break;
-                case "darkcreeper":
-                    displayName = ChatColor.DARK_GRAY + "" + ChatColor.BOLD + "Spawner de Dark Creeper";
-                    description = "Genera Creepers Oscuros";
-                    customModelData = 1031;
-                    break;
-                case "darkvex":
-                    displayName = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Spawner de Dark Vex";
-                    description = "Genera Vex Oscuros";
-                    customModelData = 1032;
-                    break;
-                case "darkskeleton":
-                    displayName = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Spawner de Dark Skeleton";
-                    description = "Genera Esqueletos Oscuros";
-                    customModelData = 1033;
-                    break;
-                case "infernalbeast":
-                    displayName = ChatColor.DARK_RED + "" + ChatColor.BOLD + "Spawner de Infernal Beast";
-                    description = "Genera Infernal Beasts";
-                    customModelData = 1034;
-                    break;
-                case "corrupteddrowned":
-                    displayName = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Spawner de Corrupted Drowned";
-                    description = "Genera Drowned Corruptos";
-                    customModelData = 1035;
-                    break;
-
-                case "corruptedbee":
-                    displayName = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Spawner de Corrupted Bee";
-                    description = "Genera Abejas Corruptas";
-                    customModelData = 1036;
-                    break;
-                default:
-                    return null;
-            }
+            // MAGIA: Generación automática de nombres usando el nombre del string
+            String formattedName = formatEntityName(mobType);
+            displayName = ChatColor.GOLD + "" + ChatColor.BOLD + "Spawner de " + formattedName;
+            description = "Genera " + formattedName;
         }
 
         meta.setDisplayName(displayName);
@@ -353,63 +162,41 @@ public class GiveSpawnerCommand implements CommandExecutor, TabCompleter {
         return name.substring(0, 1).toUpperCase() + name.substring(1);
     }
 
+    // Método sobrecargado para formatear strings genéricos
+    private String formatEntityName(String name) {
+        if (name == null || name.isEmpty()) return name;
+        return name.substring(0, 1).toUpperCase() + name.substring(1).toLowerCase();
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> suggestions = new ArrayList<>();
 
         if (args.length == 1) {
             suggestions.add("vanilla");
-            suggestions.add("bombita");
-            suggestions.add("iceologer");
-            suggestions.add("corruptedzombie");
-            suggestions.add("corruptedspider");
-            suggestions.add("queenbee");
-            suggestions.add("hellishbee");
-            suggestions.add("infestedbee");
-            suggestions.add("guardianblaze");
-            suggestions.add("guardiancorruptedskeleton");
-            suggestions.add("corruptedskeleton");
-            suggestions.add("corruptedinfernalspider");
-            suggestions.add("corruptedcreeper");
-            suggestions.add("corruptedmagma");
-            suggestions.add("piglinglobo");
-            suggestions.add("buffbreeze");
-            suggestions.add("invertedghast");
-            suggestions.add("netheritevexguardian");
-            suggestions.add("ultrawitherboss");
-            suggestions.add("whiteenderman");
-            suggestions.add("infernalcreeper");
-            suggestions.add("toxicspider");
-            suggestions.add("fastravager");
-            suggestions.add("bruteimperial");
-            suggestions.add("batboom");
-            suggestions.add("spectraleeye");
-            suggestions.add("enderghast");
-            suggestions.add("endercreeper");
-            suggestions.add("endersilverfish");
-            suggestions.add("guardianshulker");
-            suggestions.add("darkphantom");
-            suggestions.add("darkcreeper");
-            suggestions.add("darkvex");
-            suggestions.add("darkskeleton");
-            suggestions.add("infernalbeast");
-            suggestions.add("corrupteddrowned");
-            suggestions.add("corruptedbee");
+            // Lee todos los mobs directamente del Manager
+            suggestions.addAll(mobManager.getRegisteredMobs());
+            suggestions.removeIf(s -> !s.toLowerCase().startsWith(args[0].toLowerCase()));
+
         } else if (args.length == 2) {
             if (args[0].equalsIgnoreCase("vanilla")) {
                 for (EntityType type : EntityType.values()) {
-                    if (type.isSpawnable() && type.isAlive()) {
+                    if (type.isSpawnable() && type.isAlive() && type.name().toLowerCase().startsWith(args[1].toLowerCase())) {
                         suggestions.add(type.name().toLowerCase());
                     }
                 }
             } else {
                 for (Player player : Bukkit.getOnlinePlayers()) {
-                    suggestions.add(player.getName());
+                    if (player.getName().toLowerCase().startsWith(args[1].toLowerCase())) {
+                        suggestions.add(player.getName());
+                    }
                 }
             }
         } else if (args.length == 3 && args[0].equalsIgnoreCase("vanilla")) {
             for (Player player : Bukkit.getOnlinePlayers()) {
-                suggestions.add(player.getName());
+                if (player.getName().toLowerCase().startsWith(args[2].toLowerCase())) {
+                    suggestions.add(player.getName());
+                }
             }
         }
 

@@ -1,5 +1,6 @@
 package Structures;
 
+import Gui.CambiosDataManager;
 import TitleListener.RuletaAnimation;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -14,10 +15,12 @@ import java.util.Arrays;
 
 public class EndRing extends BaseStructure {
     private final RuletaAnimation ruletaAnimation;
+    private final CambiosDataManager cambiosData;
 
-    public EndRing(JavaPlugin plugin, RuletaAnimation ruletaAnimation) {
+    public EndRing(JavaPlugin plugin, RuletaAnimation ruletaAnimation, CambiosDataManager cambiosData) {
         super(plugin, Arrays.asList("EndRingFV1.schem"));
         this.ruletaAnimation = ruletaAnimation;
+        this.cambiosData = cambiosData;
     }
 
     @Override
@@ -52,9 +55,11 @@ public class EndRing extends BaseStructure {
                                 potentialLocation.getBlockX(), potentialLocation.getBlockY(), potentialLocation.getBlockZ()
                         );
 
+                        cambiosData.addCambio("estructura", "", jsonMessage);
+
                         // Llamada nativa directa a la animación (Morada para estructuras)
                         for (Player player : Bukkit.getOnlinePlayers()) {
-                            ruletaAnimation.playAnimation(player, "morado", "off", "center", jsonMessage);
+                            ruletaAnimation.playAnimation(player, "morado", "off", "center", jsonMessage, true);
                         }
                     }
                 });

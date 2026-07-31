@@ -45,7 +45,7 @@ public class CustomEffectManager implements Listener {
                     PotionEffect newEffect = event.getNewEffect();
                     if (newEffect != null) {
                         int duration = newEffect.getDuration() / 20;
-                        customEffect.applyEffect(player, duration);
+                        customEffect.applyEffect(player, duration, newEffect.getAmplifier());
                         playersWithEffects.add(player.getUniqueId());
                     }
                     break;
@@ -84,7 +84,7 @@ public class CustomEffectManager implements Listener {
                 if (potionEffect != null) {
                     CustomEffect customEffect = registeredEffects.get(effectType);
                     int duration = potionEffect.getDuration() / 20;
-                    customEffect.applyEffect(player, duration);
+                    customEffect.applyEffect(player, duration, potionEffect.getAmplifier());
                     playersWithEffects.add(player.getUniqueId());
                 }
             }
@@ -93,9 +93,14 @@ public class CustomEffectManager implements Listener {
 
     // Aplicar efecto manualmente (útil para comandos)
     public void applyEffectManually(Player player, PotionEffectType effectType, int duration) {
+        applyEffectManually(player, effectType, duration, 0);
+    }
+
+    // Aplicar efecto manualmente con nivel específico (útil para comandos)
+    public void applyEffectManually(Player player, PotionEffectType effectType, int duration, int amplifier) {
         CustomEffect customEffect = registeredEffects.get(effectType);
         if (customEffect != null) {
-            customEffect.applyEffect(player, duration);
+            customEffect.applyEffect(player, duration, amplifier);
         }
     }
 
@@ -110,10 +115,7 @@ public class CustomEffectManager implements Listener {
     // Limpiar todos los efectos (al desactivar el plugin)
     public void cleanupAllEffects() {
         for (CustomEffect effect : registeredEffects.values()) {
-            if (effect instanceof ConfusionEffect) {
-                ((ConfusionEffect) effect).cleanup();
-            }
-            // Agregar cleanup para otros tipos de efectos si es necesario
+            effect.cleanup();
         }
         registeredEffects.clear();
         playersWithEffects.clear();

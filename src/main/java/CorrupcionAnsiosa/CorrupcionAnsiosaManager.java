@@ -113,6 +113,9 @@ public class CorrupcionAnsiosaManager {
 
         saveData();
 
+        // Actualizar HUD en vivo
+        CorrupcionHudManager.updateHud(player, after);
+
         double change = after - before;
         if (change != 0)
             sendCorruptionChange(player, change);
@@ -128,6 +131,9 @@ public class CorrupcionAnsiosaManager {
 
         saveData();
 
+        // Actualizar HUD en vivo
+        CorrupcionHudManager.updateHud(player, after);
+
         double change = after - before;
         if (change != 0)
             sendCorruptionChange(player, change);
@@ -137,6 +143,9 @@ public class CorrupcionAnsiosaManager {
         PlayerCorruptionData data = getPlayerData(player);
         data.setCorruption(100.0);
         saveData();
+
+        // Actualizar HUD en vivo
+        CorrupcionHudManager.updateHud(player, 100.0);
     }
 
     public double getCorruption(Player player) {

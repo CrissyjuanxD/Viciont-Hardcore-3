@@ -39,7 +39,7 @@ public class DayTwoChanges implements Listener {
         // Creamos las instancias (que a su vez configuran sus sistemas estáticos)
         this.bombitaSpawner = new Bombita(plugin);
         this.iceologerSpawner = new Iceologer(plugin);
-        this.corruptedZombies = new CorruptedZombies(plugin);
+        this.corruptedZombies = new CorruptedZombies(plugin, dayHandler);
         this.corruptedSpiders = new CorruptedSpider(plugin, dayHandler);
     }
 

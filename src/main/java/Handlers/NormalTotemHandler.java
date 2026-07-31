@@ -35,8 +35,10 @@ public class NormalTotemHandler implements Listener {
         this.corruptionEffectsHandler = corruptionEffectsHandler;
     }
 
-    @EventHandler(priority = EventPriority.NORMAL)
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onPlayerTotemUse(EntityResurrectEvent event) {
+        if (event.isCancelled()) return;
+
         if (!(event.getEntity() instanceof Player)) return;
         Player player = (Player) event.getEntity();
         int currentDay = dayHandler.getCurrentDay();
@@ -90,8 +92,8 @@ public class NormalTotemHandler implements Listener {
 
             // Reducir -10% a todos
             for (Player online : Bukkit.getOnlinePlayers()) {
-                corruptionManager.removeCorruption(online, 10.0);
-                online.sendMessage(ChatColor.of("#B228E7") + "¡La corrupción ansiosa ha disminuido en 10% para todos!");
+                corruptionManager.removeCorruption(online, 5.0);
+                online.sendMessage(ChatColor.of("#B228E7") + "La corrupción ansiosa ha disminuido en 5% para todos!");
             }
             return;
         }

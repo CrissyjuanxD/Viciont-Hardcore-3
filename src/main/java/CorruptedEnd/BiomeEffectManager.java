@@ -22,13 +22,10 @@ import java.util.HashSet;
 public class BiomeEffectManager implements Listener {
     private final JavaPlugin plugin;
     private final Map<UUID, BiomeType> playerBiomes = new HashMap<>();
-    private final Map<UUID, Long> lastBiomeCheck = new HashMap<>();
     private final Set<UUID> frozenPlayers = new HashSet<>();
 
     public BiomeEffectManager(JavaPlugin plugin) {
         this.plugin = plugin;
-
-        // Task para verificar efectos de bioma
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -39,7 +36,6 @@ public class BiomeEffectManager implements Listener {
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
-        // Optimización: Solo verificar si cambió de bloque
         if (event.getFrom().getBlockX() == event.getTo().getBlockX() &&
                 event.getFrom().getBlockY() == event.getTo().getBlockY() &&
                 event.getFrom().getBlockZ() == event.getTo().getBlockZ()) return;
@@ -47,34 +43,25 @@ public class BiomeEffectManager implements Listener {
         Player player = event.getPlayer();
         if (!player.getWorld().getName().equals(CorruptedEnd.WORLD_NAME)) return;
 
-        // --- OPTIMIZACIÓN MASIVA: DETECCIÓN NATIVA ---
-        // Obtenemos el bioma directamente del juego (0 coste de CPU)
-        Biome vanillaBiome = player.getWorld().getBiome(player.getLocation());
-        BiomeType currentBiome = determineBiomeFromVanilla(vanillaBiome);
+        Biome customBiome = player.getWorld().getBiome(player.getLocation());
+        BiomeType currentBiome = determineBiomeFromCustom(customBiome);
 
         BiomeType previousBiome = playerBiomes.get(player.getUniqueId());
 
-        // Si entramos a un bioma nuevo
         if (currentBiome != previousBiome) {
             playerBiomes.put(player.getUniqueId(), currentBiome);
             onBiomeChange(player, previousBiome, currentBiome);
         }
     }
 
-    private BiomeType determineBiomeFromVanilla(Biome vanillaBiome) {
-        switch (vanillaBiome) {
-            case END_MIDLANDS:
-                return BiomeType.CELESTIAL_FOREST;
+    private BiomeType determineBiomeFromCustom(Biome customBiome) {
+        if (customBiome == null || customBiome.getKey() == null) return BiomeType.SCULK_PLAINS;
 
-            case SOUL_SAND_VALLEY:
-                return BiomeType.OBSIDIAN_PEAKS;
-
-            case END_HIGHLANDS:
-                return BiomeType.CRIMSON_WASTES;
-
-            case END_BARRENS:
-            default:
-                return BiomeType.SCULK_PLAINS;
+        String key = customBiome.getKey().getKey(); // Retorna "celestial_forest" si el datapack funcionó
+        try {
+            return BiomeType.valueOf(key.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return BiomeType.SCULK_PLAINS;
         }
     }
 
@@ -82,22 +69,14 @@ public class BiomeEffectManager implements Listener {
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (!player.getWorld().getName().equals(CorruptedEnd.WORLD_NAME)) continue;
             BiomeType currentBiome = playerBiomes.get(player.getUniqueId());
-            if (currentBiome != null) {
-                applyBiomeEffects(player, currentBiome);
-            }
+            if (currentBiome != null) applyBiomeEffects(player, currentBiome);
         }
     }
 
     private void onBiomeChange(Player player, BiomeType from, BiomeType to) {
-        // Remover efectos del bioma anterior
-        if (from != null) {
-            removeBiomeEffects(player, from);
-        }
-
-        // Mensaje de cambio de bioma
+        if (from != null) removeBiomeEffects(player, from);
         player.sendMessage(ChatColor.GRAY + "Entrando a " + ChatColor.AQUA + to.getName());
 
-        // Sonido de cambio de bioma
         switch (to) {
             case CELESTIAL_FOREST:
                 player.playSound(player.getLocation(), Sound.BLOCK_BEACON_AMBIENT, 0.5f, 1.5f);
@@ -116,36 +95,22 @@ public class BiomeEffectManager implements Listener {
     private void applyBiomeEffects(Player player, BiomeType biome) {
         switch (biome) {
             case CELESTIAL_FOREST:
-                // Efecto de congelación infinita
                 if (!frozenPlayers.contains(player.getUniqueId())) {
                     frozenPlayers.add(player.getUniqueId());
-
                     player.setFreezeTicks(Integer.MAX_VALUE);
                 }
-
-                // Aplicar náusea
-                PotionEffect nausea = new PotionEffect(PotionEffectType.NAUSEA, 300, 0, false, false, false);
                 if (!player.hasPotionEffect(PotionEffectType.NAUSEA)) {
-                    player.addPotionEffect(nausea);
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 300, 0, false, false, false));
                 }
-
-                // Mensaje y partículas ocasionales
                 if (System.currentTimeMillis() % 3000 < 1000) {
-
-                    // Partículas de hielo
                     player.getWorld().spawnParticle(Particle.SNOWFLAKE,
                             player.getLocation().add(0, 1, 0), 5, 0.5, 0.5, 0.5);
                 }
                 break;
-
             case OBSIDIAN_PEAKS:
-                // Efecto de oscuridad infinita
-                PotionEffect darkness = new PotionEffect(PotionEffectType.DARKNESS, 30, 0, false, false, false);
                 if (!player.hasPotionEffect(PotionEffectType.DARKNESS)) {
-                    player.addPotionEffect(darkness);
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 30, 0, false, false, false));
                 }
-
-                // Partículas de oscuridad
                 if (System.currentTimeMillis() % 2000 < 1000) {
                     player.getWorld().spawnParticle(Particle.SQUID_INK,
                             player.getLocation().add(0, 1, 0), 3, 0.3, 0.3, 0.3);
@@ -157,14 +122,12 @@ public class BiomeEffectManager implements Listener {
     private void removeBiomeEffects(Player player, BiomeType biome) {
         switch (biome) {
             case CELESTIAL_FOREST:
-                // Remover congelación al salir del bioma
                 if (frozenPlayers.contains(player.getUniqueId())) {
                     frozenPlayers.remove(player.getUniqueId());
-                    player.setFreezeTicks(0); // Quitar congelación
+                    player.setFreezeTicks(0);
                 }
                 break;
             case OBSIDIAN_PEAKS:
-                // Remover efecto de oscuridad
                 player.removePotionEffect(PotionEffectType.DARKNESS);
                 break;
         }
@@ -172,25 +135,15 @@ public class BiomeEffectManager implements Listener {
 
     private void cleanPlayerEffects(Player player) {
         UUID uuid = player.getUniqueId();
-
         playerBiomes.remove(uuid);
         frozenPlayers.remove(uuid);
-
-        // Limpiar efectos visuales y de poción
         player.setFreezeTicks(0);
-
-        // Solo quitamos los efectos específicos de la dimensión para no borrar otros buffs
-        if (player.hasPotionEffect(PotionEffectType.NAUSEA)) {
-            player.removePotionEffect(PotionEffectType.NAUSEA);
-        }
-        if (player.hasPotionEffect(PotionEffectType.DARKNESS)) {
-            player.removePotionEffect(PotionEffectType.DARKNESS);
-        }
+        player.removePotionEffect(PotionEffectType.NAUSEA);
+        player.removePotionEffect(PotionEffectType.DARKNESS);
     }
 
     @EventHandler
     public void onWorldChange(PlayerChangedWorldEvent event) {
-        // Si venía del Corrupted End y se fue a otro lado...
         if (event.getFrom().getName().equals(CorruptedEnd.WORLD_NAME)) {
             cleanPlayerEffects(event.getPlayer());
         }
@@ -199,10 +152,5 @@ public class BiomeEffectManager implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         cleanPlayerEffects(event.getPlayer());
-    }
-
-    public void cleanup() {
-        playerBiomes.clear();
-        frozenPlayers.clear();
     }
 }

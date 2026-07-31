@@ -1,5 +1,6 @@
 package SlotMachine.listeners;
 
+import Managers.ItemManager;
 import SlotMachine.SlotMachineManager;
 import SlotMachine.api.SlotMachineModel;
 import SlotMachine.cache.smachine.SlotMachine;
@@ -27,12 +28,10 @@ public class SlotMachineListener implements Listener {
 
     private final JavaPlugin plugin;
     private final SlotMachineManager manager;
-    private final ItemCreator itemCreator;
 
     public SlotMachineListener(JavaPlugin plugin, SlotMachineManager manager) {
         this.plugin = plugin;
         this.manager = manager;
-        this.itemCreator = new ItemCreator(plugin);
     }
 
     @EventHandler

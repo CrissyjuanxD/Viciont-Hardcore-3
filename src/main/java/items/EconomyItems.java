@@ -21,15 +21,15 @@ public class EconomyItems {
         ItemStack item = new ItemStack(Material.ECHO_SHARD);
         ItemMeta meta = item.getItemMeta();
 
-        // Nombre del item con formato JSON-like
-        meta.setDisplayName(ChatColor.of("#c941ec") + "Vithiums " + ChatColor.GRAY + "۞");
+        // Nombre con color pastel (Morado suave)
+        meta.setDisplayName(ChatColor.of("#E6B3FF") + "Vithiums " + ChatColor.of("#D9D9D9") + "۞");
         meta.setCustomModelData(2000);
 
         List<String> lore = new ArrayList<>();
         lore.add(" ");
-        lore.add(ChatColor.GRAY + "Se dice que estas " + ChatColor.GOLD + "monedas");
-        lore.add(ChatColor.GRAY + "eran utilizadas por " + ChatColor.DARK_PURPLE + "antiguas civilizaciones " + ChatColor.GRAY + "y que aún poseen");
-        lore.add(ChatColor.GRAY + "un" + ChatColor.GOLD + " gran valor" + ChatColor.GRAY + ".");
+        lore.add(ChatColor.of("#D9D9D9") + "Se dice que estas " + ChatColor.of("#FFD966") + "monedas");
+        lore.add(ChatColor.of("#D9D9D9") + "eran utilizadas por " + ChatColor.of("#CBA0EA") + "antiguas civilizaciones");
+        lore.add(ChatColor.of("#D9D9D9") + "y que aún poseen un " + ChatColor.of("#FFD966") + "gran valor" + ChatColor.of("#D9D9D9") + ".");
         lore.add(" ");
 
         meta.setLore(lore);
@@ -42,18 +42,41 @@ public class EconomyItems {
         ItemStack item = new ItemStack(Material.ECHO_SHARD);
         ItemMeta meta = item.getItemMeta();
 
-        // Nombre del item con formato JSON-like
-        meta.setDisplayName(ChatColor.of("#3a86b6") + "Vithiums Fichas " + ChatColor.GRAY + "۞");
+        // Nombre con color pastel (Celeste suave)
+        meta.setDisplayName(ChatColor.of("#B3E0FF") + "Vithiums Fichas " + ChatColor.of("#D9D9D9") + "۞");
         meta.setCustomModelData(2010);
 
         List<String> lore = new ArrayList<>();
         lore.add(" ");
-        lore.add(ChatColor.GRAY + "Fichas que se utilizan para");
-        lore.add(ChatColor.GRAY + "el " + ChatColor.YELLOW + "casino" + ChatColor.GRAY + ".");
+        lore.add(ChatColor.of("#D9D9D9") + "Fichas que se utilizan para");
+        lore.add(ChatColor.of("#D9D9D9") + "el " + ChatColor.of("#FFF2CC") + "casino" + ChatColor.of("#D9D9D9") + ".");
         lore.add(" ");
 
         meta.setLore(lore);
         meta.setRarity(ItemRarity.EPIC);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public static ItemStack createMonedero() {
+        ItemStack item = new ItemStack(Material.ECHO_SHARD);
+        ItemMeta meta = item.getItemMeta();
+
+        meta.setDisplayName(ChatColor.of("#FFD1DC") + "" + ChatColor.BOLD + "Monedero");
+        meta.setCustomModelData(2025);
+
+        List<String> lore = new ArrayList<>();
+        lore.add(" ");
+        lore.add(ChatColor.GRAY + "Uso:");
+        lore.add(ChatColor.GRAY + "> " + ChatColor.WHITE + "Click derecho");
+        lore.add(" ");
+        lore.add(ChatColor.of("#E6B3FF") + "Solo puede guardar Vithiums.");
+        lore.add(" ");
+
+        meta.setLore(lore);
+        meta.setRarity(ItemRarity.EPIC);
+        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         item.setItemMeta(meta);
         return item;
     }
@@ -234,7 +257,7 @@ public class EconomyItems {
         ItemStack item = new ItemStack(Material.ECHO_SHARD);
         ItemMeta meta = item.getItemMeta();
 
-        meta.setDisplayName(ChatColor.of("#99ccff") + "" + ChatColor.BOLD + "Yunque de Hierro Reparador");
+        meta.setDisplayName(ChatColor.of("#99ccff") + "" + ChatColor.BOLD + "Botella reparadora de hierro");
         meta.setCustomModelData(2040);
 
         List<String> lore = new ArrayList<>();
@@ -256,7 +279,7 @@ public class EconomyItems {
         ItemStack item = new ItemStack(Material.ECHO_SHARD);
         ItemMeta meta = item.getItemMeta();
 
-        meta.setDisplayName(ChatColor.of("#ffcc00") + "" + ChatColor.BOLD + "Yunque de Oro Reparador");
+        meta.setDisplayName(ChatColor.of("#ffcc00") + "" + ChatColor.BOLD + "Botella reparadora de Oro");
         meta.setCustomModelData(2050);
 
         List<String> lore = new ArrayList<>();

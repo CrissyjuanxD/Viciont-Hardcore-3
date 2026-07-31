@@ -8,6 +8,7 @@ import org.bukkit.command.TabCompleter;
 import Handlers.DeathStormHandler;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,34 +22,53 @@ public class DeathStormCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (label.equalsIgnoreCase("resetdeathstorm")) {
-            deathStormHandler.resetStorm();
-            sender.sendMessage(ChatColor.GREEN + "La DeathStorm ha sido reseteada.");
+        if (!label.equalsIgnoreCase("deathstorm")) {
+            return false;
+        }
+
+        if (args.length == 0) {
+            sender.sendMessage(ChatColor.RED + "۞ Uso: /deathstorm <reset|togglestop|add|remove> [hh:mm:ss]");
             return true;
         }
 
-        if (label.equalsIgnoreCase("stopdeathstorm")) {
-            deathStormHandler.toggleStopDeathStorm(sender);
-            return true;
-        }
+        String subCommand = args[0].toLowerCase();
 
-        if ((label.equalsIgnoreCase("adddeathstorm") || label.equalsIgnoreCase("removedeathstorm")) && args.length == 1) {
-            int seconds = parseTime(args[0]);
-            if (seconds < 0) {
-                sender.sendMessage(ChatColor.RED + "Formato inválido. Usa hh:mm:ss (ejemplo: 01:30:00).");
+        switch (subCommand) {
+            case "reset":
+                deathStormHandler.resetStorm();
+                sender.sendMessage(ChatColor.GREEN + "☁ La DeathStorm ha sido reseteada.");
                 return true;
-            }
 
-            if (label.equalsIgnoreCase("adddeathstorm")) {
-                deathStormHandler.addStormSeconds(seconds);
-                sender.sendMessage(ChatColor.GREEN + "Se ha añadido " + formatTime(seconds) + " de DeathStorm.");
-            } else {
-                deathStormHandler.removeStormSeconds(seconds);
-                sender.sendMessage(ChatColor.GREEN + "Se ha removido " + formatTime(seconds) + " de DeathStorm.");
-            }
-            return true;
+            case "togglestop":
+                deathStormHandler.toggleStopDeathStorm(sender);
+                return true;
+
+            case "add":
+            case "remove":
+                if (args.length < 2) {
+                    sender.sendMessage(ChatColor.RED + "۞ Falta especificar el tiempo. Uso: /deathstorm " + subCommand + " hh:mm:ss");
+                    return true;
+                }
+
+                int seconds = parseTime(args[1]);
+                if (seconds < 0) {
+                    sender.sendMessage(ChatColor.RED + "۞ Formato inválido. Usa hh:mm:ss (ejemplo: 01:30:00).");
+                    return true;
+                }
+
+                if (subCommand.equals("add")) {
+                    deathStormHandler.addStormSeconds(seconds);
+                    sender.sendMessage(ChatColor.GREEN + "☁ Se ha añadido " + formatTime(seconds) + " de DeathStorm.");
+                } else {
+                    deathStormHandler.removeStormSeconds(seconds);
+                    sender.sendMessage(ChatColor.GREEN + "☁ Se ha removido " + formatTime(seconds) + " de DeathStorm.");
+                }
+                return true;
+
+            default:
+                sender.sendMessage(ChatColor.RED + "۞ Subcomando desconocido. Usa: reset, togglestop, add, remove.");
+                return true;
         }
-        return false;
     }
 
     private int parseTime(String time) {
@@ -73,14 +93,32 @@ public class DeathStormCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        List<String> suggestions = new ArrayList<>();
+
         if (args.length == 1) {
-            List<String> suggestions = new ArrayList<>();
-            suggestions.add("00:01:00");
-            suggestions.add("00:05:00");
-            suggestions.add("00:30:00");
-            suggestions.add("01:00:00");
+            // Sugerir subcomandos
+            List<String> subCommands = Arrays.asList("reset", "togglestop", "add", "remove");
+            for (String sub : subCommands) {
+                if (sub.toLowerCase().startsWith(args[0].toLowerCase())) {
+                    suggestions.add(sub);
+                }
+            }
             return suggestions;
         }
-        return null;
+        else if (args.length == 2) {
+            // Sugerir tiempo solo si el subcomando es add o remove
+            String subCommand = args[0].toLowerCase();
+            if (subCommand.equals("add") || subCommand.equals("remove")) {
+                List<String> times = Arrays.asList("00:01:00", "00:05:00", "00:30:00", "01:00:00");
+                for (String t : times) {
+                    if (t.startsWith(args[1])) {
+                        suggestions.add(t);
+                    }
+                }
+            }
+            return suggestions;
+        }
+
+        return suggestions; // Devuelve lista vacía si hay más de 2 argumentos
     }
 }

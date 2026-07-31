@@ -1,8 +1,6 @@
 package Commands;
 
-/*import Bosses.HellishBeeHandler;*/
-import Bosses.QueenBeeHandler;
-import Dificultades.CustomMobs.*;
+import Managers.MobManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -12,92 +10,17 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import Handlers.DayHandler;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class SpawnMobs implements CommandExecutor, TabCompleter {
-    private final JavaPlugin plugin;
-    private final Bombita bombitaSpawner;
-    private final Iceologer iceologerSpawner;
-    private final CorruptedZombies corruptedZombieSpawner;
-    private final CorruptedSpider corruptedSpider;
-    /*private final HellishBeeHandler hellishBeeHandler;*/
-    private final GuardianBlaze guardianBlaze;
-    private final GuardianCorruptedSkeleton guardianCorruptedSkeleton;
-    private final CorruptedSkeleton corruptedSkeleton;
-    private final CorruptedInfernalSpider corruptedInfernalSpider;
-    private final CorruptedCreeper corruptedCreeper;
-    private final PiglinGlobo piglinGloboSpawner;
-    private final BuffBreeze buffBreeze;
-    private final InvertedGhast invertedGhast;
-    private final NetheriteVexGuardian netheriteVexGuardian;
-    private final UltraWitherBossHandler ultraWitherBossHandler;
-    private final WhiteEnderman whiteEnderman;
-    private final InfernalCreeper infernalCreeper;
-    private final ToxicSpider toxicSpider;
-    private final FastRavager fastRavager;
-    private final ImperialBrute imperialBrute;
-    private final BatBoom batBoom;
-    private final SpectralEye spectralEye;
-    private final CustomBoat customBoat;
-    private final EspectralGhast espectralGhast;
-    private final EspectralCreeper espectralCreeper;
-    private final EspectralSilverfish espectralSilverfish;
-    private final GuardianShulker_Descartado guardianShulkerDescartado;
-    private final DarkCreeper darkCreeper;
-    private final DarkVex darkVex;
-    private final DarkSkeleton darkSkeleton;
-    private final InfestedBeeHandler infestedBeeHandler;
-    private final InfernalBeast infernalBeast;
-    private final CorruptedDrowned corruptedDrowned;
-    private final CorruptedBee corruptedBee;
-    private final InfestedGolems infestedGolems;
-    private final DayHandler dayHandler;
 
-    private final CustomDolphin customDolphin;
+    private final MobManager mobManager;
 
-    public SpawnMobs(JavaPlugin plugin, DayHandler dayHandler) {
-        this.plugin = plugin;
-        this.bombitaSpawner = new Bombita(plugin);
-        this.iceologerSpawner = new Iceologer(plugin);
-        this.corruptedZombieSpawner = new CorruptedZombies(plugin);
-        this.corruptedSpider = new CorruptedSpider(plugin, dayHandler);
-        /*this.hellishBeeHandler = new HellishBeeHandler(plugin);*/
-        this.guardianBlaze = new GuardianBlaze(plugin);
-        this.guardianCorruptedSkeleton = new GuardianCorruptedSkeleton(plugin);
-        this.dayHandler = dayHandler;
-        this.corruptedSkeleton = new CorruptedSkeleton(plugin, dayHandler);
-        this.customDolphin = new CustomDolphin(plugin);
-        this.corruptedInfernalSpider = new CorruptedInfernalSpider(plugin);
-        this.corruptedCreeper = new CorruptedCreeper(plugin);
-        this.piglinGloboSpawner = new PiglinGlobo(plugin);
-        this.buffBreeze = new BuffBreeze(plugin);
-        this.invertedGhast = new InvertedGhast(plugin);
-        this.netheriteVexGuardian = new NetheriteVexGuardian(plugin);
-        this.ultraWitherBossHandler = new UltraWitherBossHandler(plugin);
-        this.whiteEnderman = new WhiteEnderman(plugin);
-        this.infernalCreeper = new InfernalCreeper(plugin);
-        this.toxicSpider = new ToxicSpider(plugin);
-        this.fastRavager = new FastRavager(plugin);
-        this.imperialBrute = new ImperialBrute(plugin);
-        this.batBoom = new BatBoom(plugin);
-        this.spectralEye = new SpectralEye(plugin);
-        this.customBoat = new CustomBoat(plugin);
-        this.espectralGhast = new EspectralGhast(plugin);
-        this.espectralCreeper = new EspectralCreeper(plugin);
-        this.espectralSilverfish = new EspectralSilverfish(plugin);
-        this.guardianShulkerDescartado = new GuardianShulker_Descartado(plugin);
-        this.darkCreeper = new DarkCreeper(plugin);
-        this.darkVex = new DarkVex(plugin);
-        this.darkSkeleton = new DarkSkeleton(plugin);
-        this.infestedBeeHandler = new InfestedBeeHandler(plugin);
-        this.infernalBeast = new InfernalBeast(plugin);
-        this.corruptedDrowned = new CorruptedDrowned(plugin);
-        this.corruptedBee = new CorruptedBee(plugin);
-        this.infestedGolems = new InfestedGolems(plugin);
+    public SpawnMobs(JavaPlugin plugin, MobManager mobManager) {
+        this.mobManager = mobManager;
         plugin.getCommand("spawnvct").setExecutor(this);
         plugin.getCommand("spawnvct").setTabCompleter(this);
     }
@@ -105,19 +28,27 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length < 1) {
-            sender.sendMessage("Uso: /spawnvct <mob> [jugador (opcional)] [x] [y] [z]");
+            sender.sendMessage("Uso: /spawnvct <mob> [jugador|variante] [x] [y] [z]");
             return true;
         }
 
         String mobType = args[0].toLowerCase();
-
         Location location = null;
         Player targetPlayer = null;
+        String variantArg = null;
 
-        if (args.length > 1 && Bukkit.getPlayer(args[1]) != null) {
-            targetPlayer = Bukkit.getPlayer(args[1]);
-            location = targetPlayer.getLocation();
-        } else if (args.length >= 4) {
+        // Comprobación de argumentos
+        if (args.length > 1) {
+            if (Bukkit.getPlayer(args[1]) != null) {
+                targetPlayer = Bukkit.getPlayer(args[1]);
+                location = targetPlayer.getLocation();
+            } else {
+                // Si no es jugador, asumimos que es una variante (ej: "Pingo", "LIME")
+                variantArg = args[1];
+            }
+        }
+
+        if (args.length >= 4) {
             try {
                 World world = sender instanceof Player ? ((Player) sender).getWorld() : Bukkit.getWorlds().get(0);
                 double x = Double.parseDouble(args[args.length - 3]);
@@ -128,220 +59,23 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
                 sender.sendMessage("Las coordenadas deben ser números válidos.");
                 return true;
             }
-        } else if (sender instanceof Player) {
+        }
+
+        if (location == null && sender instanceof Player) {
             targetPlayer = (Player) sender;
             location = targetPlayer.getLocation();
-        } else {
+        } else if (location == null) {
             sender.sendMessage("Debes especificar un jugador o coordenadas si no eres un jugador.");
             return true;
         }
 
-        switch (mobType) {
-            case "bombita":
-                bombitaSpawner.spawnBombita(location);
-                sender.sendMessage("¡Bombita ha sido spawneado en " + locationToString(location) + "!");
-                break;
+        // Llamamos al Manager
+        boolean success = mobManager.spawnMob(mobType, location, targetPlayer, variantArg);
 
-            case "iceologer":
-                iceologerSpawner.spawnIceologer(location);
-                sender.sendMessage("¡Iceologer ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "corruptedzombie":
-                corruptedZombieSpawner.spawnCorruptedZombie(location);
-                sender.sendMessage("¡Corrupted Zombie ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "corruptedspider":
-                corruptedSpider.spawnCorruptedSpider(location);
-                sender.sendMessage("¡Corrupted Spider ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "queenbee":
-                QueenBeeHandler.spawn(plugin, location);
-                sender.sendMessage("§d¡Corrupted Queen Bee ha sido invocada en " + locationToString(location) + "!");
-                break;
-
-            case "hellishbee":
-              /*  HellishBeeHandler.spawn(plugin, location);*/
-                sender.sendMessage("¡Hellish Bee ha sido spawneada en " + locationToString(location) + "!");
-                break;
-
-            case "guardianblaze":
-                guardianBlaze.spawnGuardianBlaze(location);
-                sender.sendMessage("¡Guardian Blaze ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "guardiancorruptedskeleton":
-                guardianCorruptedSkeleton.spawnGuardianCorruptedSkeleton(location);
-                sender.sendMessage("¡Guardian Corrupted Skeleton ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "corruptedskeleton":
-                if (args.length >= 2) {
-                    String variantName = args[1].toUpperCase();
-                    corruptedSkeleton.spawnCorruptedSkeleton(location, variantName);
-                    sender.sendMessage("¡Corrupted Skeleton (" + variantName + ") ha sido spawneado en " + locationToString(location) + "!");
-                } else {
-                    corruptedSkeleton.spawnCorruptedSkeleton(location, null);
-                    sender.sendMessage("¡Corrupted Skeleton (aleatorio) ha sido spawneado en " + locationToString(location) + "!");
-                }
-                break;
-
-            case "customdolphin":
-                String dolphinType = args[1];
-                if (!dolphinType.equalsIgnoreCase("Pingo") && !dolphinType.equalsIgnoreCase("Pinga")) {
-                    sender.sendMessage("Tipo de delfín no válido. Usa Pingo o Pinga.");
-                    return true;
-                }
-
-                customDolphin.spawnPinguin(location, dolphinType);
-                sender.sendMessage("¡Delfín " + dolphinType + " ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "corruptedinfernalspider":
-                corruptedInfernalSpider.spawnCorruptedInfernalSpider(location);
-                sender.sendMessage("¡Corrupted Infernal Spider ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "corruptedcreeper":
-                corruptedCreeper.spawnCorruptedCreeper(location);
-                sender.sendMessage("¡Corrupted Creeper ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "piglinglobo":
-                piglinGloboSpawner.spawnPiglinGlobo(location);
-                sender.sendMessage("¡Piglin Globo ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "buffbreeze":
-                buffBreeze.spawnBuffBreeze(location);
-                sender.sendMessage("¡Buff Breeze ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "invertedghast":
-                invertedGhast.spawnInvertedGhast(location);
-                sender.sendMessage("¡Inverted Ghast ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "netheritevexguardian":
-                netheriteVexGuardian.spawnNetheriteVexGuardian(location);
-                sender.sendMessage("¡Netherite Vex Guardian ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "ultrawitherboss":
-                ultraWitherBossHandler.spawnUltraWither(location);
-                sender.sendMessage("¡Ultra Wither Boss ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "whiteenderman":
-                whiteEnderman.spawnWhiteEnderman(location);
-                sender.sendMessage("¡White Enderman ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "infernalcreeper":
-                infernalCreeper.spawnInfernalCreeper(location);
-                sender.sendMessage("¡Infernal Creeper ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "toxicspider":
-                toxicSpider.spawnToxicSpider(location);
-                sender.sendMessage("¡Ultra Corrupted Spider ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "fastravager":
-                fastRavager.spawnFastRavager(location);
-                sender.sendMessage("¡Fast Ravager ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "bruteimperial":
-                imperialBrute.spawnBruteImperial(location);
-                sender.sendMessage("¡Brute Imperial ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "batboom":
-                batBoom.spawnBatBoom(location);
-                sender.sendMessage("¡Bat Boom ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "spectraleeye":
-                spectralEye.spawnSpectralEye(location);
-                sender.sendMessage("¡Spectral Eye ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "customboat":
-                customBoat.spawnBoat(location, Objects.requireNonNull(targetPlayer));
-                sender.sendMessage("¡Custom Boat ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "enderghast":
-                espectralGhast.spawnEnderGhast(location);
-                sender.sendMessage("¡Ender Ghast ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "endercreeper":
-                espectralCreeper.spawnEnderCreeper(location);
-                sender.sendMessage("¡Ender Creeper ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "endersilverfish":
-                espectralSilverfish.spawnEnderSilverfish(location);
-                sender.sendMessage("¡Ender Silverfish ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "guardianshulker":
-                guardianShulkerDescartado.spawnGuardianShulker(location);
-                sender.sendMessage("¡Guardian Shulker ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "darkcreeper":
-                darkCreeper.spawnDarkCreeper(location);
-                sender.sendMessage("¡Dark Creeper ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "darkvex":
-                darkVex.spawnDarkVex(location);
-                sender.sendMessage("¡Dark Vex ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "darkskeleton":
-                darkSkeleton.spawnDarkSkeleton(location);
-                sender.sendMessage("¡Dark Skeleton ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "infestedbee":
-                infestedBeeHandler.spawnInfestedBee(location);
-                sender.sendMessage("¡Infested Bee ha sido spawneada en " + locationToString(location) + "!");
-                break;
-
-            case "infernalbeast":
-                infernalBeast.spawnInfernalBeast(location);
-                sender.sendMessage("¡Infernal Beast ha sido spawneada en " + locationToString(location) + "!");
-                break;
-
-            case "corrupteddrowned":
-                corruptedDrowned.spawnCorruptedDrowned(location);
-                sender.sendMessage("¡Corrupted Drowned ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "corruptedbee":
-                corruptedBee.spawnCorruptedBee(location);
-                sender.sendMessage("¡Corrupted Bee ha sido spawneada en " + locationToString(location) + "!");
-                break;
-
-            case "infestedgolems":
-                infestedGolems.spawnInfestedGolem(location);
-                sender.sendMessage("¡Infested Golem ha sido spawneado en " + locationToString(location) + "!");
-                break;
-
-            case "null_statue":
-                Null_Statue.spawn(location);
-                sender.sendMessage("¡Null Statue ha sido spawneada en " + locationToString(location) + "!");
-                break;
-
-            default:
-                sender.sendMessage("Mob no reconocido. Usa /spawnvct <bombita|iceologer|corruptedzombie|corruptedspider|queenbee>");
-                break;
+        if (success) {
+            sender.sendMessage("¡" + mobType + " ha sido spawneado en " + locationToString(location) + "!");
+        } else {
+            sender.sendMessage("Mob no reconocido o variante inválida. Usa el tabulador para ver opciones.");
         }
 
         return true;
@@ -356,48 +90,15 @@ public class SpawnMobs implements CommandExecutor, TabCompleter {
         List<String> suggestions = new ArrayList<>();
 
         if (args.length == 1) {
-            suggestions.add("bombita");
-            suggestions.add("iceologer");
-            suggestions.add("corruptedzombie");
-            suggestions.add("corruptedspider");
-            suggestions.add("queenbee");
-            suggestions.add("hellishbee");
-            suggestions.add("guardianblaze");
-            suggestions.add("guardiancorruptedskeleton");
-            suggestions.add("corruptedskeleton");
-            suggestions.add("customdolphin");
-            suggestions.add("corruptedinfernalspider");
-            suggestions.add("corruptedcreeper");
-            suggestions.add("piglinglobo");
-            suggestions.add("buffbreeze");
-            suggestions.add("invertedghast");
-            suggestions.add("netheritevexguardian");
-            suggestions.add("ultrawitherboss");
-            suggestions.add("whiteenderman");
-            suggestions.add("infernalcreeper");
-            suggestions.add("toxicspider");
-            suggestions.add("fastravager");
-            suggestions.add("bruteimperial");
-            suggestions.add("batboom");
-            suggestions.add("spectraleeye");
-            suggestions.add("customboat");
-            suggestions.add("enderghast");
-            suggestions.add("endercreeper");
-            suggestions.add("endersilverfish");
-            suggestions.add("guardianshulker");
-            suggestions.add("darkcreeper");
-            suggestions.add("darkvex");
-            suggestions.add("darkskeleton");
-            suggestions.add("infestedbee");
-            suggestions.add("infernalbeast");
-            suggestions.add("corrupteddrowned");
-            suggestions.add("corruptedbee");
-            suggestions.add("infestedgolems");
-            suggestions.add("null_statue");
+            return mobManager.getRegisteredMobs().stream()
+                    .filter(name -> name.toLowerCase().startsWith(args[0].toLowerCase()))
+                    .collect(Collectors.toList());
         } else if (args.length == 2 && args[0].equalsIgnoreCase("corruptedskeleton")) {
-            for (CorruptedSkeleton.Variant variant : CorruptedSkeleton.Variant.values()) {
-                suggestions.add(variant.name().toLowerCase());
-            }
+            suggestions.add("lime");
+            suggestions.add("green");
+            suggestions.add("yellow");
+            suggestions.add("orange");
+            suggestions.add("red");
         } else if (args.length == 2 && args[0].equalsIgnoreCase("customdolphin")) {
             suggestions.add("Pingo");
             suggestions.add("Pinga");

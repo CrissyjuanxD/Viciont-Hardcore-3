@@ -1,5 +1,6 @@
 package Structures;
 
+import Gui.CambiosDataManager;
 import TitleListener.RuletaAnimation;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -12,10 +13,12 @@ import java.util.Arrays;
 
 public class GuardianBlazeZone extends BaseStructure {
     private final RuletaAnimation ruletaAnimation;
+    private final CambiosDataManager cambiosData;
 
-    public GuardianBlazeZone(JavaPlugin plugin, RuletaAnimation ruletaAnimation) {
+    public GuardianBlazeZone(JavaPlugin plugin, RuletaAnimation ruletaAnimation, CambiosDataManager cambiosData) {
         super(plugin, Arrays.asList("GuardianBlazeZone.schem"));
         this.ruletaAnimation = ruletaAnimation;
+        this.cambiosData = cambiosData;
     }
 
     @Override
@@ -43,10 +46,10 @@ public class GuardianBlazeZone extends BaseStructure {
                                 "[\"\",{\"text\":\"\\n\"},{\"text\":\"\\u06de Estructura \\u25ba \",\"bold\":true,\"color\":\"#6E02A5\"},{\"text\":\"\\n\\n\"},{\"text\":\"Se ha generado una Guardian Blaze Zone en las coordenadas:\\n\",\"color\":\"#A175D6\"},{\"text\":\"%d %d %d\",\"color\":\"gold\"},{\"text\":\"\\n \"}]",
                                 potentialLocation.getBlockX(), potentialLocation.getBlockY(), potentialLocation.getBlockZ()
                         );
-
+                        cambiosData.addCambio("estructura", "", jsonMessage);
                         // Llamada nativa directa a la animación (Morada)
                         for (Player player : Bukkit.getOnlinePlayers()) {
-                            ruletaAnimation.playAnimation(player, "morado", "off", "center", jsonMessage);
+                            ruletaAnimation.playAnimation(player, "morado", "off", "center", jsonMessage, true);
                         }
                     }
                 });

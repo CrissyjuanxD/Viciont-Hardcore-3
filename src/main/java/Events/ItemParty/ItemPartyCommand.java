@@ -46,6 +46,17 @@ public class ItemPartyCommand implements CommandExecutor, TabCompleter {
                 itemPartyHandler.terminarEvento();
                 sender.sendMessage(ChatColor.RED + "ItemParty terminado.");
                 break;
+            case "test":
+                int updates = 2;
+                int maxPlayers = 20;
+                if (args.length >= 3) {
+                    try {
+                        updates = Integer.parseInt(args[1]);
+                        maxPlayers = Integer.parseInt(args[2]);
+                    } catch (NumberFormatException ignored) {}
+                }
+                itemPartyHandler.toggleTestMode(updates, maxPlayers);
+                break;
             case "reset":
                 itemPartyHandler.resetPlayersFile();
                 sender.sendMessage(ChatColor.GREEN + "ItemParty: Lista de jugadores/castigos reseteada.");
@@ -74,13 +85,13 @@ public class ItemPartyCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendUsage(CommandSender sender) {
-        sender.sendMessage(ChatColor.RED + "Uso: /itemparty <start|end|reset|reload|castigo>");
+        sender.sendMessage(ChatColor.RED + "Uso: /itemparty <start|end|test <upd> <max>|reset|reload|castigo>");
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            List<String> options = Arrays.asList("start", "end", "reset", "reload", "castigo");
+            List<String> options = Arrays.asList("start", "end", "test", "reset", "reload", "castigo");
             List<String> completions = new ArrayList<>();
             StringUtil.copyPartialMatches(args[0], options, completions);
             Collections.sort(completions);

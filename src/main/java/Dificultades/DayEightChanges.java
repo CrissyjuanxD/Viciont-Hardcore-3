@@ -64,7 +64,7 @@ public class DayEightChanges implements Listener {
         this.buffBreeze = new BuffBreeze(plugin);
         this.invertedGhast = new InvertedGhast(plugin);
         this.netheriteVexGuardian = new NetheriteVexGuardian(plugin);
-        this.corruptedZombies = new CorruptedZombies(plugin);
+        this.corruptedZombies = new CorruptedZombies(plugin, handler);
         this.corruptedSkeleton = new CorruptedSkeleton(plugin, handler);
         this.imperialBrute = new ImperialBrute(plugin);
         this.infernalBeast = new InfernalBeast(plugin);
@@ -122,15 +122,15 @@ public class DayEightChanges implements Listener {
 
     //SPAWNS
     //Pigling Globo
-    @EventHandler
+    /*@EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (!isApplied) return;
 
-        if (shouldConvertImperialBruteSpawn(event)) {
+*//*        if (shouldConvertImperialBruteSpawn(event)) {
             PiglinBrute brute = (PiglinBrute) event.getEntity();
             convertToImperialBrute(brute);
             return;
-        }
+        }*//*
 
         handleInfernalBeastConversion(event);
         handleBuffBreezeConversion(event);
@@ -138,9 +138,9 @@ public class DayEightChanges implements Listener {
         handleBoggedtoCEConversion(event);
         handleHusktoCZConversion(event);
         handleBruteonversion(event);
-    }
+    }*/
 
-    private void handleInfernalBeastConversion(CreatureSpawnEvent event) {
+/*    private void handleInfernalBeastConversion(CreatureSpawnEvent event) {
         if (event.getLocation().getWorld().getEnvironment() != World.Environment.NETHER) {
             return;
         }
@@ -160,9 +160,9 @@ public class DayEightChanges implements Listener {
         infernalBeast.spawnInfernalBeast(loc);
         hoglin.remove();
 
-    }
+    }*/
 
-    private void handleBuffBreezeConversion(CreatureSpawnEvent event) {
+    /*private void handleBuffBreezeConversion(CreatureSpawnEvent event) {
 
         if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) {
             return;
@@ -182,9 +182,9 @@ public class DayEightChanges implements Listener {
 
         buffBreeze.spawnBuffBreeze(loc);
         breeze.remove();
-    }
+    }*/
 
-    private void handleStraytoCEConversion(CreatureSpawnEvent event) {
+    /*private void handleStraytoCEConversion(CreatureSpawnEvent event) {
         if (event.getEntityType() != EntityType.STRAY) return;
 
         if (event.getEntity().getPersistentDataContainer()
@@ -199,9 +199,9 @@ public class DayEightChanges implements Listener {
 
         corruptedSkeleton.spawnCorruptedSkeleton(loc, null);
         stray.remove();
-    }
+    }*/
 
-    private void handleBoggedtoCEConversion(CreatureSpawnEvent event) {
+/*    private void handleBoggedtoCEConversion(CreatureSpawnEvent event) {
         if (event.getEntityType() != EntityType.BOGGED) return;
 
         if (event.getEntity().getPersistentDataContainer()
@@ -216,9 +216,9 @@ public class DayEightChanges implements Listener {
 
         corruptedSkeleton.spawnCorruptedSkeleton(loc, null);
         bogged.remove();
-    }
+    }*/
 
-    private void handleHusktoCZConversion(CreatureSpawnEvent event) {
+/*    private void handleHusktoCZConversion(CreatureSpawnEvent event) {
         if (event.getEntityType() != EntityType.HUSK) return;
 
         if (event.getEntity().getPersistentDataContainer()
@@ -233,9 +233,9 @@ public class DayEightChanges implements Listener {
 
         corruptedZombies.spawnCorruptedZombie(loc);
         husk.remove();
-    }
+    }*/
 
-    private void handleBruteonversion(CreatureSpawnEvent event) {
+/*    private void handleBruteonversion(CreatureSpawnEvent event) {
         if (event.getEntityType() != EntityType.PIGLIN) return;
 
         if (event.getEntity().getPersistentDataContainer()
@@ -250,19 +250,19 @@ public class DayEightChanges implements Listener {
 
         imperialBrute.spawnBruteImperial(loc);
         piglin.remove();
-    }
+    }*/
 
-    private boolean shouldConvertImperialBruteSpawn(CreatureSpawnEvent event) {
+/*    private boolean shouldConvertImperialBruteSpawn(CreatureSpawnEvent event) {
         return isApplied &&
                 event.getEntityType() == EntityType.PIGLIN_BRUTE &&
                 !event.getEntity().getPersistentDataContainer()
                         .has(imperialBrute.getBruteImperialKey(), PersistentDataType.BYTE);
-    }
+    }*/
 
-    private void convertToImperialBrute(PiglinBrute brute) {
+/*    private void convertToImperialBrute(PiglinBrute brute) {
         Location loc = brute.getLocation();
         imperialBrute.transformToBruteImperial(brute);
-    }
+    }*/
 
     //Crafteos
 
@@ -613,7 +613,7 @@ public class DayEightChanges implements Listener {
 
         if (item.getType() == Material.MILK_BUCKET) {
             if (player.hasPotionEffect(PotionEffectType.TRIAL_OMEN)) {
-                event.setCancelled(true); // Cancela el consumo del cubo de leche
+                event.setCancelled(true);
                 player.sendMessage("§c۞ No puedes eliminar el efecto de Trial Omen con leche.");
             }
         }

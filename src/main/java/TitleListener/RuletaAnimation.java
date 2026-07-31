@@ -16,24 +16,25 @@ public class RuletaAnimation {
         this.plugin = plugin;
     }
 
-    public void playAnimation(Player player, String color, String mode, String pos, String jsonMessage) {
+
+    public void playAnimation(Player player, String color, String mode, String pos, String jsonMessage, boolean isGuiUpdate) {
 
         String gifName = switch (color.toLowerCase()) {
-            case "verde" -> "Rueda_Verde.gif";
-            case "naranja" -> "Rueda_Naranja.gif";
-            case "morado" -> "Rueda_Morada.gif";
-            case "rosa" -> "Rueda_Rosa.gif";
-            default -> "Rueda_Verde.gif";
+            case "verde" -> "RuedaVerde_FV2_pre.gif";
+            case "naranja" -> "RuedaNaranja_FV2_pre.gif";
+            case "morado" -> "RuedaMorado_FV2_pre.gif";
+            case "rosa" -> "RuedaRosa_FV2_pre.gif";
+            default -> "RuedaVerde_FV2_pre.gif";
         };
 
         // Lógica de posición y tamaño
-        int size = 550;
+        int size = 600;
         String vPos = "50,40";
         boolean overlay = false;
 
         if (!pos.equalsIgnoreCase("center")) {
             size = 300;
-            vPos = pos; // "topleft", "topright", etc.
+            vPos = pos;
             overlay = true;
         }
 
@@ -58,19 +59,22 @@ public class RuletaAnimation {
 
             // Activar DISCO 3.5s después del video (9s + 3.5s = 12.5s total / 250 ticks)
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                ViciontMediaAPI.sendShaderApply(player, "wobble");
+                ViciontMediaAPI.sendGlobalShaderApply("wobble");
             }, delayAfterRuleta + 80L);
 
             // Apagar DISCO (Dura 29s el video)
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                ViciontMediaAPI.sendShaderRemove(player, "wobble");
+                ViciontMediaAPI.sendGlobalShaderRemove( "wobble");
             }, delayAfterRuleta + (29 * 20L));
 
             // Mensaje Final (30s después del video)
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (jsonMessage != null && !jsonMessage.isEmpty()) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw " + player.getName() + " " + jsonMessage);
-                    player.playSound(player.getLocation(), "minecraft:custom.noti", 1.0f, 1.3f);
+                    // Solo activar la estética si se guardó en la GUI
+                    if (isGuiUpdate) {
+                        triggerNotificationEsthetics(player);
+                    }
                 }
             }, delayAfterRuleta + (30 * 20L));
 
@@ -79,9 +83,28 @@ public class RuletaAnimation {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (jsonMessage != null && !jsonMessage.isEmpty()) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw " + player.getName() + " " + jsonMessage);
-                    player.playSound(player.getLocation(), "minecraft:custom.noti", 1.0f, 1.3f);
+                    // Solo activar la estética si se guardó en la GUI
+                    if (isGuiUpdate) {
+                        triggerNotificationEsthetics(player);
+                    }
                 }
             }, delayAfterRuleta);
         }
+    }
+
+    public void playAnimation(Player player, String color, String mode, String pos, String jsonMessage) {
+        playAnimation(player, color, mode, pos, jsonMessage, false);
+    }
+
+    private void triggerNotificationEsthetics(Player player) {
+        player.playSound(player.getLocation(), "minecraft:custom.noti", 1.0f, 1.3f);
+
+        // Simular 4 segundos (el action bar dura ~2 segundos, así que lo enviamos ahora y 40 ticks después)
+        player.sendActionBar(org.bukkit.ChatColor.WHITE + "Tienes una nueva notificacion");
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline()) {
+                player.sendActionBar(org.bukkit.ChatColor.WHITE + "Tienes una nueva notificacion");
+            }
+        }, 40L);
     }
 }

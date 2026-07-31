@@ -567,22 +567,40 @@ public class EventoHandler implements Listener {
     }
 
     private void actualizarTextoPausa(List<String> offlinePlayers) {
-        String nuevosNombres = String.join(" ", offlinePlayers);
-        String newText = "&fSe ha sufrido una desconexion de los jugadores\n&#00FFFF" + nuevosNombres + "\n&fel evento ha sido pausado";
+        // 1. Formatear la lista de jugadores ("Jugador1", "Jugador1 y Jugador2", "Jugador1, Jugador2 y Jugador3")
+        String nombresFormateados = "";
+        if (offlinePlayers.size() == 1) {
+            nombresFormateados = offlinePlayers.get(0);
+        } else if (offlinePlayers.size() == 2) {
+            nombresFormateados = offlinePlayers.get(0) + " y " + offlinePlayers.get(1);
+        } else {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < offlinePlayers.size(); i++) {
+                sb.append(offlinePlayers.get(i));
+                if (i < offlinePlayers.size() - 2) {
+                    sb.append(", ");
+                } else if (i == offlinePlayers.size() - 2) {
+                    sb.append(" y ");
+                }
+            }
+            nombresFormateados = sb.toString();
+        }
+
+        String newText = "[left] Se ha sufrido una desconexión de los jugadores\n[left] &#00ffff&+" + nombresFormateados + "&- &fel evento ha sido pausado";
 
         if (!newText.equals(lastPauseText)) {
             for (Player p : getJugadoresEnZona()) {
-                if (!lastPauseText.isEmpty()) {
+                if (lastPauseText != null && !lastPauseText.isEmpty()) {
                     ViciontMediaAPI.removeText(p, lastPauseText);
                 }
-                ViciontMediaAPI.sendText(p, "", 9999, "topleft", newText);
+                ViciontMediaAPI.sendText(p, 1, "izquierda", "#000000", 300, "topleft", true, newText);
             }
             lastPauseText = newText;
         }
     }
 
     private void borrarTextoPausa() {
-        if (!lastPauseText.isEmpty()) {
+        if (lastPauseText != null && !lastPauseText.isEmpty()) {
             for (Player p : getJugadoresEnZona()) {
                 ViciontMediaAPI.removeText(p, lastPauseText);
             }
@@ -1347,24 +1365,23 @@ public class EventoHandler implements Listener {
             return;
         }
 
-        if (event.getBlockReplacedState().getType() == Material.LAVA) {
-            org.bukkit.block.data.Levelled lava = (org.bukkit.block.data.Levelled) event.getBlockReplacedState().getBlockData();
-            if (lava.getLevel() == 0) { // Nivel 0 significa que es el bloque fuente completo
-                event.setCancelled(true);
-                player.sendMessage(ChatColor.RED + "No puedes colocar bloques sobre la lava.");
-                return;
-            }
-        }
+        if (isInsideArenaGeneral(block.getLocation())) {
 
-        if (!eventoActivo) {
-            if (isInsideArenaGeneral(block.getLocation())) {
+            if (event.getBlockReplacedState().getType() == Material.LAVA) {
+                org.bukkit.block.data.Levelled lava = (org.bukkit.block.data.Levelled) event.getBlockReplacedState().getBlockData();
+                if (lava.getLevel() == 0) {
+                    event.setCancelled(true);
+                    player.sendMessage(ChatColor.RED + "No puedes colocar bloques sobre la lava.");
+                    return;
+                }
+            }
+
+            if (!eventoActivo) {
                 event.setCancelled(true);
                 player.sendMessage(ChatColor.RED + "No puedes colocar este bloque aquí.");
+                return;
             }
-            return;
-        }
 
-        if (isInsideArenaGeneral(block.getLocation())) {
             if (block.getType() == Material.PURPLE_CONCRETE || block.getType() == Material.COBWEB || block.getType() == Material.SCAFFOLDING) {
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     EquipmentSlot hand = event.getHand();

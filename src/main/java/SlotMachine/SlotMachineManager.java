@@ -1,5 +1,6 @@
 package SlotMachine;
 
+import Managers.ItemManager;
 import SlotMachine.api.SlotMachineModel;
 import SlotMachine.cache.smachine.SlotM;
 import SlotMachine.cache.smachine.SlotMachine;
@@ -37,6 +38,7 @@ public class SlotMachineManager {
     private SlotMachineTool slotMachineTool;
     private SlotMachineListener listener;
     private ItemCreator itemCreator;
+    private ItemManager itemManager;
     private ModelEngine4 modelEngine4;
     private ModelEngine3 modelEngine3;
     private boolean useModelEngine4;
@@ -44,8 +46,9 @@ public class SlotMachineManager {
     private final Map<Location, SlotMachineModel> activeMachines = new ConcurrentHashMap<>();
     private final Random random = new Random();
 
-    public SlotMachineManager(ViciontHardcore3 plugin) {
+    public SlotMachineManager(ViciontHardcore3 plugin, ItemManager itemManager) {
         this.plugin = plugin;
+        this.itemManager = itemManager;
         initialize();
     }
 
@@ -54,7 +57,7 @@ public class SlotMachineManager {
         loadConfiguration();
 
         // Inicializar utilidades
-        this.itemCreator = new ItemCreator(plugin);
+        this.itemCreator = new ItemCreator(plugin, itemManager);
 
         // Detectar ModelEngine
         detectModelEngine();

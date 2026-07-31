@@ -3,6 +3,7 @@ package Handlers;
 /*import Bosses.HellishBeeHandler;*/
 import Bosses.QueenBeeHandler;
 import Dificultades.CustomMobs.*;
+import Managers.MobManager;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
@@ -49,41 +50,7 @@ public class CustomSpawnerHandler implements Listener {
     private long lastCleanupTime = 0;
     private static final long CLEANUP_INTERVAL = 60000;
 
-    // Instancias de los mobs
-    private final Bombita bombitaSpawner;
-    private final Iceologer iceologerSpawner;
-    private final CorruptedZombies corruptedZombieSpawner;
-    private final CorruptedSpider corruptedSpider;
-    /*private final QueenBeeHandler queenBeeHandler;*/
-    /*private final HellishBeeHandler hellishBeeHandler;*/
-    private final InfestedBeeHandler infestedBeeHandler;
-    private final GuardianBlaze guardianBlaze;
-    private final GuardianCorruptedSkeleton guardianCorruptedSkeleton;
-    private final CorruptedSkeleton corruptedSkeleton;
-    private final CorruptedInfernalSpider corruptedInfernalSpider;
-    private final CorruptedCreeper corruptedCreeper;
-    private final PiglinGlobo piglinGloboSpawner;
-    private final BuffBreeze buffBreeze;
-    private final InvertedGhast invertedGhast;
-    private final NetheriteVexGuardian netheriteVexGuardian;
-    private final UltraWitherBossHandler ultraWitherBossHandler;
-    private final WhiteEnderman whiteEnderman;
-    private final InfernalCreeper infernalCreeper;
-    private final ToxicSpider toxicSpider;
-    private final FastRavager fastRavager;
-    private final ImperialBrute imperialBrute;
-    private final BatBoom batBoom;
-    private final SpectralEye spectralEye;
-    private final EspectralGhast espectralGhast;
-    private final EspectralCreeper espectralCreeper;
-    private final EspectralSilverfish espectralSilverfish;
-    private final GuardianShulker_Descartado guardianShulkerDescartado;
-    private final DarkCreeper darkCreeper;
-    private final DarkVex darkVex;
-    private final DarkSkeleton darkSkeleton;
-    private final InfernalBeast infernalBeast;
-    private final CorruptedDrowned corruptedDrowned;
-    private final CorruptedBee corruptedBee;
+    private final MobManager mobManager;
 
     public enum SpawnMode {
         VANILLA("Vanilla", Material.SPAWNER),
@@ -143,47 +110,12 @@ public class CustomSpawnerHandler implements Listener {
         }
     }
 
-    public CustomSpawnerHandler(JavaPlugin plugin, DayHandler dayHandler) {
+    public CustomSpawnerHandler(JavaPlugin plugin, DayHandler dayHandler, MobManager mobManager) {
         this.plugin = plugin;
         this.dayHandler = dayHandler;
+        this.mobManager = mobManager;
         this.spawnerKey = new NamespacedKey(plugin, "custom_spawner");
         this.spawnModeKey = new NamespacedKey(plugin, "spawn_mode");
-
-        // Inicializar todas las instancias de mobs
-        this.bombitaSpawner = new Bombita(plugin);
-        this.iceologerSpawner = new Iceologer(plugin);
-        this.corruptedZombieSpawner = new CorruptedZombies(plugin);
-        this.corruptedSpider = new CorruptedSpider(plugin, dayHandler);
-        /*this.queenBeeHandler = new QueenBeeHandler(plugin);*/
-        /*this.hellishBeeHandler = new HellishBeeHandler(plugin);*/
-        this.infestedBeeHandler = new InfestedBeeHandler(plugin);
-        this.guardianBlaze = new GuardianBlaze(plugin);
-        this.guardianCorruptedSkeleton = new GuardianCorruptedSkeleton(plugin);
-        this.corruptedSkeleton = new CorruptedSkeleton(plugin, dayHandler);
-        this.corruptedInfernalSpider = new CorruptedInfernalSpider(plugin);
-        this.corruptedCreeper = new CorruptedCreeper(plugin);
-        this.piglinGloboSpawner = new PiglinGlobo(plugin);
-        this.buffBreeze = new BuffBreeze(plugin);
-        this.invertedGhast = new InvertedGhast(plugin);
-        this.netheriteVexGuardian = new NetheriteVexGuardian(plugin);
-        this.ultraWitherBossHandler = new UltraWitherBossHandler(plugin);
-        this.whiteEnderman = new WhiteEnderman(plugin);
-        this.infernalCreeper = new InfernalCreeper(plugin);
-        this.toxicSpider = new ToxicSpider(plugin);
-        this.fastRavager = new FastRavager(plugin);
-        this.imperialBrute = new ImperialBrute(plugin);
-        this.batBoom = new BatBoom(plugin);
-        this.spectralEye = new SpectralEye(plugin);
-        this.espectralGhast = new EspectralGhast(plugin);
-        this.espectralCreeper = new EspectralCreeper(plugin);
-        this.espectralSilverfish = new EspectralSilverfish(plugin);
-        this.guardianShulkerDescartado = new GuardianShulker_Descartado(plugin);
-        this.darkCreeper = new DarkCreeper(plugin);
-        this.darkVex = new DarkVex(plugin);
-        this.darkSkeleton = new DarkSkeleton(plugin);
-        this.infernalBeast = new InfernalBeast(plugin);
-        this.corruptedDrowned = new CorruptedDrowned(plugin);
-        this.corruptedBee = new CorruptedBee(plugin);
 
         // Inicializar el sistema de spawn personalizado
         startCustomSpawnTask();
@@ -380,6 +312,9 @@ public class CustomSpawnerHandler implements Listener {
         if (world == null) return false;
 
         for (Player player : world.getPlayers()) {
+            if (player.getGameMode() == GameMode.CREATIVE || player.getGameMode() == GameMode.SPECTATOR) {
+                continue;
+            }
             if (player.getLocation().distance(spawnerLoc) <= range) {
                 return true;
             }
@@ -480,20 +415,24 @@ public class CustomSpawnerHandler implements Listener {
 
         Random random = new Random();
 
-        for (int attempts = 0; attempts < 10; attempts++) {
+        for (int attempts = 0; attempts < 30; attempts++) { // Aumentado a 30 intentos
             double x = spawnerLoc.getX() + (random.nextDouble() * range * 2 - range);
             double z = spawnerLoc.getZ() + (random.nextDouble() * range * 2 - range);
             double y = spawnerLoc.getY() + (random.nextDouble() * 3 - 1);
 
-            Location testLoc = new Location(world, x, y, z);
+            Location testLoc = new Location(world, Math.floor(x) + 0.5, Math.floor(y), Math.floor(z) + 0.5);
 
-            // Verificar que la ubicación sea válida
             if (isValidSpawnLocation(testLoc)) {
                 return testLoc;
             }
         }
 
-        return spawnerLoc.clone().add(0.5, 1, 0.5); // Fallback a encima del spawner
+        // Fallback a encima del spawner, subiendo hasta encontrar aire para no asfixiar
+        Location fallback = spawnerLoc.clone().add(0.5, 1, 0.5);
+        while (!fallback.getBlock().isPassable() && fallback.getY() < world.getMaxHeight()) {
+            fallback.add(0, 1, 0);
+        }
+        return fallback;
     }
 
     // Verificar si la ubicación es válida para spawn
@@ -501,13 +440,35 @@ public class CustomSpawnerHandler implements Listener {
         World world = loc.getWorld();
         if (world == null) return false;
 
-        Block block = world.getBlockAt(loc);
-        Block above = world.getBlockAt(loc.clone().add(0, 1, 0));
-        Block below = world.getBlockAt(loc.clone().add(0, -1, 0));
+        int blockX = loc.getBlockX();
+        int blockY = loc.getBlockY();
+        int blockZ = loc.getBlockZ();
 
-        return !block.getType().isSolid() &&
-                !above.getType().isSolid() &&
-                below.getType().isSolid();
+        Block floor = world.getBlockAt(blockX, blockY - 1, blockZ);
+        Block feet = world.getBlockAt(blockX, blockY, blockZ);
+        Block head = world.getBlockAt(blockX, blockY + 1, blockZ);
+
+        String floorName = floor.getType().name();
+        if (!floor.getType().isSolid() || floorName.contains("FENCE") || floorName.contains("WALL") || floorName.contains("LEAVES")) {
+            return false;
+        }
+
+        if (!feet.isPassable() || !head.isPassable()) return false;
+
+        for (int ox = -1; ox <= 1; ox++) {
+            for (int oz = -1; oz <= 1; oz++) {
+                if (ox == 0 && oz == 0) continue;
+
+                Block sideFeet = world.getBlockAt(blockX + ox, blockY, blockZ + oz);
+                Block sideHead = world.getBlockAt(blockX + ox, blockY + 1, blockZ + oz);
+
+                if (!sideFeet.isPassable() || !sideHead.isPassable()) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     @EventHandler
@@ -808,112 +769,10 @@ public class CustomSpawnerHandler implements Listener {
     }
 
     private void spawnCustomMob(String mobType, Location location) {
-        switch (mobType.toLowerCase()) {
-            case "bombita":
-                bombitaSpawner.spawnBombita(location);
-                break;
-            case "iceologer":
-                iceologerSpawner.spawnIceologer(location);
-                break;
-            case "corruptedzombie":
-                corruptedZombieSpawner.spawnCorruptedZombie(location);
-                break;
-            case "corruptedspider":
-                corruptedSpider.spawnCorruptedSpider(location);
-                break;
-            case "queenbee":
-                QueenBeeHandler.spawn(plugin, location);
-                break;
-            case "hellishbee":
-/*                HellishBeeHandler.spawn(plugin, location);*/
-                break;
-            case "infestedbee":
-                infestedBeeHandler.spawnInfestedBee(location);
-                break;
-            case "guardianblaze":
-                guardianBlaze.spawnGuardianBlaze(location);
-                break;
-            case "guardiancorruptedskeleton":
-                guardianCorruptedSkeleton.spawnGuardianCorruptedSkeleton(location);
-                break;
-            case "corruptedskeleton":
-                corruptedSkeleton.spawnCorruptedSkeleton(location, null);
-                break;
-            case "corruptedinfernalspider":
-                corruptedInfernalSpider.spawnCorruptedInfernalSpider(location);
-                break;
-            case "corruptedcreeper":
-                corruptedCreeper.spawnCorruptedCreeper(location);
-                break;
-            case "piglinglobo":
-                piglinGloboSpawner.spawnPiglinGlobo(location);
-                break;
-            case "buffbreeze":
-                buffBreeze.spawnBuffBreeze(location);
-                break;
-            case "invertedghast":
-                invertedGhast.spawnInvertedGhast(location);
-                break;
-            case "netheritevexguardian":
-                netheriteVexGuardian.spawnNetheriteVexGuardian(location);
-                break;
-            case "ultrawitherboss":
-                ultraWitherBossHandler.spawnUltraWither(location);
-                break;
-            case "whiteenderman":
-                whiteEnderman.spawnWhiteEnderman(location);
-                break;
-            case "infernalcreeper":
-                infernalCreeper.spawnInfernalCreeper(location);
-                break;
-            case "toxicspider":
-                toxicSpider.spawnToxicSpider(location);
-                break;
-            case "fastravager":
-                fastRavager.spawnFastRavager(location);
-                break;
-            case "bruteimperial":
-                imperialBrute.spawnBruteImperial(location);
-                break;
-            case "batboom":
-                batBoom.spawnBatBoom(location);
-                break;
-            case "spectraleeye":
-                spectralEye.spawnSpectralEye(location);
-                break;
-            case "enderghast":
-                espectralGhast.spawnEnderGhast(location);
-                break;
-            case "endercreeper":
-                espectralCreeper.spawnEnderCreeper(location);
-                break;
-            case "endersilverfish":
-                espectralSilverfish.spawnEnderSilverfish(location);
-                break;
-            case "guardianshulker":
-                guardianShulkerDescartado.spawnGuardianShulker(location);
-                break;
-            case "darkcreeper":
-                darkCreeper.spawnDarkCreeper(location);
-                break;
-            case "darkvex":
-                darkVex.spawnDarkVex(location);
-                break;
-            case "darkskeleton":
-                darkSkeleton.spawnDarkSkeleton(location);
-                break;
-            case "infernalbeast":
-                infernalBeast.spawnInfernalBeast(location);
-                break;
-            case "corrupteddrowned":
-                corruptedDrowned.spawnCorruptedDrowned(location);
-                break;
-            case "corruptedbee":
-                corruptedBee.spawnCorruptedBee(location);
-                break;
-            default:
-                plugin.getLogger().warning("Tipo de mob desconocido en spawner: " + mobType);
-                break;
+        boolean spawned = mobManager.spawnMob(mobType, location, null, null);
+
+        if (!spawned) {
+            plugin.getLogger().warning("Tipo de mob desconocido en spawner custom: " + mobType);
         }
     }
 
@@ -959,6 +818,8 @@ public class CustomSpawnerHandler implements Listener {
                 return EntityType.WITHER;
             case "whiteenderman":
                 return EntityType.ENDERMAN;
+            case "corruptedinsect":
+                return EntityType.ENDERMITE;
             case "fastravager":
                 return EntityType.RAVAGER;
             case "bruteimperial":
@@ -990,6 +851,8 @@ public class CustomSpawnerHandler implements Listener {
                 return "Corrupted Zombie";
             case "corruptedspider":
                 return "Corrupted Spider";
+            case "corruptedinsect":
+                return "Corrupted Insect";
             case "queenbee":
                 return "Abeja Reina";
             case "hellishbee":
@@ -1083,6 +946,8 @@ public class CustomSpawnerHandler implements Listener {
 
         ItemStack item = event.getItem();
         if (item == null || item.getType() != Material.SPAWNER) return;
+        if (item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer()
+                .has(TrialSpawnerHandler.presetIdKey, PersistentDataType.STRING)) return;
 
         event.setCancelled(true);
         openConfigGUI(event.getPlayer(), item);

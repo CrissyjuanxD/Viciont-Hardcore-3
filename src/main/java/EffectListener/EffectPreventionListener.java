@@ -24,11 +24,14 @@ import java.util.Set;
 
 public class EffectPreventionListener implements Listener {
 
-    // === Efectos de poción prohibidos ===
     private static final Set<PotionEffectType> BLOCKED_EFFECTS = new HashSet<>();
 
     static {
-        BLOCKED_EFFECTS.add(PotionEffectType.WEAVING);
+        BLOCKED_EFFECTS.add(PotionEffectType.WEAVING);      // Corrupture
+        BLOCKED_EFFECTS.add(PotionEffectType.LUCK);         // Corrupción
+        BLOCKED_EFFECTS.add(PotionEffectType.OOZING);       // Drenaje
+        BLOCKED_EFFECTS.add(PotionEffectType.WIND_CHARGED); // EcoMuerto
+        BLOCKED_EFFECTS.add(PotionEffectType.UNLUCK);       // Confusión
     }
 
     private boolean hasBlockedEffect(PotionMeta meta) {
@@ -57,7 +60,6 @@ public class EffectPreventionListener implements Listener {
         if (loc == null || loc.getWorld() == null) return;
         loc.getWorld().playSound(loc, Sound.BLOCK_GLASS_BREAK, 1f, 1.2f);
     }
-
 
     @EventHandler
     public void onPotionCraft(PrepareItemCraftEvent event) {

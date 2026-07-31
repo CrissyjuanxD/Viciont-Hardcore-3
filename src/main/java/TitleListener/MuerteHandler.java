@@ -98,9 +98,6 @@ public class MuerteHandler implements Listener {
 
         Component actionBarMessage = formatted;
 
-        // FEEDBACK VISUAL INMEDIATO: Le enviamos el Action Bar al instante SOLO a la víctima
-        player.sendActionBar(actionBarMessage);
-
         if (currentDeathMessageTask != null && !currentDeathMessageTask.isCancelled()) {
             currentDeathMessageTask.cancel();
         }
@@ -136,8 +133,8 @@ public class MuerteHandler implements Listener {
                 }
             }
         };
-        // RETRASO DE 1 SEGUNDO (20 Ticks) ANTES DE MANDAR EL ACTION BAR AL RESTO
-        currentDeathMessageTask.runTaskTimer(plugin, 20, 20);
+
+        currentDeathMessageTask.runTaskTimer(plugin, 0, 20);
 
         new BukkitRunnable() {
             @Override

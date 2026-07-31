@@ -59,11 +59,11 @@ public class DayFiveChange implements Listener {
         }
     }
 
-    @EventHandler
+/*    @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (!isApplied) return;
 
-/*        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) {
+*//*        if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) {
             return;
         }
 
@@ -81,11 +81,11 @@ public class DayFiveChange implements Listener {
 
                 corruptedCreeper.transformToCorruptedCreeper(creeper);
             }
-        }*/
+        }*//*
 
         handleCorruptedDrownedsConversion(event);
         handleICreepertoCorruptedCreepersConversion(event);
-        /*handleSquidstoCorruptedDrownedsConversion(event);*/
+        *//*handleSquidstoCorruptedDrownedsConversion(event);*//*
     }
 
     private boolean isAlreadyCustomCreeper(Entity creeper) {
@@ -132,7 +132,7 @@ public class DayFiveChange implements Listener {
             event.setCancelled(true);
             corruptedCreeper.spawnCorruptedCreeper(event.getLocation());
         }
-    }
+    }*/
 
 /*    private void handleSquidstoCorruptedDrownedsConversion(CreatureSpawnEvent event) {
 

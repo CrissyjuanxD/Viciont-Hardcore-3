@@ -1,10 +1,13 @@
     package Dificultades;
 
+    import net.md_5.bungee.api.ChatColor;
+    import Dificultades.CustomMobs.CorruptedInsect;
     import Dificultades.CustomMobs.CorruptedSpider;
     import Dificultades.CustomMobs.CorruptedZombies;
     import items.CorruptedMobItems;
     import items.CorruptedNetheriteItems;
     import org.bukkit.*;
+    import org.bukkit.enchantments.Enchantment;
     import org.bukkit.entity.*;
     import org.bukkit.event.EventHandler;
     import org.bukkit.event.HandlerList;
@@ -13,10 +16,7 @@
     import org.bukkit.event.player.PlayerItemConsumeEvent;
     import org.bukkit.event.player.PlayerPortalEvent;
     import org.bukkit.event.raid.RaidTriggerEvent;
-    import org.bukkit.inventory.ItemRarity;
-    import org.bukkit.inventory.ItemStack;
-    import org.bukkit.inventory.RecipeChoice;
-    import org.bukkit.inventory.ShapedRecipe;
+    import org.bukkit.inventory.*;
     import org.bukkit.inventory.meta.ItemMeta;
     import org.bukkit.persistence.PersistentDataType;
     import org.bukkit.plugin.java.JavaPlugin;
@@ -34,12 +34,15 @@
         private boolean isApplied = false;
         private final CorruptedZombies corruptedZombies;
         private final CorruptedSpider corruptedSpider;
+        private final CorruptedInsect corruptedInsect;
+
 
         public DayOneChanges(JavaPlugin plugin, DayHandler handler) {
             this.plugin = plugin;
             this.dayHandler = handler;
-            this.corruptedZombies = new CorruptedZombies(plugin);
+            this.corruptedZombies = new CorruptedZombies(plugin, handler);
             this.corruptedSpider = new CorruptedSpider(plugin,handler);
+            this.corruptedInsect = new CorruptedInsect(plugin, handler);
         }
 
         public void apply() {
@@ -47,6 +50,7 @@
                 // eventos solo cuando se aplica
                 corruptedZombies.apply();
                 corruptedSpider.apply();
+                corruptedInsect.apply();
                 Bukkit.getPluginManager().registerEvents(this, plugin);
                 registerCustomRecipe();
                 disablePhantomSpawning();
@@ -58,6 +62,7 @@
             if (isApplied) {
                 corruptedZombies.revert();
                 corruptedSpider.revert();
+                corruptedInsect.revert();
                 NamespacedKey key = new NamespacedKey(plugin, "corrupted_steak");
                 Bukkit.removeRecipe(key);
                 // Desregistrar eventos
@@ -67,7 +72,7 @@
             }
         }
 
-        @EventHandler
+/*        @EventHandler
         public void onCreatureSpawn(CreatureSpawnEvent event) {
             if (!isApplied) return;
             if (dayHandler.getCurrentDay() >= 4) {
@@ -75,10 +80,10 @@
             }
             handleCorruptedZombieConversion(event);
             handleCorruptedSpiderConversion(event);
-        }
+        }*/
 
 
-        private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
+/*        private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
             if (event.getEntityType() != EntityType.ZOMBIE) return;
 
             if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE)) {
@@ -89,9 +94,9 @@
 
             Zombie zombie = (Zombie) event.getEntity();
             corruptedZombies.transformToCorruptedZombie(zombie);
-        }
+        }*/
 
-        private void handleCorruptedSpiderConversion(CreatureSpawnEvent event) {
+/*        private void handleCorruptedSpiderConversion(CreatureSpawnEvent event) {
             if (event.getEntityType() != EntityType.SPIDER) return;
 
             if (event.getLocation().getWorld().getEnvironment() != World.Environment.NORMAL) return;
@@ -104,17 +109,31 @@
 
             Spider spider = (Spider) event.getEntity();
             corruptedSpider.transformspawnCorruptedSpider(spider);
-        }
+        }*/
 
         public static ItemStack corruptedSteak() {
             ItemStack item = new ItemStack(Material.COOKED_BEEF);
             ItemMeta meta = item.getItemMeta();
-            meta.setDisplayName(ChatColor.DARK_PURPLE + "Carne Corrupta");
+            meta.setDisplayName(ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Carne Corrupta");
+
+            List<String> lore = new ArrayList<>();
+            lore.add("");
+            lore.add(ChatColor.of("#ffcc99") + "Esta carne te otorga estos");
+            lore.add(ChatColor.of("#ffcc99") + "efectos" + ChatColor.GRAY + ":");
+            lore.add("");
+            lore.add(ChatColor.GRAY + "> " + ChatColor.of("#99cc33") + "Náuseas 1" + ChatColor.GRAY + " (" + ChatColor.of("#0099cc") + "10 s" + ChatColor.GRAY + ")");
+            lore.add(ChatColor.GRAY + "> " + ChatColor.of("#cc3300") + "Saturación 1" + ChatColor.GRAY + " (" + ChatColor.of("#0099cc") + "1.5 s" + ChatColor.GRAY + ")");
+            lore.add("");
+            meta.setLore(lore);
             meta.setCustomModelData(2);
             meta.setRarity(ItemRarity.EPIC);
+            meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+
             item.setItemMeta(meta);
             return item;
         }
+
 
         public void registerCustomRecipe() {
             NamespacedKey key = new NamespacedKey(plugin, "corrupted_steak");
@@ -191,6 +210,22 @@
 
             if (event.getEntityType() == EntityType.ZOMBIE_VILLAGER) {
                 event.setCancelled(true);
+            }
+        }
+
+        @EventHandler
+        public void onMonsterExplosionDamage(EntityDamageEvent event) {
+            if (!isApplied) return;
+
+            Entity entity = event.getEntity();
+            if (entity instanceof Monster || entity instanceof Slime || entity instanceof Ghast || entity instanceof Phantom || entity instanceof EnderDragon) {
+                EntityDamageEvent.DamageCause cause = event.getCause();
+
+                if (cause == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION ||
+                        cause == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) {
+
+                    event.setCancelled(true);
+                }
             }
         }
 

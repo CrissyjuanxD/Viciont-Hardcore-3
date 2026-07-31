@@ -45,7 +45,7 @@ public class DayNineChanges implements Listener {
     public DayNineChanges(JavaPlugin plugin, DayHandler handler) {
         this.plugin = plugin;
         this.dayHandler = handler;
-        this.corruptedZombies = new CorruptedZombies(plugin);
+        this.corruptedZombies = new CorruptedZombies(plugin, handler);
         this.corruptedSpider = new CorruptedSpider(plugin, handler);
     }
 
@@ -83,14 +83,11 @@ public class DayNineChanges implements Listener {
         }
     }
 
-    @EventHandler
+/*    @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (!isApplied) return;
 
         Entity entity = event.getEntity();
-
-        handleCorruptedZombieConversion(event);
-        handleCorruptedSpiderConversion(event);
 
 
         // 2. Modificaciones para Raiders
@@ -150,7 +147,7 @@ public class DayNineChanges implements Listener {
                 ));
             }
         }
-    }
+    }*/
 
     @EventHandler
     public void onEntityDamage(EntityDamageEvent event) {
@@ -169,7 +166,7 @@ public class DayNineChanges implements Listener {
         }
     }
 
-    private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
+   /* private void handleCorruptedZombieConversion(CreatureSpawnEvent event) {
         if (event.getEntityType() != EntityType.ZOMBIE) return;
 
         if (event.getEntity().getPersistentDataContainer().has(corruptedZombies.getCorruptedKey(), PersistentDataType.BYTE)) {
@@ -195,5 +192,5 @@ public class DayNineChanges implements Listener {
 
         Spider spider = (Spider) event.getEntity();
         corruptedSpider.transformspawnCorruptedSpider(spider);
-    }
+    }*/
 }
